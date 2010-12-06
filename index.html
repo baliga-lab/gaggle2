@@ -1,0 +1,72 @@
+<!--
+    Skein prototype.
+-->
+<html>
+  <head>
+    <title>ISB Skein Prototype</title>
+	  <link type="text/css" href="css/ui-lightness/jquery-ui-1.8.5.custom.css"
+          rel="stylesheet" /> 
+    <link rel="stylesheet" type="text/css" href="css/skein.css">
+	  <style type="text/css"> 
+	    .column { width: 50%; float: left; padding-bottom: 100px; }
+	    .portlet { margin: 0 1em 1em 0; }
+	    .portlet-header { margin: 0.3em; padding-bottom: 4px; padding-left: 0.2em; }
+	    .portlet-header .ui-icon { float: right; }
+	    .portlet-content { padding: 0.3em; }
+	    .ui-sortable-placeholder { border: 1px dotted black; visibility: visible !important; height: 50px !important; }
+	    .ui-sortable-placeholder * { visibility: hidden; }
+	  </style> 
+    <script src="js/jquery-1.4.3.min.js"></script>
+    <script src="js/jquery-ui-1.8.5.custom.min.js"></script>
+    <script src="js/json2.js"></script>
+    <script src="js/boss.js"></script>
+    <script type="text/javascript">
+      // This is our messaging router, our geese are looking for it
+      akka.boss = new akka.Akka();
+
+      $(document).ready(function() {
+        // portlet setup
+		    $(".column").sortable({
+			    connectWith: '.column'
+		    });
+		    $(".portlet").addClass("ui-widget ui-widget-content ui-helper-clearfix ui-corner-all")
+			    .find(".portlet-header")
+				  .addClass("ui-widget-header ui-corner-all")
+				  .prepend('<span class="ui-icon ui-icon-minusthick"></span>')
+				  .end()
+			    .find(".portlet-content");
+ 
+		    $(".portlet-header .ui-icon").click(function() {
+			    $(this).toggleClass("ui-icon-minusthick").toggleClass("ui-icon-plusthick");
+			    $(this).parents(".portlet:first").find(".portlet-content").toggle();
+		    });
+		    $(".column").disableSelection();
+      });
+    </script>
+  </head>
+  <body>
+    <div class="header" style="height: 120">
+      <span style="float: left;">
+      <div style="font-size: 24pt; font-weight: bold; font-style: italic;">ISB Skein Prototype</div>
+      <div style="font-size: 20pt; font-style: italic;">October 2010</div>
+      </span>
+      <span style="float: right;">
+        <img src="images/skein_transparent.png" width="300" height="103">
+      </span>
+    </div>
+
+    <div class="container">
+      <div class="column">
+        <div class="portlet">
+          <div class="portlet-header">Akka Events</div>
+          <div class="portlet-content">
+            <div id="akka-log" style="color: red;">
+              This is Akka Prototype 1.0
+            </div>
+            <span id="akka-log-text"></span>
+          </div>
+        </div>
+      </div>
+    </div> <!-- container end -->
+  </body>
+</html>

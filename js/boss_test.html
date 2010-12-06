@@ -1,0 +1,55 @@
+<html>
+  <head>
+    <title>ISB Gaggle Boss Test Suite</title>
+    <link rel="stylesheet" type="text/css" href="qunit.css">
+	  <style type="text/css"> 
+	    .column { width: 50%; float: left; padding-bottom: 100px; }
+	    .portlet { margin: 0 1em 1em 0; }
+	    .portlet-header { margin: 0.3em; padding-bottom: 4px; padding-left: 0.2em; }
+	    .portlet-header .ui-icon { float: right; }
+	    .portlet-content { padding: 0.3em; }
+	    .ui-sortable-placeholder { border: 1px dotted black; visibility: visible !important; height: 50px !important; }
+	    .ui-sortable-placeholder * { visibility: hidden; }
+	  </style> 
+    <script src="jquery-1.4.3.min.js"></script>
+    <script src="json2.js"></script>
+    <script src="boss.js"></script>
+    <script src="qunit.js"></script>
+    <script type="text/javascript">
+QUnit.testStart = function(name) {
+  gaggle.boss = new gaggle.Boss();
+};
+
+// This is our messaging router, our geese are looking for it
+$(document).ready(function() {
+  test("Adding a Goose", function() {
+    gaggle.boss.register({
+      getId : function() { return 1; }
+    });
+    ok(gaggle.boss.exists(1), "goose 1 should exist");
+    ok(!gaggle.boss.exists(2), "goose 2 should not exist");
+    raises(function()  {
+      gaggle.boss.register({
+        getId : function() { return 1; }
+      });
+    }, "adding goose with existing id should raise an exception");
+  });
+  test("Removing a registered Goose", function() {
+    gaggle.boss.register({
+      getId : function() { return 1; }
+    });
+    gaggle.boss.unregister(1);
+    ok(!gaggle.boss.exists(1), "goose 1 should not exist");
+  });
+});
+    </script>
+  </head>
+  <body>
+    <h1 id="qunit-header">Gaggle Boss JS Test Suite</h1>
+    <h2 id="qunit-banner"></h2>
+    <div id="qunit-testrunner-toolbar"></div>
+    <h2 id="qunit-userAgent"></h2>
+    <ol id="qunit-tests"></ol>
+    <div id="qunit-fixture">test markup, will be hidden</div>
+  </body>
+</html>

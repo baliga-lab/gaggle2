@@ -1,0 +1,29 @@
+Gaggle 2 Infrastructure Project
+
+Description:
+------------
+
+This project defines the successor to the Gaggle infrastructure system.
+
+Goals:
+
+  - integrate with web services in a browser- and platform-agnostic way
+  - provide the user with a way to customize and configure personalized tool views
+  - persistency for communication
+  - preserve existing RMI communication mechanism to Java Desktop applications
+
+Approaches:
+
+  - a new Boss, written in Javascript
+  - integration with Java Desktop applications is solved by a Java bridge applet,
+    which sole purpose is to relay data from and to
+
+Implementation technologies:
+
+  - HTML/Javascript for visual and communication aspects
+  - Java SE for the bridge
+  - LiveConnect for data exchange between Javascript and Java
+
+While Scala makes for a great alternative to implement the bridge, we use pure Java
+instead. This decision ensures that we do only include 3rd party dependencies that
+are absolutely necessary and can keep the bridge code archive relatively small.
