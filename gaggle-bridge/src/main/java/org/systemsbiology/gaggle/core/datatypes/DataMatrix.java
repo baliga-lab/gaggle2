@@ -33,9 +33,7 @@ public class DataMatrix implements GaggleData {
     protected String dataTypeBriefName;
     protected String species = "unknown";
 
-    public DataMatrix() {
-        this("");
-    }
+    public DataMatrix() { this(""); }
 
     public DataMatrix(String uri) {
         this.uri = uri.trim();
@@ -45,79 +43,57 @@ public class DataMatrix implements GaggleData {
         dataTypeBriefName = fileExtension;
     }
 
-
     public void setShortName(String newValue) {
         shortName = newValue;
     }
 
-    public String getShortName() {
-        return shortName;
-    }
-
+    public String getShortName() { return shortName; }
     public void setSpecies(String newValue) {
         species = newValue;
     }
 
-    public String getSpecies() {
-        return species;
-    }
+    public String getSpecies() { return species; }
 
     protected String calculateShortName() {
         String[] tokens = fullName.split("/");
         int lastToken = tokens.length - 1;
-        if (lastToken < 0)
-            return fullName;
-        else
-            return tokens[lastToken];
+        return (lastToken < 0) ? fullName : tokens[lastToken];
     }
 
     protected String calculateFileExtension() {
         String shortName = getShortName();
         int lastDot = shortName.lastIndexOf(".");
-        if (lastDot < 0)
-            return "";
-        else
-            return shortName.substring(lastDot + 1);
+        return (lastDot < 0) ? "" : shortName.substring(lastDot + 1);
     }
 
-    public String getFileExtension() {
-        return fileExtension;
-    }
+    public String getFileExtension() { return fileExtension; }
 
-/**
- * the 'data type brief name' is often the file extension of the
- * uri from which the data has been read, eg, 'ratio' or 'lambda'.
- * indeed, that file extension is the value of this variable by default.
- * but it may be reset here.
- *
- * @return brief name of data type
- */
-    public String getDataTypeBriefName() {
-        return dataTypeBriefName;
-    }
-
+    /**
+     * the 'data type brief name' is often the file extension of the
+     * uri from which the data has been read, eg, 'ratio' or 'lambda'.
+     * indeed, that file extension is the value of this variable by default.
+     * but it may be reset here.
+     *
+     * @return brief name of data type
+     */
+    public String getDataTypeBriefName() { return dataTypeBriefName; }
     public void setDataTypeBriefName(String newValue) {
         dataTypeBriefName = newValue;
     }
 
+    public String getFullName() { return fullName; }
     public void setFullName(String newValue) {
         fullName = newValue;
         shortName = calculateShortName();
         fileExtension = calculateFileExtension();
     }
 
-    public String getFullName() {
-        return fullName;
-    }
-
     public void setSize(int rows, int columns) {
         data = new double[rows][columns];
-
     }
 
     public void setDefault(double value) {
-        if (data == null)
-            return;
+        if (data == null) return;
 
         for (int r = 0; r < data.length; r++)
             for (int c = 0; c < data[0].length; c++)
@@ -166,18 +142,11 @@ public class DataMatrix implements GaggleData {
     }
 
     public int getRowCount() {
-        if (data != null)
-            return data.length;
-        else
-            return 0;
+        return (data != null) ? data.length : 0;
     }
 
     public int getColumnCount() {
-        if (columnTitles != null)
-            return columnTitles.length;
-        else
-            return 0;
-
+        return (columnTitles != null) ? columnTitles.length : 0;
     }
 
     public double get(int row, int column) {
@@ -185,49 +154,36 @@ public class DataMatrix implements GaggleData {
     }
 
     public double[] get(int row) {
-        if (data != null)
-            return data[row];
-        else
-            return new double[]{};
+        return (data != null) ? data[row] : new double[]{};
     }
 
     public double[] get(String rowName) {
-        for (int i = 0; i < rowTitles.length; i++)
-            if (rowTitles[i].equals(rowName))
-                return data[i];
-
+        for (int i = 0; i < rowTitles.length; i++) {
+            if (rowTitles[i].equals(rowName)) return data[i];
+        }
         throw new IllegalArgumentException("no data for '" + rowName + "'");
     }
 
-    public String[] getRowTitles() {
-        return rowTitles;
-    }
+    public String[] getRowTitles() { return rowTitles; }
 
     public void set(double[][] d) {
         data = d;
     }
 
-    public double[][] get() {
-        return data;
-    }
+    public double[][] get() { return data; }
 
     public int getColumnNumber(String columnName) {
         for (int c = 0; c < getColumnCount(); c++) {
-            if (columnTitles[c].equals(columnName))
-                return c;
+            if (columnTitles[c].equals(columnName)) return c;
         }
         throw new IllegalArgumentException("no column named " + columnName);
-
     }
 
     public int getRowNumber(String rowName) {
         for (int r = 0; r < getRowCount(); r++) {
-            if (rowTitles[r].equals(rowName))
-                return r;
+            if (rowTitles[r].equals(rowName)) return r;
         }
-
         throw new IllegalArgumentException("no row named " + rowName);
-
     }
 
     public double[] getColumn(String columnName) {
@@ -245,19 +201,14 @@ public class DataMatrix implements GaggleData {
             result[r] = data[r][columnNumber];
 
         return result;
-
     }
 
-    public String getRowTitlesTitle() {
-        return rowTitlesTitle;
-    }
+    public String getRowTitlesTitle() { return rowTitlesTitle; }
 
-    public String[] getColumnTitles() {
-        return columnTitles;
-    }
+    public String[] getColumnTitles() { return columnTitles; }
 
-    public String toString() {
-        StringBuffer sb = new StringBuffer();
+    @Override public String toString() {
+        StringBuilder sb = new StringBuilder();
         int colMax = columnTitles.length;
         String[] columnTitles = getColumnTitles();
 
@@ -278,9 +229,7 @@ public class DataMatrix implements GaggleData {
             }
             sb.append("\n");
         }
-
         return sb.toString();
-
     }
 
     public void sortByRowName() {
@@ -316,7 +265,6 @@ public class DataMatrix implements GaggleData {
         for (int i = 0; i < data.length; i++) {
             sortedData[indexMap.get(i)] = data[i];
         }
-
         data = sortedData;
     }
 
@@ -339,22 +287,13 @@ public class DataMatrix implements GaggleData {
 
     }
 
-
-    public String getName() {
-        return name;
-    }
-
-
+    public String getName() { return name; }
     public void setName(String name) {
         this.name = name;
     }
 
-    public Tuple getMetadata() {
-        return metadata;
-    }
-
+    public Tuple getMetadata() { return metadata; }
     public void setMetadata(Tuple metadata) {
         this.metadata = metadata;
     }
-
 }
