@@ -99,7 +99,6 @@ public class Network implements GaggleData {
 
         HashMap<String, Object> attributeHash = edgeAttributes.get(attributeName);
         attributeHash.put(edgeName, value);
-
     }
 
     public void addNodeAttribute(String nodeName, String attributeName, Object value) {

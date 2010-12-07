@@ -9,8 +9,19 @@ public class NetworkTest {
     @Test public void testCreateEmpty() {
         Network network = new Network();
         assertNull(network.getName());
+        assertEquals("unknown", network.getSpecies());
+        assertNull(network.getMetadata());
+
         assertEquals(0, network.nodeCount());
         assertEquals(0, network.getNodes().length);
+        assertEquals(0, network.getOrphanNodes().length);
+        assertEquals(0, network.getOrphanNodeCount());
         assertEquals(0, network.getConnectedNodes().size());
+        assertEquals(0, network.edgeCount());
+
+        assertEquals(0, network.getNodeAttributeNames().length);
+        assertEquals(0, network.getEdgeAttributeNames().length);
+
+        assertEquals("", network.toString());
     }
 }
