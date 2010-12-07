@@ -20,18 +20,15 @@
  * @see Network
  */
 package org.systemsbiology.gaggle.core.datatypes;
-//----------------------------------------------------------------------------------------
 
 import java.io.*;
 
-//----------------------------------------------------------------------------------------
 public class Interaction implements Serializable {
-    protected String source;
-    protected String target;
-    protected String interactionType;
-    protected boolean directed;
+    private String source;
+    private String target;
+    private String interactionType;
+    private boolean directed;
 
-    //----------------------------------------------------------------------------------------
     public Interaction(String source, String target, String interactionType, boolean directed) {
         this.source = source;
         this.interactionType = interactionType;
@@ -39,49 +36,29 @@ public class Interaction implements Serializable {
         this.directed = directed;
     }
 
-    //----------------------------------------------------------------------------------------
     public Interaction(String source, String target, String interactionType) {
         this(source, target, interactionType, false);
-
-    } // ctor
-
-    //----------------------------------------------------------------------------------------
-    public String getSource() {
-        return source;
     }
 
-    //---------------------------------------------------------------------------------------
-    public String getType() {
-        return interactionType;
-    }
+    public String getSource() { return source; }
+    public String getType() { return interactionType; }
+    public String getTarget() { return target; }
 
-    //---------------------------------------------------------------------------------------
-    public String getTarget() {
-        return target;
-    }
+    public boolean isDirected() { return directed; }
 
-    //---------------------------------------------------------------------------------------
-    public boolean isDirected() {
-        return directed;
-    }
-
-    //---------------------------------------------------------------------------------------
-    public String toString() {
-        StringBuffer sb = new StringBuffer();
+    @Override public String toString() {
+        StringBuilder sb = new StringBuilder();
         sb.append(source);
         sb.append(" (");
         sb.append(interactionType);
         sb.append(") ");
         sb.append(target);
-
         return sb.toString();
     }
 
-    //---------------------------------------------------------------------------------------
     public boolean equals(Interaction other) {
         return (other.toString().equals(toString()));
     }
-//---------------------------------------------------------------------------------------
-} // Interaction
+}
 
 
