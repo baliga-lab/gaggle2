@@ -27,9 +27,19 @@ public class SingleTest {
     @Test public void testSettersNoErrors() {
         Single single = new Single();
         single.setName("name");
-        assertEquals("name of Single should be 'name'", "name", single.getName());
+        assertEquals("name", single.getName());
         single.setValue("value");
-        assertEquals("value of Single should be 'value'", "value", single.getValue());
+        assertEquals("value", single.getValue());
+        single.setValue(1);
+        assertEquals(1, single.getValue());
+        single.setValue(1l);
+        assertEquals(1l, single.getValue());
+        single.setValue(1.0f);
+        assertEquals(1.0f, single.getValue());
+        single.setValue(1.0);
+        assertEquals(1.0, single.getValue());
+        single.setValue(true);
+        assertEquals(true, single.getValue());
     }
     @Test public void testSettersInvalidType() {
         Single single = new Single();
