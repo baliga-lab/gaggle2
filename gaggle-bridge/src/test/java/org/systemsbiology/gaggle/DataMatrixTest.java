@@ -203,4 +203,57 @@ public class DataMatrixTest {
             assertEquals("no data for 'norow'", ex.getMessage());
         }
     }
+    @Test public void testEquals() {
+        // note that we currently have to set up a complete data matrix
+        // to make equals() work 
+        DataMatrix matrix1 = new DataMatrix("matrix1");
+        DataMatrix matrix2 = new DataMatrix("matrix2");
+        matrix1.setSize(2, 2);
+        matrix2.setSize(3, 2);
+        matrix1.setRowTitles(new String[] {"row1", "row2"});
+        matrix1.setColumnTitles(new String[] {"col1", "col2"});
+        matrix2.setRowTitles(new String[] {"row1", "row2", "row3"});
+        matrix2.setColumnTitles(new String[] {"col1", "col2"});
+
+        assertTrue(matrix1.equals(matrix1));
+        assertFalse(String.format("%s", matrix1), matrix1.equals(matrix2));
+    }
+
+    @Test public void testToString() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(2, 2);
+        matrix.setRowTitles(new String[] {"row1", "row2"});
+        matrix.setColumnTitles(new String[] {"col1", "col2"});
+        assertEquals("DataMatrix\tcol1\tcol2\nrow1\t0.0\t0.0\nrow2\t0.0\t0.0\n", matrix.toString());
+    }
+
+    @Test public void testSortByRowName() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(2, 2);
+        matrix.setRowTitles(new String[] {"row02", "row01"});
+        matrix.setColumnTitles(new String[] {"col1", "col2"});
+        matrix.set(0, new double[] { 3.0, 3.0 });
+        matrix.set(1, new double[] { 1.0, 1.0 });
+        matrix.sortByRowName();
+
+        assertEquals("row01", matrix.getRowTitles()[0]);
+        assertEquals("row02", matrix.getRowTitles()[1]);
+        assertAllRowValuesAre(matrix, 0, 1.0);
+        assertAllRowValuesAre(matrix, 1, 3.0);
+    }
+
+    @Test public void testSortByRowNameInvalid() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(2, 2);
+        matrix.setRowTitles(new String[] {"row02", "row02"});
+        matrix.setColumnTitles(new String[] {"col1", "col2"});
+        matrix.set(0, new double[] { 3.0, 3.0 });
+        matrix.set(1, new double[] { 1.0, 1.0 });
+        try {
+            matrix.sortByRowName();
+            fail("sorting with duplicate row names should throw an exception");
+        } catch (IllegalArgumentException ex) {
+            assertEquals("Encountered duplicate row names in matrix!", ex.getMessage());
+        }
+    }
 }
