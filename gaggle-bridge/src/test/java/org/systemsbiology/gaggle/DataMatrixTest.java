@@ -21,6 +21,9 @@ public class DataMatrixTest {
         assertEquals("", matrix.getDataTypeBriefName());
         assertEquals(0, matrix.getRowCount());
         assertEquals(0, matrix.getColumnCount());
+        assertEquals("DataMatrix", matrix.getRowTitlesTitle());
+        assertEquals(0, matrix.getRowTitles().length);
+        assertEquals(0, matrix.getColumnTitles().length);
     }
 
     @Test public void testCreateWithURI() {
@@ -30,5 +33,27 @@ public class DataMatrixTest {
         assertEquals("testfile.txt", matrix.getShortName());
         assertEquals("txt", matrix.getFileExtension());
         assertEquals("txt", matrix.getDataTypeBriefName());
+    }
+
+    @Test public void testCreateWithNonPathURI() {
+        DataMatrix matrix = new DataMatrix("LABEL");
+        assertEquals("LABEL", matrix.getURI());
+        assertEquals("LABEL", matrix.getFullName());
+        assertEquals("LABEL", matrix.getShortName());
+        assertEquals("", matrix.getFileExtension());
+        assertEquals("", matrix.getDataTypeBriefName());
+    }
+
+    @Test public void testSimpleSetters() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        Tuple metadata = new Tuple();
+
+        matrix.setName("name");
+        matrix.setSpecies("species");
+        matrix.setMetadata(metadata);
+     
+        assertEquals("name", matrix.getName());
+        assertEquals("species", matrix.getSpecies());
+        assertEquals(metadata, matrix.getMetadata());
     }
 }
