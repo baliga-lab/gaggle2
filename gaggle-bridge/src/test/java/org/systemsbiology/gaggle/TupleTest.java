@@ -39,4 +39,12 @@ public class TupleTest {
         assertEquals(single, tuple.getSingleAt(0));
         assertEquals("name: (single = 4711) ", tuple.toString());
     }
+    @Test public void testAddSingle() {
+        Tuple tuple = new Tuple();
+        Single single = new Single("single", 4711);
+        tuple.addSingle(single);
+        assertEquals(1, tuple.getSingleList().size());
+        assertEquals(single, tuple.getSingleAt(0));
+        assertEquals("(no name): (single = 4711) ", tuple.toString());
+    }
 }

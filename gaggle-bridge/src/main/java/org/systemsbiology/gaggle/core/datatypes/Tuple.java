@@ -97,10 +97,7 @@ public class Tuple implements Serializable {
         this(name, new ArrayList<Single>());
     }
 
-    public List<Single> getSingleList() {
-        return singleList;
-    }
-
+    public List<Single> getSingleList() { return singleList; }
     public void setSingleList(List<Single> singleList) {
         this.singleList = singleList;
     }
@@ -113,10 +110,7 @@ public class Tuple implements Serializable {
         return singleList.get(index);
     }
 
-    public String getName() {
-        return name;
-    }
-
+    public String getName() { return name; }
     public void setName(String name) {
         this.name = name;
     }

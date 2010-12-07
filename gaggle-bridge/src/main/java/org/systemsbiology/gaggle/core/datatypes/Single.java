@@ -37,18 +37,12 @@ public class Single implements Serializable {
         setValue(value);
     }
 
-    public String getName() {
-        return name;
-    }
-
+    public String getName() { return name; }
     public void setName(String name) {
         this.name = name;
     }
 
-    public Serializable getValue() {
-        return value;
-    }
-
+    public Serializable getValue() { return value; }
     public void setValue(Serializable value) {
         if (!(value instanceof String ||
               value instanceof Integer ||
@@ -78,5 +72,4 @@ public class Single implements Serializable {
         sb.append(")");
         return sb.toString();
     }
-
 }
