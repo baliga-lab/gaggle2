@@ -20,18 +20,18 @@ import java.io.*;
 
 
 public class DataMatrix implements GaggleData {
-    protected String name;
-    protected Tuple metadata;
-    protected String rowTitlesTitle = "DataMatrix";
-    protected String[] columnTitles = new String[0];
-    protected String[] rowTitles = new String[0];
-    protected double[][] data = null;
-    protected String uri = "";
-    protected String fullName = "";
-    protected String shortName = "";
-    protected String fileExtension;
-    protected String dataTypeBriefName;
-    protected String species = "unknown";
+    private String name;
+    private Tuple metadata;
+    private String rowTitlesTitle = "DataMatrix";
+    private String[] columnTitles = new String[0];
+    private String[] rowTitles = new String[0];
+    private double[][] data = null;
+    private String uri = "";
+    private String fullName = "";
+    private String shortName = "";
+    private String fileExtension;
+    private String dataTypeBriefName;
+    private String species = "unknown";
 
     public DataMatrix() { this(""); }
 
@@ -42,6 +42,7 @@ public class DataMatrix implements GaggleData {
         fileExtension = calculateFileExtension();
         dataTypeBriefName = fileExtension;
     }
+    public String getURI() { return uri; }
 
     public void setShortName(String newValue) {
         shortName = newValue;
@@ -54,13 +55,13 @@ public class DataMatrix implements GaggleData {
 
     public String getSpecies() { return species; }
 
-    protected String calculateShortName() {
+    private String calculateShortName() {
         String[] tokens = fullName.split("/");
         int lastToken = tokens.length - 1;
         return (lastToken < 0) ? fullName : tokens[lastToken];
     }
 
-    protected String calculateFileExtension() {
+    private String calculateFileExtension() {
         String shortName = getShortName();
         int lastDot = shortName.lastIndexOf(".");
         return (lastDot < 0) ? "" : shortName.substring(lastDot + 1);
