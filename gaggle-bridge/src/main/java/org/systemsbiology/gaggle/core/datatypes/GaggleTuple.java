@@ -17,43 +17,29 @@ package org.systemsbiology.gaggle.core.datatypes;
  * objects, as the GaggleData interface requires one for metadata.
  */
 public class GaggleTuple implements GaggleData {
-    String name;
-    String species;
-    Tuple data = new Tuple();
-    Tuple metadata = new Tuple();
+    private String name;
+    private String species;
+    private Tuple data = new Tuple();
+    private Tuple metadata = new Tuple();
 
     public GaggleTuple() {}
 
-
-    public String getName() {
-        return name;
-    }
-
+    public String getName() { return name; }
     public void setName(String name) {
         this.name = name;
     }
 
-    public String getSpecies() {
-        return species;
-    }
-
+    public String getSpecies() { return species; }
     public void setSpecies(String species) {
         this.species = species;
     }
 
-
-    public Tuple getData() {
-        return data;
-    }
-
+    public Tuple getData() { return data; }
     public void setData(Tuple data) {
         this.data = data;
     }
 
-    public Tuple getMetadata() {
-        return metadata;
-    }
-
+    public Tuple getMetadata() { return metadata; }
     public void setMetadata(Tuple metadata) {
         this.metadata = metadata;
     }

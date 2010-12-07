@@ -27,4 +27,19 @@ public class NamelistTest {
         assertEquals(2, list.getNames().length);
         assertNull(list.getMetadata());
     }
+    @Test public void testSetters() {
+        Namelist list = new Namelist();
+        list.setName("name");
+        assertEquals("name", list.getName());
+
+        list.setSpecies("species");
+        assertEquals("species", list.getSpecies());
+        
+        list.setNames(new String[] { "name1", "name2" });
+        assertEquals(2, list.getNames().length);
+
+        Tuple tuple = new Tuple();
+        list.setMetadata(tuple);
+        assertTrue(tuple == list.getMetadata());
+    }
 }
