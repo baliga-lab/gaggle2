@@ -44,6 +44,18 @@ public class DataMatrixTest {
         assertEquals("", matrix.getDataTypeBriefName());
     }
 
+    /**
+     * An unusual case, which is nevertheless handled.
+     */
+    @Test public void testCreateWithSlashURI() {
+        DataMatrix matrix = new DataMatrix("/");
+        assertEquals("/", matrix.getURI());
+        assertEquals("/", matrix.getFullName());
+        assertEquals("/", matrix.getShortName());
+        assertEquals("", matrix.getFileExtension());
+        assertEquals("", matrix.getDataTypeBriefName());
+    }
+
     @Test public void testSimpleSetters() {
         DataMatrix matrix = new DataMatrix(TESTURI);
         Tuple metadata = new Tuple();
@@ -51,9 +63,46 @@ public class DataMatrixTest {
         matrix.setName("name");
         matrix.setSpecies("species");
         matrix.setMetadata(metadata);
+        matrix.setShortName("short");
+        matrix.setDataTypeBriefName("brief");
      
         assertEquals("name", matrix.getName());
         assertEquals("species", matrix.getSpecies());
         assertEquals(metadata, matrix.getMetadata());
+        assertEquals("short", matrix.getShortName());
+        assertEquals("brief", matrix.getDataTypeBriefName());
+    }
+
+    @Test public void testSetFullName() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setFullName("/path/to/testfile.txt");
+     
+        assertEquals("/path/to/testfile.txt", matrix.getFullName());
+        assertEquals("testfile.txt", matrix.getShortName());
+        assertEquals("txt", matrix.getFileExtension());
+    }
+
+    // Data matrix values
+    private void assertAllValuesAre(DataMatrix matrix, double expected) {
+        for (int row = 0; row < matrix.getRowCount(); row++) {
+            for (int col = 0; col < matrix.getColumnCount(); col++) {
+                assertEquals(expected, matrix.get(row, col), 0.001);
+            }
+        }
+    }
+
+    @Test public void testMakeMatrixDefault() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(3, 4);
+        assertEquals(3, matrix.getRowCount());
+        assertEquals(4, matrix.getColumnCount());
+        assertAllValuesAre(matrix, 0.0);
+    }
+
+    @Test public void testMakeMatrixOverrideDefault() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(3, 4);
+        matrix.setDefault(13.0);
+        assertAllValuesAre(matrix, 13.0);
     }
 }
