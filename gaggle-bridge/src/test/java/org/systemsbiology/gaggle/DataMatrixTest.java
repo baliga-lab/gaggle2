@@ -134,6 +134,7 @@ public class DataMatrixTest {
         assertEquals(4, matrix.getColumnCount());
         assertAllValuesAre(matrix, 0.0);
         assertEquals(4, matrix.get(0).length);
+        assertEquals(3, matrix.getColumn(0).length);
     }
 
     @Test public void testMakeMatrixOverrideDefault() {
@@ -169,6 +170,37 @@ public class DataMatrixTest {
             fail("adding row with wrong column count should throw an exception");
         } catch (IllegalArgumentException ex) {
             assertEquals("new row must have only 4 values; you supplied 2", ex.getMessage());
+        }
+    }
+
+    @Test public void testGetDataByName() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(3, 4);
+        matrix.setRowTitles(new String[] {"row1", "row2", "row3"});
+        matrix.setColumnTitles(new String[] {"col1", "col2", "col3", "col4"});
+        
+        assertEquals(0, matrix.getRowNumber("row1"));
+        assertEquals(1, matrix.getColumnNumber("col2"));
+        assertEquals(4, matrix.get("row1").length);
+        assertEquals(3, matrix.getColumn("col2").length);
+        
+        try {
+            matrix.getRowNumber("norow");
+            fail("getRowNumber() should throw an exception");
+        } catch (IllegalArgumentException ex) {
+            assertEquals("no row named norow", ex.getMessage());
+        }
+        try {
+            matrix.getColumnNumber("nocol");
+            fail("getColumnNumber() should throw an exception");
+        } catch (IllegalArgumentException ex) {
+            assertEquals("no column named nocol", ex.getMessage());
+        }
+        try {
+            matrix.get("norow");
+            fail("get() should throw an exception");
+        } catch (IllegalArgumentException ex) {
+            assertEquals("no data for 'norow'", ex.getMessage());
         }
     }
 }
