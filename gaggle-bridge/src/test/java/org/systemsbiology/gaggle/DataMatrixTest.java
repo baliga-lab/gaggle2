@@ -60,18 +60,26 @@ public class DataMatrixTest {
     @Test public void testSimpleSetters() {
         DataMatrix matrix = new DataMatrix(TESTURI);
         Tuple metadata = new Tuple();
+        String[] rowTitles = new String[] { "row1", "row2" };
+        String[] colTitles = new String[] { "col1", "col2" };
 
         matrix.setName("name");
         matrix.setSpecies("species");
         matrix.setMetadata(metadata);
         matrix.setShortName("short");
         matrix.setDataTypeBriefName("brief");
-     
+        matrix.setRowTitlesTitle("title");
+        matrix.setRowTitles(rowTitles);
+        matrix.setColumnTitles(colTitles);
+
         assertEquals("name", matrix.getName());
         assertEquals("species", matrix.getSpecies());
         assertEquals(metadata, matrix.getMetadata());
         assertEquals("short", matrix.getShortName());
         assertEquals("brief", matrix.getDataTypeBriefName());
+        assertEquals("title", matrix.getRowTitlesTitle());
+        assertEquals(rowTitles, matrix.getRowTitles());
+        assertEquals(colTitles, matrix.getColumnTitles());
     }
 
     @Test public void testSetFullName() {
@@ -90,6 +98,14 @@ public class DataMatrixTest {
                 assertEquals(expected, matrix.get(row, col), 0.001);
             }
         }
+    }
+
+    @Test public void testZeroColSetup() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(3, 0);
+        assertEquals(0, matrix.getColumnCount());
+        matrix.setSize(0, 0);
+        assertEquals(0, matrix.getColumnCount());
     }
 
     @Test public void testMakeMatrixDefault() {
