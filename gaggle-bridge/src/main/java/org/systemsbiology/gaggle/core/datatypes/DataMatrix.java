@@ -149,7 +149,7 @@ public class DataMatrix implements GaggleData {
     }
 
     public int getColumnCount() {
-        return (data != null && data.length > 0 && data[0] != null) ? data[0].length : 0;
+        return (data != null && data.length > 0) ? data[0].length : 0;
     }
 
     public double get(int row, int column) {
