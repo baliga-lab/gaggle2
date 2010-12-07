@@ -3,6 +3,8 @@ package org.systemsbiology.gaggle;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.systemsbiology.gaggle.core.datatypes.Single;
+import org.systemsbiology.gaggle.core.datatypes.Tuple;
+import org.systemsbiology.gaggle.core.datatypes.GaggleTuple;
 
 public class SingleTest {
     @Test public void testCreateEmpty() {
@@ -40,6 +42,12 @@ public class SingleTest {
         assertEquals(1.0, single.getValue());
         single.setValue(true);
         assertEquals(true, single.getValue());
+        Tuple tuple = new Tuple();
+        single.setValue(tuple);
+        assertEquals(tuple, single.getValue());
+        GaggleTuple gaggleTuple = new GaggleTuple();
+        single.setValue(gaggleTuple);
+        assertEquals(gaggleTuple, single.getValue());
     }
     @Test public void testSettersInvalidType() {
         Single single = new Single();
