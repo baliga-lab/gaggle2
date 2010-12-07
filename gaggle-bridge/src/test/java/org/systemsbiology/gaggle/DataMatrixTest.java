@@ -25,6 +25,10 @@ public class DataMatrixTest {
         assertEquals("DataMatrix", matrix.getRowTitlesTitle());
         assertEquals(0, matrix.getRowTitles().length);
         assertEquals(0, matrix.getColumnTitles().length);
+        assertEquals(0, matrix.get(0).length);
+        assertNull(matrix.get());
+        assertEquals(0, matrix.getColumn(0).length);
+        assertEquals("DataMatrix\n", matrix.toString());
     }
 
     @Test public void testCreateWithURI() {
@@ -99,6 +103,11 @@ public class DataMatrixTest {
             }
         }
     }
+    private void assertAllRowValuesAre(DataMatrix matrix, int row, double expected) {
+        for (int col = 0; col < matrix.getColumnCount(); col++) {
+            assertEquals(expected, matrix.get(row, col), 0.001);
+        }
+    }
 
     @Test public void testZeroColSetup() {
         DataMatrix matrix = new DataMatrix(TESTURI);
@@ -108,12 +117,23 @@ public class DataMatrixTest {
         assertEquals(0, matrix.getColumnCount());
     }
 
+    @Test public void testSetMatrixDirect() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        double[][] data = new double[3][2];
+        matrix.set(data);
+        assertEquals(2, matrix.getColumnCount());
+        assertEquals(3, matrix.getRowCount());
+        assertEquals(data, matrix.get());
+    }
+
+
     @Test public void testMakeMatrixDefault() {
         DataMatrix matrix = new DataMatrix(TESTURI);
         matrix.setSize(3, 4);
         assertEquals(3, matrix.getRowCount());
         assertEquals(4, matrix.getColumnCount());
         assertAllValuesAre(matrix, 0.0);
+        assertEquals(4, matrix.get(0).length);
     }
 
     @Test public void testMakeMatrixOverrideDefault() {
@@ -121,5 +141,34 @@ public class DataMatrixTest {
         matrix.setSize(3, 4);
         matrix.setDefault(13.0);
         assertAllValuesAre(matrix, 13.0);
+    }
+
+    @Test public void testSetDataValue() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(3, 4);
+        matrix.set(0, 1, 1.2);
+        assertEquals(1.2, matrix.get(0, 1), 0.001);
+    }
+
+    @Test public void testSetDataRow() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(3, 4);
+        matrix.set(0, new double[] { 3.0, 3.0, 3.0, 3.0 });
+        assertAllRowValuesAre(matrix, 0, 3.0);
+    }
+
+    @Test public void testAddDataRow() {
+        DataMatrix matrix = new DataMatrix(TESTURI);
+        matrix.setSize(3, 4);
+        matrix.addRow("name", new double[] { 3.0, 3.0, 3.0, 3.0 });
+        assertEquals(4, matrix.getRowCount());
+        assertAllRowValuesAre(matrix, 3, 3.0);
+
+        try {
+            matrix.addRow("name2", new double[] { 2.0, 2.0 });
+            fail("adding row with wrong column count should throw an exception");
+        } catch (IllegalArgumentException ex) {
+            assertEquals("new row must have only 4 values; you supplied 2", ex.getMessage());
+        }
     }
 }
