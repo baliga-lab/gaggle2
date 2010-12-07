@@ -127,17 +127,19 @@ public class DataMatrix implements GaggleData {
         tmp.add(rowName);
 
         rowTitles = tmp.toArray(new String[0]);
-
     }
 
+    public String[] getColumnTitles() { return columnTitles; }
     public void setColumnTitles(String[] newValues) {
         columnTitles = newValues;
     }
 
+    public String[] getRowTitles() { return rowTitles; }
     public void setRowTitles(String[] newValues) {
         rowTitles = newValues;
     }
 
+    public String getRowTitlesTitle() { return rowTitlesTitle; }
     public void setRowTitlesTitle(String newValue) {
         rowTitlesTitle = newValue;
     }
@@ -165,12 +167,7 @@ public class DataMatrix implements GaggleData {
         throw new IllegalArgumentException("no data for '" + rowName + "'");
     }
 
-    public String[] getRowTitles() { return rowTitles; }
-
-    public void set(double[][] d) {
-        data = d;
-    }
-
+    public void set(double[][] d) { data = d; }
     public double[][] get() { return data; }
 
     public int getColumnNumber(String columnName) {
@@ -203,10 +200,6 @@ public class DataMatrix implements GaggleData {
 
         return result;
     }
-
-    public String getRowTitlesTitle() { return rowTitlesTitle; }
-
-    public String[] getColumnTitles() { return columnTitles; }
 
     @Override public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -285,16 +278,11 @@ public class DataMatrix implements GaggleData {
         FileInputStream fstream = new FileInputStream(uri);
         ObjectInputStream ostream = new ObjectInputStream(fstream);
         return (DataMatrix) ostream.readObject();
-
     }
 
     public String getName() { return name; }
-    public void setName(String name) {
-        this.name = name;
-    }
+    public void setName(String name) { this.name = name; }
 
     public Tuple getMetadata() { return metadata; }
-    public void setMetadata(Tuple metadata) {
-        this.metadata = metadata;
-    }
+    public void setMetadata(Tuple metadata) { this.metadata = metadata; }
 }

@@ -10,6 +10,7 @@ public class DataMatrixTest {
 
     @Test public void testCreateEmpty() {
         DataMatrix matrix = new DataMatrix();
+        matrix.setDefault(1.0); // does nothing
         assertNull(matrix.getName());
         assertEquals("unknown", matrix.getSpecies());
         assertNull(matrix.getMetadata());
