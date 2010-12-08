@@ -10,7 +10,7 @@
 	    .portlet-content { padding: 0.3em; }
 	    .ui-sortable-placeholder { border: 1px dotted black; visibility: visible !important; height: 50px !important; }
 	    .ui-sortable-placeholder * { visibility: hidden; }
-	  </style> 
+	  </style>
     <script src="jquery-1.4.3.min.js"></script>
     <script src="json2.js"></script>
     <script src="boss.js"></script>
@@ -40,6 +40,11 @@ $(document).ready(function() {
     });
     gaggle.boss.unregister(1);
     ok(!gaggle.boss.exists(1), "goose 1 should not exist");
+  });
+  test("Creating a proxy", function() {
+    var uniqueName = gaggle.boss.createProxy('aname');
+    equal(uniqueName, 'aname', "unique name should be created");
+    ok(gaggle.boss.exists(uniqueName));
   });
 });
     </script>

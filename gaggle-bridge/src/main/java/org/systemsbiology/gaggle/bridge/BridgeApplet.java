@@ -20,13 +20,14 @@ public class BridgeApplet extends JApplet {
     private static final String SERVICE_NAME = "gaggle";
 
     public void init() {
-        JSObject win = JSObject.getWindow(this);
-        System.out.println("window is: " + win);
+        System.out.println("init()");
     }
 
     public void start() {
         try {
-            BridgeBoss boss = new BridgeBoss();
+            JSObject win = JSObject.getWindow(this);
+            JSObject doc = (JSObject) win.getMember("document");
+            BridgeBoss boss = new BridgeBoss(doc);
             LocateRegistry.createRegistry(1099);
             Naming.rebind(SERVICE_NAME, boss);
         } catch (MalformedURLException ex) {

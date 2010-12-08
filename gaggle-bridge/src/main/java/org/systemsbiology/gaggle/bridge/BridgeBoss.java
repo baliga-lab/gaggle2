@@ -3,30 +3,67 @@ package org.systemsbiology.gaggle.bridge;
 import java.rmi.server.UnicastRemoteObject;
 import java.rmi.RemoteException;
 
+import netscape.javascript.*;
+
 import org.systemsbiology.gaggle.core.Boss;
 import org.systemsbiology.gaggle.core.Goose;
 import org.systemsbiology.gaggle.core.datatypes.*;
 
+import java.util.Map;
+import java.util.HashMap;
+
 public class BridgeBoss extends UnicastRemoteObject implements Boss {
-    public BridgeBoss() throws RemoteException {
+
+    private static final String JS_BOSS = "gaggle.boss";
+
+    private JSObject document;
+    private Map<String, Goose> geese = new HashMap<String, Goose>();
+
+    public BridgeBoss(JSObject doc) throws RemoteException {
         super();
+        this.document = doc;
     }
 
+    // **********************************************************************
+    // **** Functions that call the Javascript side via LiveConnect
+    // **********************************************************************
+    private String callJsBoss(String methodCall) {
+        return document.eval(String.format(JS_BOSS + ".%s;", methodCall)).toString();
+    }
+    private String jsCreateProxyFor(String gooseBaseName) {
+        return callJsBoss(String.format("createProxy('%s')", gooseBaseName));
+    }
+    private void jsUnregister(String gooseUID) {
+        callJsBoss(String.format("unregister('%s')", gooseUID));
+    }
+
+    // **********************************************************************
+    // **** Public interface implementation
+    // **********************************************************************
     // registration
     public String[] getGooseNames() {
         System.out.println("getGooseNames()");
-        return new String[] { "goose1" };
+        return geese.keySet().toArray(new String[0]);
     }
     public String renameGoose(String oldName, String newName) {
         System.out.printf("renameGoose from '%s' to '%s'\n", oldName, newName);
         return newName;
     }
     public String register(Goose goose) throws RemoteException {
-        System.out.printf("register() goose '%s'\n", goose.getName());
+        // 1. call register(goose) on JS side, returning an unique identifier
+        String gooseBaseName = goose.getName();
+        String uniqueName = jsCreateProxyFor(gooseBaseName);
+        // 2. put the goose into the map, using that identifier
+        System.out.printf("register() goose '%s' with unique name '%s'\n", gooseBaseName, uniqueName);
+        geese.put(uniqueName, goose);
+        // update the list of current connected geese and inform them about the
+        // updated list
+        goose.update(getGooseNames());
         return goose.getName();
     }
     public void unregister(String gooseName) {
         System.out.printf("unregister() goose '%s'\n", gooseName);
+        jsUnregister(gooseName);
     }
     
     // application control

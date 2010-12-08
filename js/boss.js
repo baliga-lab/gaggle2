@@ -10,6 +10,10 @@
  */
 var gaggle = {};
 
+gaggle.GooseProxy = function(uniqueId) {
+    this.getId = function() { return uniqueId; };
+};
+
 // all geese have the method getId()
 // and sendMessage()
 
@@ -17,28 +21,35 @@ gaggle.Boss = function() {
     var geese = [];
     var log = []; // a log of messages
 
-    this.broadcast = function(sourceId, msg) {
-        var logMsg = 'Msg from <span style="color: blue;">' + sourceId +
+    /*
+     * A simple logging function, for diagnostic purposes. Using this method assumes that
+     * jQuery >= 1.4.3 is used within the page
+     */
+    this.log = function(source, msg) {
+        var logMsg = '<span style="color: blue;">' + source +
             ':</span> \'' + msg + "\'";
         log.push(logMsg);
         var logText = '<br>';
         for (var i = 0; i < log.length; i++) {
             logText += log[i] + '<br>';
         }
-        $('#akka-log-text').replaceWith('<span id="akka-log-text">' + logText + '</span>');
-        // notify geese except source
-        for (var id in geese) {
-            if (id != sourceId) {
-                geese[id].sendMessage(msg);
-            }
-        }
+        $('#gaggle-log-text').replaceWith('<div id="gaggle-log-text">' + logText + '</div>');
+    };
+    this.createProxy = function (gooseBaseName) {
+        var uniqueId = gooseBaseName;
+        var proxy = new gaggle.GooseProxy(uniqueId);
+        this.log('boss', 'created proxy with id: ' + uniqueId);
+        this.register(proxy);
+        return uniqueId;
     };
     this.register = function(goose) {
         if (this.exists(goose.getId())) throw "goose with id '" + goose.getId() + "' exists already.";
         geese[goose.getId()] = goose;
+        this.log('boss', 'registered goose with id: ' + goose.getId());
     };
     this.unregister = function(gooseId) {
         geese[gooseId] = undefined;
+        this.log('boss', 'unregistered goose with id: ' + gooseId);
     };
     this.exists = function(gooseId) {
         return geese[gooseId] !== undefined;
