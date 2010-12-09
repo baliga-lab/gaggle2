@@ -2,14 +2,12 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.systemsbiology.gaggle2</groupId>
+  <groupId>org.systemsbiology.gaggle</groupId>
   <artifactId>gaggle-bridge</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>gaggle-bridge</name>
-  <url>http://maven.apache.org</url>
-
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -44,6 +42,11 @@
       <groupId>netscape.javascript</groupId>
       <artifactId>plugin</artifactId>
       <version>1.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.systemsbiology.gaggle</groupId>
+      <artifactId>gaggle-core</artifactId>
+      <version>1.0</version>
     </dependency>
   </dependencies>
   <build>
