@@ -38,6 +38,9 @@ var MockGoose = function(name) {
     knownNames = currentNames;
   };
   this.currentNames = function() { return knownNames; };
+  this.handleNamelist = function(source, namelist) {
+    // TODO
+  };
 };
 
 // This is our messaging router, our geese are looking for it
@@ -69,10 +72,15 @@ $(document).ready(function() {
     equal(2, goose2.currentNames().length);
   });
   test("Removing a registered Goose", function() {
-    var uniqueName = gaggle.boss.register(new MockGoose('goose'));
-    gaggle.boss.unregister(uniqueName);
-    equal(0, gaggle.boss.numGeese(), 'number of geese should be 0');
-    ok(!gaggle.boss.exists(uniqueName), "goose 'goose' should not exist");
+    var goose1 = new MockGoose('goose1');
+    var goose2 = new MockGoose('goose2');
+    var uniqueName1 = gaggle.boss.register(goose1);
+    var uniqueName2 = gaggle.boss.register(goose2);
+    gaggle.boss.unregister(uniqueName1);
+
+    equal(1, gaggle.boss.numGeese(), 'number of geese should be 1');
+    ok(!gaggle.boss.exists(uniqueName1), "goose 'goose' should not exist");
+    equal(1, goose2.currentNames().length);
   });
   test("Register with a proxy", function() {
     var goose = new MockGoose('goose');

@@ -36,7 +36,7 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
     private static final String JS_BOSS = "gaggle.boss";
 
     private JSObject document;
-    private Map<String, Goose> geese = new HashMap<String, Goose>();
+    //private Map<String, Goose> geese = new HashMap<String, Goose>();
 
     public BridgeBoss(JSObject doc) throws RemoteException {
         super();
@@ -46,31 +46,23 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
     // **********************************************************************
     // **** Functions that call the Javascript side via LiveConnect
     // **********************************************************************
-    private String callJsBoss(String methodCall) {
-        return document.eval(String.format(JS_BOSS + ".%s;", methodCall)).toString();
-    }
-    private String jsCreateProxyFor(String gooseBaseName) {
-        return callJsBoss(String.format("createProxy('%s')", gooseBaseName));
+    private Object callJsBoss(String methodCall) {
+        return document.eval(String.format(JS_BOSS + ".%s;", methodCall));
     }
     private void jsUnregister(String gooseUID) {
         callJsBoss(String.format("unregister('%s')", gooseUID));
     }
-
-    // **********************************************************************
-    // **** LiveConnect interface
-    // **********************************************************************
-    public void updateGoose(String gooseUID, String[] currentNames) {
-        if (geese.containsKey(gooseUID)) {
-            try {
-                geese.get(gooseUID).update(currentNames);
-            } catch (RemoteException ex) {
-                System.out.printf("BridgeBoss.updateGoose(): goose '%s' seems to be dead.\n",
-                                  gooseUID);
-                ex.printStackTrace();
-            }
-        } else {
-            System.out.printf("BridgeBoss.updateGoose(): goose '%s' not found.\n", gooseUID);
-        }
+    private String jsRegisterGoose(Goose goose) {
+        JSObject boss = (JSObject) document.eval("gaggle.boss");
+        return boss.call("registerWithProxy", new Object[] { goose }).toString();
+    }
+    private String[] jsGetGooseNames() {
+        JSObject boss = (JSObject) document.eval("gaggle.boss");
+        return (String[]) boss.call("getGooseNames", new Object[0]);
+    }
+    private String[] jsBroadcastNamelist(String source, String target, Namelist namelist) {
+        JSObject boss = (JSObject) document.eval("gaggle.boss");
+        return (String[]) boss.call("broadcastNamelist", new Object[] { source, target, namelist });
     }
 
     // **********************************************************************
@@ -79,27 +71,17 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
     // registration
     public String[] getGooseNames() {
         System.out.println("getGooseNames()");
-        return geese.keySet().toArray(new String[0]);
+        return jsGetGooseNames();
     }
     public String renameGoose(String oldName, String newName) {
         System.out.printf("renameGoose from '%s' to '%s'\n", oldName, newName);
         return newName;
     }
     public String register(Goose goose) throws RemoteException {
-        // 1. call register(goose) on JS side, returning an unique identifier
-        String gooseBaseName = goose.getName();
-        String uniqueName = jsCreateProxyFor(gooseBaseName);
-        // 2. put the goose into the map, using that identifier
-        System.out.printf("register() goose '%s' with unique name '%s'\n", gooseBaseName, uniqueName);
-        geese.put(uniqueName, goose);
-        // update the list of current connected geese and inform them about the
-        // updated list
-        //goose.update(getGooseNames());
-        return goose.getName();
+        return jsRegisterGoose(goose);
     }
     public void unregister(String gooseUID) {
         System.out.printf("unregister() goose '%s'\n", gooseUID);
-        geese.remove(gooseUID);
         jsUnregister(gooseUID);
         // TODO: this might be a good time to check for unavailable RMI geese
     }
@@ -108,20 +90,19 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
     // the desktop applications and we won't delegate to JsBoss here.
     public void show(String gooseUID) throws RemoteException {
         System.out.printf("show goose '%s'\n", gooseUID);
-        if (geese.containsKey(gooseUID)) geese.get(gooseUID).doShow();
     }
     public void hide(String gooseUID) throws RemoteException {
         System.out.printf("hide goose '%s'\n", gooseUID);
-        if (geese.containsKey(gooseUID)) geese.get(gooseUID).doHide();
     }
     public void terminate(String gooseUID) throws RemoteException {
         System.out.printf("terminate goose '%s'\n", gooseUID);
+        /*
         try {
             if (geese.containsKey(gooseUID)) geese.get(gooseUID).doExit();
         } catch (java.rmi.UnmarshalException ignore) {
             // an exception that can occasionally happen and is non-critical
             System.out.println("UnmarshalException caught on terminate goose (ignored)");
-        }
+            }*/
     }
 
     // broadcasting
@@ -139,5 +120,7 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
     }
     public void broadcastNamelist(String source, String target, Namelist namelist) {
         System.out.printf("broadcastNamelist() from '%s' to '%s'\n", source, target);
+        jsBroadcastNamelist(source, target, namelist);
+        System.out.println("broadcast success !!");
     }
 }

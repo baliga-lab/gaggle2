@@ -14,6 +14,7 @@ gaggle.GooseProxy = function(bridgeBoss, wrappedGoose) {
     this.getName = function() { return wrappedGoose.getName(); };
     this.setName = function(newName) { wrappedGoose.setName(newName); };
     this.update = function(currentGooseIds) { wrappedGoose.update(currentGooseIds); };
+    this.handleNamelist = function(source, namelist) { wrappedGoose.handleNamelist(source, namelist); };
 };
 
 // all geese have the method getName()/setName()
@@ -59,15 +60,19 @@ gaggle.Boss = function(bridgeBoss) {
         return this.register(new gaggle.GooseProxy(bridgeBoss, goose));
     };
 
+    function updateGeese() {
+        for (var i = 0; i < gooseUIDs.length; i++) {
+            gooseMap[gooseUIDs[i]].update(gooseUIDs);
+        }
+    }
+
     // service interface
     this.register = function(goose) {
         var uniqueName = uniqueNameFor(goose.getName());
         goose.setName(uniqueName);
         gooseUIDs[gooseUIDs.length] = uniqueName;
         gooseMap[uniqueName] = goose;
-        for (var i = 0; i < gooseUIDs.length; i++) {
-            gooseMap[gooseUIDs[i]].update(gooseUIDs);
-        }
+        updateGeese();
         this.log('boss', 'registered goose with name: ' + goose.getName());
         return uniqueName;
     };
@@ -75,8 +80,24 @@ gaggle.Boss = function(bridgeBoss) {
         gooseMap[gooseId] = undefined;
         var index = gooseUIDs.indexOf(gooseId);
         if (index >= 0) { gooseUIDs.splice(index, 1); }
+        updateGeese();
         this.log('boss', 'unregistered goose with id: ' + gooseId);
     };
+    this.broadcastNamelist = function(source, target, namelist) {
+        this.log('boss', 'broadcastNamelist(), source = ' + source + ' target: ' + target);
+        if (target === 'Boss') {
+            this.log('boss', 'this is a broadcast');
+            // broadcast
+            for (var i = 0; i < gooseUIDs.length; i++) {
+                gooseMap[gooseUIDs[i]].handleNamelist(source, namelist);
+            }
+        } else {
+            this.log('boss', 'this is a unicast');
+            // unicast
+            gooseMap[target].handleNamelist(source, namelist);
+        }
+    };
+    
     this.exists = function(gooseId) {
         return gooseMap[gooseId] !== undefined;
     };

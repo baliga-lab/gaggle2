@@ -24,6 +24,7 @@ package org.systemsbiology.gaggle.core.datatypes;
 import java.io.*;
 
 public class Interaction implements Serializable {
+    private static final long serialVersionUID = -3634738795512456706L;
     private String source;
     private String target;
     private String interactionType;

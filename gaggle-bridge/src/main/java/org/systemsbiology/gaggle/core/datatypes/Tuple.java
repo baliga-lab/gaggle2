@@ -81,6 +81,7 @@ import java.io.Serializable;
  * @see Single
  */
 public class Tuple implements Serializable {
+    private static final long serialVersionUID = -3549370084717929585L;
     private List<Single> singleList = null;
     private String name;
 

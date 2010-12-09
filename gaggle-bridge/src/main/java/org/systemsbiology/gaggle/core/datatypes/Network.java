@@ -14,6 +14,9 @@ import java.util.*;
  * Encapsulates the notion of a network graph.
  */
 public class Network implements GaggleData {
+    
+    // we should keep the serialVersionUID fixed to prevent incompatililities
+    private static final long serialVersionUID = 4432411298944530810l;
 
     private List<Interaction> interactionList = new ArrayList<Interaction>();
     private Map<String, HashMap<String, Object>> nodeAttributes =

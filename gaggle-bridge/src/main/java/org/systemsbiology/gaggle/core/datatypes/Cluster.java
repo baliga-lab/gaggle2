@@ -4,6 +4,7 @@ package org.systemsbiology.gaggle.core.datatypes;
  * An object encapsulating the notion "these items (genes, proteins, etc.) are interesting in these conditions".
  */
 public class Cluster implements GaggleData {
+    private static final long serialVersionUID = -8609321165847299694L;
     private String name;
     private String species;
     private String[] rowNames;

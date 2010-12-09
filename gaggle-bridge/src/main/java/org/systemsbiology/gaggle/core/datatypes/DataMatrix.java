@@ -20,6 +20,7 @@ import java.io.*;
 
 
 public class DataMatrix implements GaggleData {
+    private static final long serialVersionUID = -3106528785970983027L;
     private String name;
     private Tuple metadata;
     private String rowTitlesTitle = "DataMatrix";

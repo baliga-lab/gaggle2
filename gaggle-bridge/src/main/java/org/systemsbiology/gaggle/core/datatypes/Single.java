@@ -22,7 +22,7 @@ import java.io.Serializable;
  * @see Tuple
  */
 public class Single implements Serializable {
-
+    private static final long serialVersionUID = -8076225086993871814L;
     private String name;
     private Serializable value;
 

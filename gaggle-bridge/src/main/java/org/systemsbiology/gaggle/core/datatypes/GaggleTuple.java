@@ -17,6 +17,7 @@ package org.systemsbiology.gaggle.core.datatypes;
  * objects, as the GaggleData interface requires one for metadata.
  */
 public class GaggleTuple implements GaggleData {
+    private static final long serialVersionUID = -2191567353933816076L;
     private String name;
     private String species;
     private Tuple data = new Tuple();

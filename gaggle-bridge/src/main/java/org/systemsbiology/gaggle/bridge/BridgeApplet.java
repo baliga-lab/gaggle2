@@ -57,14 +57,6 @@ public class BridgeApplet extends JApplet {
         return bossWasBound;
     }
 
-    public void updateGoose(String gooseUID, String[] currentNames) {
-        if (boss != null) {
-            boss.updateGoose(gooseUID, currentNames);
-        } else {
-            System.out.println("WARNING: Boss does not exist (BridgeApplet.updateGoose())");
-        }
-    }
-
     /** {@inheritDoc} */
     @Override public void destroy() {
         System.out.println("BridgeApplet.destroy()");

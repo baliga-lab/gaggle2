@@ -5,6 +5,7 @@ package org.systemsbiology.gaggle.core.datatypes;
  * A list of identifiers.
  */
 public class Namelist implements GaggleData {
+    private static final long serialVersionUID = 7315981527261181784L;
     private String name;
     private String species;
     private String[] names;
