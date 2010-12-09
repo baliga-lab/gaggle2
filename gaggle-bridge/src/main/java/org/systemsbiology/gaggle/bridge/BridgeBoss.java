@@ -60,9 +60,13 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
         JSObject boss = (JSObject) document.eval("gaggle.boss");
         return (String[]) boss.call("getGooseNames", new Object[0]);
     }
-    private String[] jsBroadcastNamelist(String source, String target, Namelist namelist) {
+    private void jsBroadcastNamelist(String source, String target, Namelist namelist) {
         JSObject boss = (JSObject) document.eval("gaggle.boss");
-        return (String[]) boss.call("broadcastNamelist", new Object[] { source, target, namelist });
+        boss.call("broadcastNamelist", new Object[] { source, target, namelist });
+    }
+    private void jsBroadcastNetwork(String source, String target, Network network) {
+        JSObject boss = (JSObject) document.eval("gaggle.boss");
+        boss.call("broadcastNetwork", new Object[] { source, target, network });
     }
 
     // **********************************************************************
@@ -108,6 +112,8 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
     // broadcasting
     public void broadcastNetwork(String source, String target, Network network) {
         System.out.printf("broadcastNetwork() from '%s' to '%s'\n", source, target);
+        jsBroadcastNetwork(source, target, network);
+        System.out.println("broadcast success !!");
     }
     public void broadcastCluster(String source, String target, Cluster cluster) {
         System.out.printf("broadcastCluster() from '%s' to '%s'\n", source, target);

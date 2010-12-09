@@ -15,6 +15,7 @@ gaggle.GooseProxy = function(bridgeBoss, wrappedGoose) {
     this.setName = function(newName) { wrappedGoose.setName(newName); };
     this.update = function(currentGooseIds) { wrappedGoose.update(currentGooseIds); };
     this.handleNamelist = function(source, namelist) { wrappedGoose.handleNamelist(source, namelist); };
+    this.handleNetwork = function(source, network) { wrappedGoose.handleNetwork(source, network); };
 };
 
 // all geese have the method getName()/setName()
@@ -86,15 +87,25 @@ gaggle.Boss = function(bridgeBoss) {
     this.broadcastNamelist = function(source, target, namelist) {
         this.log('boss', 'broadcastNamelist(), source = ' + source + ' target: ' + target);
         if (target === 'Boss') {
-            this.log('boss', 'this is a broadcast');
-            // broadcast
             for (var i = 0; i < gooseUIDs.length; i++) {
-                gooseMap[gooseUIDs[i]].handleNamelist(source, namelist);
+                if (gooseUIDs[i] != source) {
+                    gooseMap[gooseUIDs[i]].handleNamelist(source, namelist);
+                }
             }
         } else {
-            this.log('boss', 'this is a unicast');
-            // unicast
             gooseMap[target].handleNamelist(source, namelist);
+        }
+    };
+    this.broadcastNetwork = function(source, target, network) {
+        this.log('boss', 'broadcastNetwork(), source = ' + source + ' target: ' + target);
+        if (target === 'Boss') {
+            for (var i = 0; i < gooseUIDs.length; i++) {
+                if (gooseUIDs[i] != source) {
+                    gooseMap[gooseUIDs[i]].handleNetwork(source, network);
+                }
+            }
+        } else {
+            gooseMap[target].handleNetwork(source, network);
         }
     };
     
