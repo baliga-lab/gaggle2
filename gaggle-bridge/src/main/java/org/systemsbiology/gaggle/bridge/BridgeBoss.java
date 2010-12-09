@@ -1,3 +1,12 @@
+/*
+ * BridgeBoss.java
+ * Copyright (C) 2010 by Institute for Systems Biology,
+ * Seattle, Washington, USA.  All rights reserved.
+ *
+ * This source code is distributed under the GNU Lesser
+ * General Public License, the text of which is available at:
+ *   http://www.gnu.org/copyleft/lesser.html
+ */
 package org.systemsbiology.gaggle.bridge;
 
 import java.rmi.server.UnicastRemoteObject;
@@ -12,6 +21,16 @@ import org.systemsbiology.gaggle.core.datatypes.*;
 import java.util.Map;
 import java.util.HashMap;
 
+/**
+ * BridgeBoss is a remote service that keeps track of the Java Desktop side of Gaggle.
+ * It pretends to be a Boss, but delegates broadcasting and registration to a Javascript
+ * implementation which is contained in the same web page as the applet this boss is started
+ * from.
+ * The Javascript boss has to be available under JS_BOSS, so LiveConnect can call methods
+ * on it.
+ * BridgeBoss keeps a map of all geese that were registered through RMI and only knows about
+ * these in order to detect unavailable services and update the list in JsBoss.
+ */
 public class BridgeBoss extends UnicastRemoteObject implements Boss {
 
     private static final String JS_BOSS = "gaggle.boss";
@@ -38,6 +57,23 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
     }
 
     // **********************************************************************
+    // **** LiveConnect interface
+    // **********************************************************************
+    public void updateGoose(String gooseUID, String[] currentNames) {
+        if (geese.containsKey(gooseUID)) {
+            try {
+                geese.get(gooseUID).update(currentNames);
+            } catch (RemoteException ex) {
+                System.out.printf("BridgeBoss.updateGoose(): goose '%s' seems to be dead.\n",
+                                  gooseUID);
+                ex.printStackTrace();
+            }
+        } else {
+            System.out.printf("BridgeBoss.updateGoose(): goose '%s' not found.\n", gooseUID);
+        }
+    }
+
+    // **********************************************************************
     // **** Public interface implementation
     // **********************************************************************
     // registration
@@ -58,23 +94,34 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
         geese.put(uniqueName, goose);
         // update the list of current connected geese and inform them about the
         // updated list
-        goose.update(getGooseNames());
+        //goose.update(getGooseNames());
         return goose.getName();
     }
-    public void unregister(String gooseName) {
-        System.out.printf("unregister() goose '%s'\n", gooseName);
-        jsUnregister(gooseName);
+    public void unregister(String gooseUID) {
+        System.out.printf("unregister() goose '%s'\n", gooseUID);
+        geese.remove(gooseUID);
+        jsUnregister(gooseUID);
+        // TODO: this might be a good time to check for unavailable RMI geese
     }
     
-    // application control
-    public void show(String gooseName) {
-        System.out.printf("show goose '%s'\n", gooseName);
+    // Application control: These methods really only apply to
+    // the desktop applications and we won't delegate to JsBoss here.
+    public void show(String gooseUID) throws RemoteException {
+        System.out.printf("show goose '%s'\n", gooseUID);
+        if (geese.containsKey(gooseUID)) geese.get(gooseUID).doShow();
     }
-    public void hide(String gooseName) {
-        System.out.printf("hide goose '%s'\n", gooseName);
+    public void hide(String gooseUID) throws RemoteException {
+        System.out.printf("hide goose '%s'\n", gooseUID);
+        if (geese.containsKey(gooseUID)) geese.get(gooseUID).doHide();
     }
-    public void terminate(String gooseName) {
-        System.out.printf("terminate goose '%s'\n", gooseName);
+    public void terminate(String gooseUID) throws RemoteException {
+        System.out.printf("terminate goose '%s'\n", gooseUID);
+        try {
+            if (geese.containsKey(gooseUID)) geese.get(gooseUID).doExit();
+        } catch (java.rmi.UnmarshalException ignore) {
+            // an exception that can occasionally happen and is non-critical
+            System.out.println("UnmarshalException caught on terminate goose (ignored)");
+        }
     }
 
     // broadcasting

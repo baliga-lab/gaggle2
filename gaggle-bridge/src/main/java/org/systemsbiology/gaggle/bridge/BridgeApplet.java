@@ -1,3 +1,12 @@
+/*
+ * BridgeApplet.java
+ * Copyright (C) 2010 by Institute for Systems Biology,
+ * Seattle, Washington, USA.  All rights reserved.
+ *
+ * This source code is distributed under the GNU Lesser
+ * General Public License, the text of which is available at:
+ *   http://www.gnu.org/copyleft/lesser.html
+ */
 package org.systemsbiology.gaggle.bridge;
 
 import javax.swing.*;
@@ -15,8 +24,10 @@ import java.rmi.server.UnicastRemoteObject;
  * are relayed to the Javascript based Boss contained in the web page this applet
  * was started from.
  * An RMI registry is created on localhost, port RMI_PORT, in case it exists, the boss will
- * registered with the existing Registry.
- * Note: The applet <b>must</b> be signed in order to use RMI functionality.
+ * registered with the existing Registry, if SERVICE_NAME is not bound. If it is bound, it
+ * is assumed, that the service was already started somewhere else (this could be the old
+ * Boss or the start page was opened twice).
+ * <b>Note:</b> The applet <b>must</b> be signed in order to use RMI functionality.
  */
 public class BridgeApplet extends JApplet {
 
@@ -41,13 +52,26 @@ public class BridgeApplet extends JApplet {
         }
     }
 
-    public boolean bossWasBound() { return bossWasBound; }
+    public boolean bossWasBound() {
+        System.out.println("calling bossWasBound()");
+        return bossWasBound;
+    }
 
+    public void updateGoose(String gooseUID, String[] currentNames) {
+        if (boss != null) {
+            boss.updateGoose(gooseUID, currentNames);
+        } else {
+            System.out.println("WARNING: Boss does not exist (BridgeApplet.updateGoose())");
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public void destroy() {
         System.out.println("BridgeApplet.destroy()");
         shutdownCurrentBoss();
     }
 
+    /** {@inheritDoc} */
     @Override public void start() {
         JSObject win = JSObject.getWindow(this);
         JSObject doc = (JSObject) win.getMember("document");
@@ -70,9 +94,7 @@ public class BridgeApplet extends JApplet {
             } catch (java.rmi.AlreadyBoundException ex) { 
                 System.out.println("Gaggle Boss already exists (probably GUI Boss ?)");
             } catch (MalformedURLException ex) {
-                System.out.println("error, reason: ");
-                ex.printStackTrace();
-            } catch (RemoteException ex) {
+                // should not happen
                 System.out.println("error, reason: ");
                 ex.printStackTrace();
             }
@@ -83,12 +105,13 @@ public class BridgeApplet extends JApplet {
     }
 
     // unused Applet lifecycle functions, put in here for diagnostics reasons
+    /** {@inheritDoc} */
     @Override public void init() {
         System.out.println("BridgeApplet.init()");
     }
 
+    /** {@inheritDoc} */
     @Override public void stop() {
         System.out.println("BridgeApplet.stop()");
     }
-
 }
