@@ -18,9 +18,6 @@ import org.systemsbiology.gaggle.core.Boss;
 import org.systemsbiology.gaggle.core.Goose;
 import org.systemsbiology.gaggle.core.datatypes.*;
 
-import java.util.Map;
-import java.util.HashMap;
-
 /**
  * BridgeBoss is a remote service that keeps track of the Java Desktop side of Gaggle.
  * It pretends to be a Boss, but delegates broadcasting and registration to a Javascript
@@ -34,9 +31,7 @@ import java.util.HashMap;
 public class BridgeBoss extends UnicastRemoteObject implements Boss {
 
     private static final String JS_BOSS = "gaggle.boss";
-
     private JSObject document;
-    //private Map<String, Goose> geese = new HashMap<String, Goose>();
 
     public BridgeBoss(JSObject doc) throws RemoteException {
         super();
