@@ -11,27 +11,29 @@
 var gaggle = {};
 
 gaggle.GooseProxy = function(bridgeBoss, uniqueId) {
-    this.getId = function() { return uniqueId; };
     this.getName = function() { return uniqueId; }
     this.update = function(currentGooseIds) {
         bridgeBoss.updateGoose(uniqueId, currentGooseIds);
     };
 };
 
-// all geese have the method getId()
-// and sendMessage()
-
+// all geese have the method getName()/setName()
 gaggle.Boss = function(bridgeBoss) {
     var gooseUIDs = [];
     var gooseMap = [];
     var log = []; // a log of messages
 
-    this.uniqueNameFor = function(baseName) {
+    /*
+     * A simple uniquification function for goose names based on NameUniquifier in GuiBoss.
+     * We assume that all unique names are in the form <baseName>-<counter>, so we can
+     * use a simple regexp to find the maximum count for a base name.
+     */
+    function uniqueNameFor(baseName) {
         var maxCount = 0;
         var regexp = new RegExp(baseName + '-(\\d)+');
 
         for (var i = 0; i < gooseUIDs.length; i++) {
-            if (gooseUIDs[i].match(regExp)) {
+            if (gooseUIDs[i].match(regexp)) {
                 var comps = gooseUIDs[i].split('-');
                 var count = parseInt(comps[comps.length - 1]);
                 if (count > maxCount) maxCount = count;
@@ -39,7 +41,7 @@ gaggle.Boss = function(bridgeBoss) {
         }
         var uniqueCount = maxCount + 1;
         return (uniqueCount < 10) ? baseName + '-0' + uniqueCount : baseName + '-' + uniqueCount;
-    };
+    }
     /*
      * A simple logging function, for diagnostic purposes. Using this method assumes that
      * jQuery >= 1.4.3 is used within the page
@@ -55,22 +57,21 @@ gaggle.Boss = function(bridgeBoss) {
         $('#gaggle-log-text').replaceWith('<div id="gaggle-log-text">' + logText + '</div>');
     };
     this.createProxy = function (gooseBaseName) {
-        var uniqueId = gooseBaseName;
-        var proxy = new gaggle.GooseProxy(bridgeBoss, uniqueId);
-        this.log('boss', 'created proxy with id: ' + uniqueId);
-        this.register(proxy);
-        return uniqueId;
+        var proxy = new gaggle.GooseProxy(bridgeBoss, gooseBaseName);
+        this.log('boss', 'created proxy with id: ' + gooseBaseName);
+        return this.register(proxy);
     };
 
     // service interface
     this.register = function(goose) {
-        if (this.exists(goose.getName())) throw "goose with id '" + goose.getName() + "' exists already.";
-        gooseUIDs[gooseUIDs.length] = goose.getName();
-        gooseMap[goose.getName()] = goose;
+        var uniqueName = uniqueNameFor(goose.getName());
+        gooseUIDs[gooseUIDs.length] = uniqueName;
+        gooseMap[uniqueName] = goose;
         for (var i = 0; i < gooseUIDs.length; i++) {
-            gooseMap[goose.getName()].update(gooseUIDs);
+            gooseMap[gooseUIDs[i]].update(gooseUIDs);
         }
         this.log('boss', 'registered goose with name: ' + goose.getName());
+        return uniqueName;
     };
     this.unregister = function(gooseId) {
         gooseMap[gooseId] = undefined;

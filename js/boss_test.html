@@ -29,9 +29,8 @@ QUnit.testStart = function(name) {
 };
 
 // A mock Goose class for testing
-var MockGoose = function(name, uid) {
+var MockGoose = function(name) {
   var knownNames = [];
-  this.getId = function() { return uid; };
   this.getName = function() { return name; };
   this.update = function(currentNames) {
     knownNames = currentNames;
@@ -42,40 +41,40 @@ var MockGoose = function(name, uid) {
 // This is our messaging router, our geese are looking for it
 $(document).ready(function() {
   test("Adding a Goose", function() {
-    var goose = new MockGoose('goose', 'goose');
-    gaggle.boss.register(goose);
-    ok(gaggle.boss.exists('goose'), "goose 'goose' should exist");
-    ok(!gaggle.boss.exists('goose2'), "goose 'goose2' should not exist");
+    var goose = new MockGoose('goose');
+    var uniqueName = gaggle.boss.register(goose);
+    ok(gaggle.boss.exists(uniqueName), "goose 'goose' should exist");
     equal(1, gaggle.boss.numGeese());
     equal(1, goose.currentNames().length);
-    raises(function()  {
-      gaggle.boss.register(new MockGoose('goose'));
-    }, "adding goose with existing id should raise an exception");
-    equal(1, gaggle.boss.numGeese());
+    equal(uniqueName, 'goose-01');
   });
-  test("Register 2 Geese", function() {
-    var goose1 = new MockGoose('goose1', 'goose1');
-    var goose2 = new MockGoose('goose2', 'goose2');
+  test("Adding 2 geese with the same name", function() {
+    var uniqueName1 = gaggle.boss.register(new MockGoose('goose'));
+    var uniqueName2 = gaggle.boss.register(new MockGoose('goose'));
+    equal(uniqueName1, 'goose-01');
+    equal(uniqueName2, 'goose-02');
+    equal(2, gaggle.boss.numGeese());
+  });
+  test("Register 2 different Geese", function() {
+    var goose1 = new MockGoose('goose1');
+    var goose2 = new MockGoose('goose2');
     gaggle.boss.register(goose1);
     gaggle.boss.register(goose2);
+
     equal(2, gaggle.boss.numGeese());
     equal(2, goose1.currentNames().length);
     equal(2, goose2.currentNames().length);
   });
   test("Removing a registered Goose", function() {
-    gaggle.boss.register(new MockGoose('goose', 'goose'));
-    gaggle.boss.unregister('goose');
+    var uniqueName = gaggle.boss.register(new MockGoose('goose'));
+    gaggle.boss.unregister(uniqueName);
     equal(0, gaggle.boss.numGeese(), 'number of geese should be 0');
-    ok(!gaggle.boss.exists('goose'), "goose 'goose' should not exist");
+    ok(!gaggle.boss.exists(uniqueName), "goose 'goose' should not exist");
   });
   test("Creating a proxy", function() {
     var uniqueName = gaggle.boss.createProxy('aname');
-    equal(uniqueName, 'aname', "unique name should be created");
-    ok(gaggle.boss.exists(uniqueName));
-  });
-  test("Creating a unique name", function() {
-    var uniqueName = gaggle.boss.uniqueNameFor('aname');
     equal(uniqueName, 'aname-01', "unique name should be created");
+    ok(gaggle.boss.exists(uniqueName));
   });
 });
     </script>
