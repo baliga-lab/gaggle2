@@ -30,8 +30,10 @@ QUnit.testStart = function(name) {
 
 // A mock Goose class for testing
 var MockGoose = function(name) {
+  var gooseName = name;
   var knownNames = [];
-  this.getName = function() { return name; };
+  this.getName = function() { return gooseName; };
+  this.setName = function(newName) { gooseName = newName; };
   this.update = function(currentNames) {
     knownNames = currentNames;
   };
@@ -47,6 +49,7 @@ $(document).ready(function() {
     equal(1, gaggle.boss.numGeese());
     equal(1, goose.currentNames().length);
     equal(uniqueName, 'goose-01');
+    equal(uniqueName, goose.getName());
   });
   test("Adding 2 geese with the same name", function() {
     var uniqueName1 = gaggle.boss.register(new MockGoose('goose'));
@@ -71,9 +74,10 @@ $(document).ready(function() {
     equal(0, gaggle.boss.numGeese(), 'number of geese should be 0');
     ok(!gaggle.boss.exists(uniqueName), "goose 'goose' should not exist");
   });
-  test("Creating a proxy", function() {
-    var uniqueName = gaggle.boss.createProxy('aname');
-    equal(uniqueName, 'aname-01', "unique name should be created");
+  test("Register with a proxy", function() {
+    var goose = new MockGoose('goose');
+    var uniqueName = gaggle.boss.registerWithProxy(goose);
+    equal(uniqueName, goose.getName(), "unique name should be created");
     ok(gaggle.boss.exists(uniqueName));
   });
 });

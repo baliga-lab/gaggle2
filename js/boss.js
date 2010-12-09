@@ -10,11 +10,10 @@
  */
 var gaggle = {};
 
-gaggle.GooseProxy = function(bridgeBoss, uniqueId) {
-    this.getName = function() { return uniqueId; }
-    this.update = function(currentGooseIds) {
-        bridgeBoss.updateGoose(uniqueId, currentGooseIds);
-    };
+gaggle.GooseProxy = function(bridgeBoss, wrappedGoose) {
+    this.getName = function() { return wrappedGoose.getName(); };
+    this.setName = function(newName) { wrappedGoose.setName(newName); };
+    this.update = function(currentGooseIds) { wrappedGoose.update(currentGooseIds); };
 };
 
 // all geese have the method getName()/setName()
@@ -56,15 +55,14 @@ gaggle.Boss = function(bridgeBoss) {
         }
         $('#gaggle-log-text').replaceWith('<div id="gaggle-log-text">' + logText + '</div>');
     };
-    this.createProxy = function (gooseBaseName) {
-        var proxy = new gaggle.GooseProxy(bridgeBoss, gooseBaseName);
-        this.log('boss', 'created proxy with id: ' + gooseBaseName);
-        return this.register(proxy);
+    this.registerWithProxy = function (goose) {
+        return this.register(new gaggle.GooseProxy(bridgeBoss, goose));
     };
 
     // service interface
     this.register = function(goose) {
         var uniqueName = uniqueNameFor(goose.getName());
+        goose.setName(uniqueName);
         gooseUIDs[gooseUIDs.length] = uniqueName;
         gooseMap[uniqueName] = goose;
         for (var i = 0; i < gooseUIDs.length; i++) {
