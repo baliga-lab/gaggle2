@@ -84,31 +84,33 @@ gaggle.Boss = function(bridgeBoss) {
         updateGeese();
         this.log('boss', 'unregistered goose with id: ' + gooseId);
     };
-    this.broadcastNamelist = function(source, target, namelist) {
-        this.log('boss', 'broadcastNamelist(), source = ' + source + ' target: ' + target);
+    this.broadcast = function(method, source, target, data) {
+        this.log('boss', 'broadcast(), method = ' + method + ', source = ' + source + ' target: ' + target);
         if (target === 'Boss') {
             for (var i = 0; i < gooseUIDs.length; i++) {
                 if (gooseUIDs[i] != source) {
-                    gooseMap[gooseUIDs[i]].handleNamelist(source, namelist);
+                    gooseMap[gooseUIDs[i]][method](source, data);
                 }
             }
         } else {
-            gooseMap[target].handleNamelist(source, namelist);
+            gooseMap[target][method](source, data);
         }
+    };
+    this.broadcastNamelist = function(source, target, namelist) {
+        this.broadcast('handleNamelist', source, target, namelist);
     };
     this.broadcastNetwork = function(source, target, network) {
-        this.log('boss', 'broadcastNetwork(), source = ' + source + ' target: ' + target);
-        if (target === 'Boss') {
-            for (var i = 0; i < gooseUIDs.length; i++) {
-                if (gooseUIDs[i] != source) {
-                    gooseMap[gooseUIDs[i]].handleNetwork(source, network);
-                }
-            }
-        } else {
-            gooseMap[target].handleNetwork(source, network);
-        }
+        this.broadcast('handleNetwork', source, target, network);
     };
-    
+    this.broadcastCluster = function(source, target, cluster) {
+        this.broadcast('handleCluster', source, target, cluster);
+    };
+    this.broadcastTuple = function(source, target, tuple) {
+        this.broadcast('handleTuple', source, target, tuple);
+    };
+    this.broadcastMatrix = function(source, target, matrix) {
+        this.broadcast('handleMatrix', source, target, matrix);
+    };
     this.exists = function(gooseId) {
         return gooseMap[gooseId] !== undefined;
     };

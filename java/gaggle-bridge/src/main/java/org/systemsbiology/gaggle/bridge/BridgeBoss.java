@@ -63,6 +63,18 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
         JSObject boss = (JSObject) document.eval("gaggle.boss");
         boss.call("broadcastNetwork", new Object[] { source, target, network });
     }
+    private void jsBroadcastCluster(String source, String target, Cluster cluster) {
+        JSObject boss = (JSObject) document.eval("gaggle.boss");
+        boss.call("broadcastCluster", new Object[] { source, target, cluster });
+    }
+    private void jsBroadcastTuple(String source, String target, GaggleTuple tuple) {
+        JSObject boss = (JSObject) document.eval("gaggle.boss");
+        boss.call("broadcastTuple", new Object[] { source, target, tuple });
+    }
+    private void jsBroadcastMatrix(String source, String target, DataMatrix matrix) {
+        JSObject boss = (JSObject) document.eval("gaggle.boss");
+        boss.call("broadcastMatrix", new Object[] { source, target, matrix });
+    }
 
     // **********************************************************************
     // **** Public interface implementation
@@ -112,12 +124,18 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
     }
     public void broadcastCluster(String source, String target, Cluster cluster) {
         System.out.printf("broadcastCluster() from '%s' to '%s'\n", source, target);
+        jsBroadcastCluster(source, target, cluster);
+        System.out.println("broadcast success !!");
     }
     public void broadcastTuple(String source, String target, GaggleTuple tuple) {
         System.out.printf("broadcastTuple() from '%s' to '%s'\n", source, target);
+        jsBroadcastTuple(source, target, tuple);
+        System.out.println("broadcast success !!");
     }
     public void broadcastMatrix(String source, String target, DataMatrix matrix) {
         System.out.printf("broadcastMatrix() from '%s' to '%s'\n", source, target);
+        jsBroadcastMatrix(source, target, matrix);
+        System.out.println("broadcast success !!");
     }
     public void broadcastNamelist(String source, String target, Namelist namelist) {
         System.out.printf("broadcastNamelist() from '%s' to '%s'\n", source, target);
