@@ -32,11 +32,15 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
 
     private static final String JS_BOSS = "gaggle.boss";
     private JSObject document;
+    private boolean isMaster;
 
     public BridgeBoss(JSObject doc) throws RemoteException {
         super();
         this.document = doc;
+        this.isMaster = true;
     }
+    public boolean isMaster() { return isMaster; }
+    public void setIsMaster(boolean flag) { isMaster = flag; }
 
     // **********************************************************************
     // **** Functions that call the Javascript side via LiveConnect
