@@ -34,11 +34,11 @@ public class BridgeApplet extends JApplet {
     private static final String SERVICE_NAME = "gaggle";
     private static final int RMI_PORT = 1099;
     private BridgeBoss boss;
-    private boolean bossWasBound;
+    public BridgeBoss getBoss() { return boss; }
 
     private void shutdownCurrentBoss() {
         try {
-            if (bossWasBound) {
+            if (boss != null && boss.isMaster()) {
                 Naming.unbind(SERVICE_NAME);
                 boolean result = UnicastRemoteObject.unexportObject(boss, true);
                 if (result) {
@@ -49,12 +49,9 @@ public class BridgeApplet extends JApplet {
             }
         } catch (Exception ex) {
             ex.printStackTrace();
+        } finally {
+            boss = null;
         }
-    }
-
-    public boolean bossWasBound() {
-        System.out.println("calling bossWasBound()");
-        return bossWasBound;
     }
 
     /** {@inheritDoc} */
@@ -63,8 +60,11 @@ public class BridgeApplet extends JApplet {
         shutdownCurrentBoss();
     }
 
-    /** {@inheritDoc} */
-    @Override public void start() {
+    /**
+     * Initialize the RMI bridge. We let the client initialize the bridge expicitly
+     * to avoid unnecessary thread synchronization.
+     */
+    public void initBridge() {
         JSObject win = JSObject.getWindow(this);
         JSObject doc = (JSObject) win.getMember("document");
         try {
@@ -76,11 +76,9 @@ public class BridgeApplet extends JApplet {
                 System.out.println("registry exists, we are using the existing one.");
             }
             try {
-                bossWasBound = false;
                 System.out.print("register bridge boss service...");
                 boss = new BridgeBoss(doc);
                 Naming.bind(SERVICE_NAME, boss);
-                bossWasBound = true;
                 System.out.println("done.");
                 System.out.println("Gaggle Boss Bridge ready to go !");
             } catch (java.rmi.AlreadyBoundException ex) { 
@@ -94,6 +92,11 @@ public class BridgeApplet extends JApplet {
             // any errors we did not think about
             ex.printStackTrace();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void start() {
+        System.out.println("BridgeApplet.start()");
     }
 
     // unused Applet lifecycle functions, put in here for diagnostics reasons
