@@ -11,6 +11,7 @@ package org.systemsbiology.gaggle.bridge;
 
 import javax.swing.*;
 import netscape.javascript.*;
+import java.security.*;
 
 import java.net.MalformedURLException;
 import java.rmi.RemoteException;
@@ -61,10 +62,24 @@ public class BridgeApplet extends JApplet {
     }
 
     /**
+     * We are initializing from a Javascript function, so we need to do this in
+     * privileged mode to prevent the SecurityManager complaining about the
+     * Javascript context on the stack.
+     */
+    public void initBridge() {
+        AccessController.doPrivileged(new PrivilegedAction() {
+                public Object run() {
+                    doInitBridge();
+                    return null;
+                }
+            });
+    }
+
+    /**
      * Initialize the RMI bridge. We let the client initialize the bridge expicitly
      * to avoid unnecessary thread synchronization.
      */
-    public void initBridge() {
+    private void doInitBridge() {
         JSObject win = JSObject.getWindow(this);
         JSObject doc = (JSObject) win.getMember("document");
         try {
