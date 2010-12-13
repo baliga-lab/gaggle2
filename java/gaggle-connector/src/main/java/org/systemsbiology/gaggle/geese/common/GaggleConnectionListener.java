@@ -2,7 +2,6 @@ package org.systemsbiology.gaggle.geese.common;
 
 import org.systemsbiology.gaggle.core.Boss;
 
-
 /**
  * Interface through which to notify of connection and disconnection events.
  * @author cbare

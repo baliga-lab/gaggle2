@@ -30,10 +30,9 @@ public class RmiGaggleConnector {
      * todo - Make sure this is the correct URL if you update the API.
      * todo - factor this out to the GaggleConstants interface
      */
-
     private Goose goose;
     private Boss boss;
-    final String DEFAULT_HOSTNAME = "localhost";
+    private final static String DEFAULT_HOSTNAME = "localhost";
     String serviceName = "gaggle";
     String hostname = DEFAULT_HOSTNAME;
     String uri = "rmi://" + hostname + "/" + serviceName;
@@ -110,21 +109,17 @@ public class RmiGaggleConnector {
             } else {
                 boss = (Boss)Naming.lookup(uri);
                 
-            }
-            
+            }  
             String gooseName = boss.register(goose);
             goose.setName(gooseName);
             fireConnectionEvent(true);
-        }
-        catch (NullPointerException npe) {
+        } catch (NullPointerException npe) {
             System.out.println("Boss isn't quite ready yet, trying again...");
-            //System.out.println(npe.getMessage());
-        }
-        catch (Exception e) {
+            npe.printStackTrace();
+        } catch (Exception e) {
             if (!autoStartBoss) {
                 System.err.println("failed to connect to gaggle at " + uri + ": " + e.getMessage());
-                if (verbose)
-                    e.printStackTrace();
+                if (verbose) e.printStackTrace();
             }
             boss = null;
             fireConnectionEvent(false);
@@ -147,19 +142,18 @@ public class RmiGaggleConnector {
                 connectToGaggle();
                 this.cancel();
             } catch(ConnectException ce) {
-                //System.out.println("failed: " + ce.getMessage());
+                ce.printStackTrace();
             } catch (ClassNotFoundException cnfe) {
-                //System.out.println("got cnfe");
                 try {
                    connectToGaggle();
-                    this.cancel();
+                   this.cancel();
                 } catch (Exception ex) {
                     System.out.println("exception trying to connect using boss autostart: " + ex.getMessage());
                     ex.printStackTrace();
                 }
             } catch (Exception ex) {
                 //System.out.println("general exception trying to autostart boss: " + ex.getMessage());
-                //ex.printStackTrace();
+                ex.printStackTrace();
             }
         }
     }
@@ -207,7 +201,6 @@ public class RmiGaggleConnector {
             }
             exported = false;
         }
-
         fireConnectionEvent(false);
     }
 
@@ -234,9 +227,7 @@ public class RmiGaggleConnector {
         }
     }
     
-    public synchronized boolean isConnected() {
-        return (boss!=null);
-    }
+    public synchronized boolean isConnected() { return (boss != null); }
 
     /**
      * Determines whether we should try and start a boss if a boss cannot
@@ -247,32 +238,18 @@ public class RmiGaggleConnector {
         this.autoStartBoss = autoStartBoss;
     }
 
-
-    public boolean getAutoStartBoss() {
-        return autoStartBoss;
-    }
-    
+    public boolean getAutoStartBoss() { return autoStartBoss; }
 
     /**
      * @return Boss if connected or null otherwise.
      */
-    public synchronized Boss getBoss() {
-        return boss;
-    }
+    public synchronized Boss getBoss() { return boss; }
 
+    public boolean isVerbose() { return verbose; }
 
-    public boolean isVerbose() {
-        return verbose;
-    }
-
-
-    public void setVerbose(boolean verbose) {
-        this.verbose = verbose;
-    }
-
+    public void setVerbose(boolean verbose) { this.verbose = verbose; }
 
     public void setTimerTimeout(long timerTimeout) {
         this.timerTimeout = timerTimeout;
     }
-
 }

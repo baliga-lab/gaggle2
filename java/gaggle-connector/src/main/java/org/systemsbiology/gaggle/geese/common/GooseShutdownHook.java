@@ -1,5 +1,3 @@
-package org.systemsbiology.gaggle.geese.common;
-
 /*
 * Copyright (C) 2007 by Institute for Systems Biology,
 * Seattle, Washington, USA.  All rights reserved.
@@ -8,6 +6,7 @@ package org.systemsbiology.gaggle.geese.common;
 * General Public License, the text of which is available at:
 *   http://www.gnu.org/copyleft/lesser.html
 */
+package org.systemsbiology.gaggle.geese.common;
 
 /**
  * Provides a shutdown hook to ensure that the boss is notified when
@@ -19,7 +18,7 @@ package org.systemsbiology.gaggle.geese.common;
  * todo - make a boss shutdown hook?
  */
 public class GooseShutdownHook extends Thread {
-    RmiGaggleConnector connector;
+    private RmiGaggleConnector connector;
 
     public GooseShutdownHook(RmiGaggleConnector connector) {
         this.connector = connector;

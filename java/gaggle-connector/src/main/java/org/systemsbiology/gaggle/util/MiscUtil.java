@@ -17,17 +17,13 @@ import java.net.URL;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.util.Arrays;
-import java.util.ArrayList;
 import java.awt.GraphicsConfiguration;
 import java.awt.Toolkit;
-import java.awt.event.ActionListener;
 import javax.swing.JFrame;
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
 import javax.jnlp.BasicService;
 import javax.jnlp.ServiceManager;
-
-import org.systemsbiology.gaggle.core.Boss;
 
 public class MiscUtil {
     public static void placeInCenter(JFrame frame) {
@@ -70,13 +66,9 @@ public class MiscUtil {
         }
     }
     public static String getPage(URL url) throws Exception {
-        int characterCount = 0;
         StringBuilder result = new StringBuilder();
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         int responseCode = urlConnection.getResponseCode();
-        String contentType = urlConnection.getContentType();
-        int contentLength = urlConnection.getContentLength();
-        String contentEncoding = urlConnection.getContentEncoding();
 
         if (responseCode != HttpURLConnection.HTTP_OK)
             throw new IOException ("\nHTTP response code: " + responseCode);
@@ -96,9 +88,7 @@ public class MiscUtil {
      * cleaner and more user-friendly.
      */
     public static void openURL(String url)  {
-        String UNIX_PROTOCOL = "file:";
         String UNIX_PATH = "gnome-moz-remote";
-        String UNIX_FLAG = "-remote openURL";
         String WINDOWS_PATH = "cmd.exe /c start";
         String MAC_PATH = "open";
         String osName = System.getProperty("os.name" );
@@ -152,7 +142,7 @@ public class MiscUtil {
         // this will attempt to set selected item to what it was before.
         // if that item is no longer in the list, it will silently fail
         // and therefore Boss, as the first item, will be selected by default.
-        gooseChooser.setSelectedItem(savedItem);
+        if (savedItem != null) gooseChooser.setSelectedItem(savedItem);
     }
 
     public static int countOccurences(String textToSearch, String pattern) {
