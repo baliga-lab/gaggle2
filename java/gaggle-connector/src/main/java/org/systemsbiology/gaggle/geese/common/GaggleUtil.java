@@ -1,8 +1,5 @@
 package org.systemsbiology.gaggle.geese.common;
 
-import java.util.Arrays;
-
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import org.systemsbiology.gaggle.util.MiscUtil;
 
