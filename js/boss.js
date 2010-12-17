@@ -14,8 +14,13 @@ gaggle.GooseProxy = function(bridgeBoss, wrappedGoose) {
     this.getName = function() { return wrappedGoose.getName(); };
     this.setName = function(newName) { wrappedGoose.setName(newName); };
     this.update = function(currentGooseIds) { wrappedGoose.update(currentGooseIds); };
-    this.handleNamelist = function(source, namelist) { wrappedGoose.handleNamelist(source, namelist); };
-    this.handleNetwork = function(source, network) { wrappedGoose.handleNetwork(source, network); };
+    this.handleNameList = function(source, namelist) {
+        wrappedGoose.handleNameList(source, namelist);
+    };
+
+    this.handleNetwork = function(source, network) {
+        wrappedGoose.handleNetwork(source, network);
+    };
 };
 
 // all geese have the method getName()/setName()
@@ -97,7 +102,7 @@ gaggle.Boss = function(bridgeBoss) {
         }
     };
     this.broadcastNamelist = function(source, target, namelist) {
-        this.broadcast('handleNamelist', source, target, namelist);
+        this.broadcast('handleNameList', source, target, namelist);
     };
     this.broadcastNetwork = function(source, target, network) {
         this.broadcast('handleNetwork', source, target, network);

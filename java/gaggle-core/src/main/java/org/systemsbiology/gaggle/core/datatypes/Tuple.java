@@ -85,7 +85,7 @@ public class Tuple implements Serializable {
     private List<Single> singleList = null;
     private String name;
 
-    public Tuple () {
+    public Tuple() {
         singleList = new ArrayList<Single>();
     }
 

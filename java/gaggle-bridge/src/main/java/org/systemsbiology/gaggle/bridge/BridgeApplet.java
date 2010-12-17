@@ -9,6 +9,8 @@
  */
 package org.systemsbiology.gaggle.bridge;
 
+import java.io.Serializable;
+import java.util.List;
 import javax.swing.*;
 import netscape.javascript.*;
 import java.security.*;
@@ -18,6 +20,8 @@ import java.rmi.RemoteException;
 import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
+
+import org.systemsbiology.gaggle.core.datatypes.*;
 
 /**
  * The BridgeApplet is intended to start an invisible component in the browser
@@ -123,5 +127,31 @@ public class BridgeApplet extends JApplet {
     /** {@inheritDoc} */
     @Override public void stop() {
         System.out.println("BridgeApplet.stop()");
+    }
+
+    // Provide factory methods for all core Gaggle RMI data types.
+    // Creation of Java custom objects seems to be different on different
+    // browsers, so we use the Applet as a portable factory
+    public Single createSingle(String name, Serializable value) {
+        return new Single(name, value);
+    }
+    public Tuple createTuple(String name, List<Single> singleList) {
+        return new Tuple(name, singleList);
+    }
+    public GaggleTuple createGaggleTuple() { return new GaggleTuple(); }
+    public Namelist createNamelist(String name, String species, String[] names) {
+        return new Namelist(name, species, names);
+    }
+    public Cluster createCluster(String name, String species, String[] rowNames,
+                                 String[] colNames) {
+        return new Cluster(name, species, rowNames, colNames);
+    }
+    public Network createNetwork() { return new Network(); }
+    public Interaction createInteraction(String source, String target, String interactionType,
+                                         boolean directed) {
+        return new Interaction(source, target, interactionType, directed);
+    }
+    public DataMatrix createDataMatrix(String uri) {
+        return new DataMatrix(uri);
     }
 }
