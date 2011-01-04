@@ -3,10 +3,10 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.systemsbiology.gaggle</groupId>
-  <artifactId>gaggle-connector</artifactId>
+  <artifactId>gaggle-boss</artifactId>
   <version>1.0</version>
   <packaging>jar</packaging>
-  <name>gaggle-connector</name>
+  <name>gaggle-boss</name>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -37,6 +37,11 @@
       <version>1.9.4.1</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>urbanophile</groupId>
+      <artifactId>java-getopt</artifactId>
+      <version>1.0.9</version>
+    </dependency>
     <!--
     <dependency>
       <groupId>javax.jnlp</groupId>
@@ -48,6 +53,12 @@
     <dependency>
       <groupId>org.systemsbiology.gaggle</groupId>
       <artifactId>gaggle-core</artifactId>
+      <version>1.0</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.systemsbiology.gaggle</groupId>
+      <artifactId>gaggle-connector</artifactId>
       <version>1.0</version>
       <scope>compile</scope>
     </dependency>
@@ -69,6 +80,11 @@
             <descriptors>
               <descriptor>src/main/assembly/src.xml</descriptor>
             </descriptors>
+            <archive>
+              <manifest>
+                <mainClass>org.systemsbiology.gaggle.boss.GuiBoss</mainClass>
+              </manifest>
+            </archive>
           </configuration>
         </plugin>
       </plugins>

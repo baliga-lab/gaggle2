@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.net.URI;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.util.Arrays;
@@ -22,8 +23,7 @@ import java.awt.Toolkit;
 import javax.swing.JFrame;
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
-import javax.jnlp.BasicService;
-import javax.jnlp.ServiceManager;
+import java.awt.Desktop;
 
 public class MiscUtil {
     public static void placeInCenter(JFrame frame) {
@@ -37,22 +37,20 @@ public class MiscUtil {
 
     public static void displayWebPage(String urlString) {
         try {
-            URL url = new URL(urlString);
-            displayWebPage(url);
+            displayWebPage(new URI(urlString));
         } catch (Exception ex0) {
             ex0.printStackTrace();
         }
     }
-    public static void displayWebPage(URL url) {
+    public static void displayWebPage(URI uri) {
         try {
-            BasicService bs = (BasicService) ServiceManager.lookup("javax.jnlp.BasicService");
-            bs.showDocument(url);
-            System.out.println("BasicService url: " + url);
+            Desktop.getDesktop().browse(uri);
         } catch (Exception ex) {
             ex.printStackTrace();
-            openURL(url.toString());
+            openURL(uri.toString());
         }
     }
+
     public static String getPage(String urlString) throws Exception {
         return getPage(new URL(urlString));
     }

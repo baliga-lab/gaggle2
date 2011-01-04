@@ -14,5 +14,6 @@
     <module>gaggle-core</module>
     <module>gaggle-connector</module>
     <module>gaggle-bridge</module>
+    <module>gaggle-boss</module>
   </modules>
 </project>
