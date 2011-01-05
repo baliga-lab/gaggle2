@@ -5,24 +5,21 @@ import java.util.Arrays;
 import java.util.ArrayList;
 
 /*
-* Copyright (C) 2009 by Institute for Systems Biology,
-* Seattle, Washington, USA.  All rights reserved.
-*
-* This source code is distributed under the GNU Lesser
-* General Public License, the text of which is available at:
-*   http://www.gnu.org/copyleft/lesser.html
-*/
+ * Copyright (C) 2009 by Institute for Systems Biology,
+ * Seattle, Washington, USA.  All rights reserved.
+ *
+ * This source code is distributed under the GNU Lesser
+ * General Public License, the text of which is available at:
+ *   http://www.gnu.org/copyleft/lesser.html
+ */
 public class NameUniquifier {
-
 
     public static String makeUnique(String candidate, String[] existingGooseNames) {
         if (existingGooseNames.length == 0) {
             return candidate;
         }
 
-
         List<String> gooseNamesList = Arrays.asList(existingGooseNames);
-
 
         String basename = "";
 
@@ -39,19 +36,13 @@ public class NameUniquifier {
             }
         }
 
-
         List<String> temp = new ArrayList<String>();
         for (String name : gooseNamesList) {
             if (name.startsWith(basename)) {
                 temp.add(name);
             }
         }
-        if (temp.size() == 0) {
-            return candidate;
-        }
-
-
-
+        if (temp.size() == 0) return candidate;
 
         int max = 0;
         int suffix;
@@ -63,20 +54,13 @@ public class NameUniquifier {
             } catch (NumberFormatException nfe) {
                 continue;
             }
-            if (suffix > max) {
-                max = suffix;
-            }
+            if (suffix > max) max = suffix;
         }
         String stringToReturn = candidate;
         max++;
-
         stringToReturn += "-";
-        if (max < 10) {
-            stringToReturn += "0";
-        }
+        if (max < 10) stringToReturn += "0";
         return stringToReturn += max;
-
-     
     }
 
 }

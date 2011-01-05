@@ -1,10 +1,5 @@
 // BossConfig.java
 // a class to handle run-time configuration
-//------------------------------------------------------------------------------------------
-// $Revision$   
-// $Date$ 
-// $Author$
-//-----------------------------------------------------------------------------------
 /*
  * Copyright (C) 2006 by Institute for Systems Biology,
  * Seattle, Washington, USA.  All rights reserved.
@@ -15,7 +10,6 @@
  */
 
 package org.systemsbiology.gaggle.boss;
-//------------------------------------------------------------------------------------------
 
 import java.io.*;
 import java.util.*;
@@ -25,7 +19,6 @@ import gnu.getopt.LongOpt;
 
 import org.systemsbiology.gaggle.util.*;
 
-//------------------------------------------------------------------------------------------
 public class BossConfig {
 
     String argSpecificationString = "p:n:";
@@ -42,27 +35,18 @@ public class BossConfig {
     protected boolean startInvisibly = false;
     protected boolean startMinimized = false;
 
-    //------------------------------------------------------------------------------------------
-    public BossConfig() {
-        this(new String[0]);
-    }
+    public BossConfig() { this(new String[0]); }
 
-    //------------------------------------------------------------------------------------------
     public BossConfig(String[] args) {
 
         commandLineArguments = new String[args.length];
         System.arraycopy(args, 0, commandLineArguments, 0, args.length);
         parseArgs();
         props = readProperties();
-
-    } // ctor
-
-    //------------------------------------------------------------------------------------------
-    public Properties getProperties() {
-        return props;
     }
 
-    //------------------------------------------------------------------------------------------
+    public Properties getProperties() { return props; }
+
     protected void parseArgs() {
         helpRequested = false;
         boolean argsError = false;
@@ -74,7 +58,8 @@ public class BossConfig {
         LongOpt[] longopts = new LongOpt[2];
         longopts[0] = new LongOpt("startInvisibly", LongOpt.NO_ARGUMENT, null, '~');
         longopts[1] = new LongOpt("startMinimized", LongOpt.NO_ARGUMENT, null, '`');
-        Getopt g = new Getopt("GaggleBoss", commandLineArguments, argSpecificationString, longopts);
+        Getopt g = new Getopt("GaggleBoss", commandLineArguments,
+                              argSpecificationString, longopts);
         g.setOpterr(false); // We'll do our own error handling
 
         int c;
@@ -89,7 +74,8 @@ public class BossConfig {
                 case'?': // Optopt==0 indicates an unrecognized long option, which is reserved for plugins
                     int theOption = g.getOptopt();
                     if (theOption != 0)
-                        errorMessages.append("The option '" + (char) theOption + "' is not valid\n");
+                        errorMessages.append("The option '" + (char) theOption +
+                                             "' is not valid\n");
                     break;
                 case'~':
                     startInvisibly = true;
@@ -100,48 +86,34 @@ public class BossConfig {
                 default:
                     argsError = true;
                     break;
-            } // switch on c
-        } // while
+            }
+        }
+    }
 
-
-    } // parseArgs
-
-    //---------------------------------------------------------------------------------
     public String[] getPluginNames() {
+
         String[] keys = (String[]) props.keySet().toArray(new String[0]);
-        ArrayList list = new ArrayList();
-        for (int i = 0; i < keys.length; i++) {
-            String propertyName = keys[i];
+        ArrayList<String> list = new ArrayList<String>();
+
+        for (String key : keys) {
+            String propertyName = key;
             if (propertyName.toLowerCase().startsWith("plugin"))
-                list.add(props.get(propertyName));
-        } // for i
-
+                list.add(props.get(propertyName).toString());
+        }
         return (String[]) list.toArray(new String[0]);
-
-    } // getPluginNames
-
-    //---------------------------------------------------------------------------------
-    public String getNameHelperUri() {
-        return nameHelperUri;
     }
 
-    //---------------------------------------------------------------------------------
-    public String getPropsFilename() {
-        return propsFilename;
-    }
+    public String getNameHelperUri() { return nameHelperUri; }
 
-    public boolean startInvisibly() {
-        return startInvisibly;
-    }
+    public String getPropsFilename() { return propsFilename; }
 
-    public boolean startMinimized() {
-        return startMinimized;
-    }
+    public boolean startInvisibly() { return startInvisibly; }
 
-    //---------------------------------------------------------------------------------
+    public boolean startMinimized() { return startMinimized; }
+
     protected Properties readProperties() {
-        if (propsFilename == null)
-            return new Properties();
+
+        if (propsFilename == null) return new Properties();
 
         System.out.println("BossConfig about to read from " + propsFilename);
         Properties projectProps = readPropertyFileAsText(propsFilename);
@@ -149,9 +121,8 @@ public class BossConfig {
 
         return projectProps;
 
-    } // readProperties
+    }
 
-    //------------------------------------------------------------------------------------------
     public Properties readPropertyFileAsText(String filename) {
         String rawText = "";
 
@@ -161,13 +132,13 @@ public class BossConfig {
                 reader.read();
                 rawText = reader.getText();
             } else {
-                File projectPropsFile = new File(absolutizeFilename(projectFileDirectoryAbsolute, filename));
+                File projectPropsFile =
+                    new File(absolutizeFilename(projectFileDirectoryAbsolute, filename));
                 TextFileReader reader = new TextFileReader(projectPropsFile.getPath());
                 reader.read();
                 rawText = reader.getText();
             }
-        }
-        catch (Exception e0) {
+        } catch (Exception e0) {
             System.err.println("-- Exception while reading properties file " + filename);
             e0.printStackTrace();
         }
@@ -177,51 +148,19 @@ public class BossConfig {
         byte[] byteText = rawText.getBytes();
         InputStream is = new ByteArrayInputStream(byteText);
         Properties newProps = new Properties();
+
         try {
             newProps.load(is);
-        }
-        catch (IOException ioe) { //seems unlikely
+        } catch (IOException ioe) { //seems unlikely
             ioe.printStackTrace();
         }
 
         return newProps;
-
-    } // readPropertyFileAsText
-
-    //------------------------------------------------------------------------------------------
-    protected String absolutizeFilename(File parentDirectory, String filename) {
-        if (filename.trim().startsWith("/"))
-            return filename;
-        else
-            return (new File(parentDirectory, filename)).getPath();
-
     }
-//---------------------------------------------------------------------------------
-/***************************************************
- public String [] getArgs ()
- {
- String [] returnVal = new String [commandLineArgumentsCopy.length];
- System.arraycopy (commandLineArgumentsCopy, 0, returnVal, 0, commandLineArgumentsCopy.length);
- return returnVal;
- }
- //------------------------------------------------------------------------------------------
- protected boolean legalArguments ()
- {
- boolean legal = true;
 
- } // legalArguments
- //---------------------------------------------------------------------------------
- public void setExpressionFilename (String newValue)
- {
- expressionFilename = newValue;
- }
- //---------------------------------------------------------------------------------
- public void setProjectFilename (String newValue)
- {
- projectFilename = newValue;
- }
- //---------------------------------------------------------------------------------
- *****************************************/
-} // class BossConfig
+    protected String absolutizeFilename(File parentDirectory, String filename) {
 
-
+        if (filename.trim().startsWith("/")) return filename;
+        else return (new File(parentDirectory, filename)).getPath();
+    }
+}
