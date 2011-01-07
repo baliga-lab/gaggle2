@@ -3,13 +3,15 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.systemsbiology.gaggle</groupId>
+  <parent>
+    <groupId>org.systemsbiology.gaggle</groupId>
+    <artifactId>gaggle</artifactId>
+    <version>2.0</version>
+  </parent>
   <artifactId>gaggle-core</artifactId>
   <version>1.0</version>
   <packaging>jar</packaging>
   <name>gaggle-core</name>
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
 
   <dependencies>
     <dependency>

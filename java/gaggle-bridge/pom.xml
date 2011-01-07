@@ -3,27 +3,15 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.systemsbiology.gaggle</groupId>
+  <parent>
+    <groupId>org.systemsbiology.gaggle</groupId>
+    <artifactId>gaggle</artifactId>
+    <version>2.0</version>
+  </parent>
   <artifactId>gaggle-bridge</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
-
   <name>gaggle-bridge</name>
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
-
-  <repositories>
-    <repository>
-      <id>wwu-maven2</id>
-      <url>http://druid.systemsbiology.net/~wwu/maven2-repo</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-  </repositories>
 
   <dependencies>
     <dependency>

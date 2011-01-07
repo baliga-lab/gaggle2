@@ -3,13 +3,24 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.systemsbiology.gaggle</groupId>
-  <artifactId>gaggle2</artifactId>
-  <version>1.0</version>
+  <artifactId>gaggle</artifactId>
+  <version>2.0</version>
   <packaging>pom</packaging>
   <name>gaggle2</name>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+
+  <repositories>
+    <repository>
+      <id>isb.gaggle.release</id>
+      <url>http://gaggle.systemsbiology.org/maven/repo-releases</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+  </repositories>
+
   <modules>
     <module>gaggle-core</module>
     <module>gaggle-connector</module>
