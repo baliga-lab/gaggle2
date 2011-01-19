@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.TimerTask;
 import java.util.Timer;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.logging.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -44,7 +45,7 @@ public class RmiGaggleConnector {
 
     // a hack to avoid seeing unwanted stack traces. We should think about using log4j. -jcb
     private boolean verbose = true;
-
+    private static Logger Log = Logger.getLogger("RmiGaggleConnector"); 
 
     /**
      * @param goose a non-null goose
@@ -62,7 +63,6 @@ public class RmiGaggleConnector {
         }
     }
 
-
     private synchronized void exportObject(Goose goose) throws Exception {
         try {
             UnicastRemoteObject.exportObject(goose, 0);
@@ -78,7 +78,6 @@ public class RmiGaggleConnector {
     public synchronized void connectToGaggle(String hostname) throws Exception {
         this.hostname = hostname;
         uri = "rmi://" + hostname + "/" + serviceName;
-
         connectToGaggle();
     }
 
@@ -89,17 +88,18 @@ public class RmiGaggleConnector {
      * @throws Exception if connection cannot be performed
      */
     public synchronized void connectToGaggle() throws Exception {
+        Log.info("connectToGaggle(%s)".format(uri));
         try {
             // if goose is not already a live RMI object, make it so
-            if (!exported) {
-                exportObject(goose);
-            }
+            if (!exported) exportObject(goose);
 
             // connect to the Boss
             if (autoStartBoss && hostname.equals(DEFAULT_HOSTNAME)) {
+                Log.info("AUTOSTART BOSS & DEFAULT HOST");
                 try {
-                    boss = (Boss)Naming.lookup(uri);
+                    boss = (Boss) Naming.lookup(uri);
                 } catch (Exception ex) {
+                    Log.info("EXCEPT MESSAGE: " + ex.getMessage());
                     if (ex.getMessage().startsWith("Connection refused to host:")) {
                         System.out.println("Couldn't find a boss, trying to start one....");
                         tryToStartBoss();
@@ -107,15 +107,15 @@ public class RmiGaggleConnector {
                 }
 
             } else {
-                boss = (Boss)Naming.lookup(uri);
-                
+                Log.info("NO AUTOSTART, CONNECT TO EXIST");
+                boss = (Boss) Naming.lookup(uri);                
             }  
             String gooseName = boss.register(goose);
             goose.setName(gooseName);
             fireConnectionEvent(true);
         } catch (NullPointerException npe) {
             System.out.println("Boss isn't quite ready yet, trying again...");
-            npe.printStackTrace();
+            //npe.printStackTrace();
         } catch (Exception e) {
             if (!autoStartBoss) {
                 System.err.println("failed to connect to gaggle at " + uri + ": " + e.getMessage());
@@ -142,18 +142,19 @@ public class RmiGaggleConnector {
                 connectToGaggle();
                 this.cancel();
             } catch(ConnectException ce) {
-                ce.printStackTrace();
+                Log.severe("ConnectException in WaitForBossStart");
             } catch (ClassNotFoundException cnfe) {
                 try {
                    connectToGaggle();
                    this.cancel();
                 } catch (Exception ex) {
                     System.out.println("exception trying to connect using boss autostart: " + ex.getMessage());
-                    ex.printStackTrace();
+                    //ex.printStackTrace();
                 }
             } catch (Exception ex) {
+                Log.log(Level.WARNING, "unknown Exception in WaitForBossStart: " + ex.getMessage());
                 //System.out.println("general exception trying to autostart boss: " + ex.getMessage());
-                ex.printStackTrace();
+                // ex.printStackTrace();
             }
         }
     }

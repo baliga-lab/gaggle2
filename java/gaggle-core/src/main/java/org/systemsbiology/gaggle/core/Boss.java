@@ -17,6 +17,10 @@ import java.rmi.RemoteException;
 
 import org.systemsbiology.gaggle.core.datatypes.*;
 
+// we need to include these for compatibility
+import org.systemsbiology.gaggle.geese.DeafGoose;
+import org.systemsbiology.gaggle.util.NewNameHelper;
+
 /**
  * The core interface for the Gaggle Boss. Any software that wishes to coordinate
  * communication between one or more Gaggled applications (geese) must implement this.
@@ -42,6 +46,12 @@ public interface Boss extends Remote {
      * @throws RemoteException if RMI communication fails
      */
     public void unregister(String gooseName) throws RemoteException;
+
+    /**
+     * Note: This is not supported anymore and just included for compatibility with
+     * GuiBoss.
+     */
+    public String register(DeafGoose deafGoose) throws RemoteException;
 
     /**
      * Tells the boss to broadcast a Namelist object.
@@ -117,6 +127,11 @@ public interface Boss extends Remote {
 
 
     public String renameGoose(String oldName, String newName) throws RemoteException;
+
+    /**
+     * Do not implement or use, this is only here to support GuiBoss.
+     */
+    public NewNameHelper getNameHelper() throws RemoteException;
 
     /**
      * Terminates the specified goose.
