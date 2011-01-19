@@ -26,4 +26,12 @@
     <module>gaggle-connector</module>
     <module>gaggle-bridge</module>
   </modules>
+
+  <distributionManagement>
+    <repository>
+      <id>bragi</id>
+      <name>Gaggle Web Server</name>
+      <url>scp://wwu@bragi//local/apache2/htdocs/maven/repo-releases</url>
+    </repository>
+  </distributionManagement>
 </project>
