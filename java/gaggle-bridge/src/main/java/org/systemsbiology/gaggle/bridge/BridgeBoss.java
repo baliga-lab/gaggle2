@@ -18,6 +18,10 @@ import org.systemsbiology.gaggle.core.Boss;
 import org.systemsbiology.gaggle.core.Goose;
 import org.systemsbiology.gaggle.core.datatypes.*;
 
+// we need to include these for compatibility
+import org.systemsbiology.gaggle.geese.DeafGoose;
+import org.systemsbiology.gaggle.util.NewNameHelper;
+
 /**
  * BridgeBoss is a remote service that keeps track of the Java Desktop side of Gaggle.
  * It pretends to be a Boss, but delegates broadcasting and registration to a Javascript
@@ -145,5 +149,14 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
         System.out.printf("broadcastNamelist() from '%s' to '%s'\n", source, target);
         jsBroadcastNamelist(source, target, namelist);
         System.out.println("broadcast success !!");
+    }
+
+    // These methods are solely provided for compatibility reasons. Do not use.
+    public NewNameHelper getNameHelper() {
+        throw new UnsupportedOperationException("Not supported");
+    }
+
+    public String register(DeafGoose deafGoose) {
+        throw new UnsupportedOperationException("Not supported");
     }
 }
