@@ -37,7 +37,9 @@ public class RmiGaggleConnector {
     String serviceName = "gaggle";
     String hostname = DEFAULT_HOSTNAME;
     String uri = "rmi://" + hostname + "/" + serviceName;
-    private Set<GaggleConnectionListener> listeners = new CopyOnWriteArraySet<GaggleConnectionListener>();
+    private Set<GaggleConnectionListener> listeners =
+        new CopyOnWriteArraySet<GaggleConnectionListener>();
+
     private boolean exported  = false;
     private boolean autoStartBoss = true;
     private long timerInterval = 200L; //milliseconds
@@ -55,7 +57,7 @@ public class RmiGaggleConnector {
         Security.setProperty("networkaddress.cache.negative.ttl","0");
         System.out.println("ttl settings changed in goose");
         
-        if (goose==null)
+        if (goose == null)
             throw new NullPointerException("RmiGaggleConnector requires a non-null goose.");
         this.goose = goose;
         if (goose instanceof GaggleConnectionListener) {
@@ -67,8 +69,7 @@ public class RmiGaggleConnector {
         try {
             UnicastRemoteObject.exportObject(goose, 0);
             exported = true;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             System.err.println("RmiGaggleConnector failed to export remote object: "
                     + e.getMessage());
             throw e;
@@ -152,7 +153,10 @@ public class RmiGaggleConnector {
                     //ex.printStackTrace();
                 }
             } catch (Exception ex) {
-                Log.log(Level.WARNING, "unknown Exception in WaitForBossStart: " + ex.getMessage());
+                // reduce noise by not printing anything here. This will be
+                // caught on every timer event until a boss is found or until
+                // timeout
+                //Log.log(Level.WARNING, "unknown Exception in WaitForBossStart: " + ex.getMessage());
                 //System.out.println("general exception trying to autostart boss: " + ex.getMessage());
                 // ex.printStackTrace();
             }
