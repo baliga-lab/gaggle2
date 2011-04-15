@@ -150,6 +150,10 @@ public class BridgeBoss extends UnicastRemoteObject implements Boss {
         jsBroadcastNamelist(source, target, namelist);
         System.out.println("broadcast success !!");
     }
+    public void broadcastJson(String source, String target, String json) {
+        System.out.printf("broadcastJson() from '%s' to '%s'\n", source, target);
+        throw new UnsupportedOperationException("Not supported");
+    }
 
     // These methods are solely provided for compatibility reasons. Do not use.
     public NewNameHelper getNameHelper() {

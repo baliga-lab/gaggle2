@@ -29,7 +29,6 @@ import org.systemsbiology.gaggle.util.NewNameHelper;
  *
  * Implementations of Boss are desgined to be compiled by rmic into stubs which
  * can communicate across JVMs. Hence every method must throw RemoteException.
-
  */
 public interface Boss extends Remote {
     /**
@@ -61,7 +60,8 @@ public interface Boss extends Remote {
      * @param nameList The NameList object
      * @throws RemoteException if RMI communication fails
      */
-    public void broadcastNamelist(String sourceGoose, String targetGoose, Namelist nameList) throws RemoteException;
+    public void broadcastNamelist(String sourceGoose, String targetGoose,
+                                  Namelist nameList) throws RemoteException;
 
     /**
      * Tells the boss to broadcast a DataMatrix object.
@@ -71,7 +71,8 @@ public interface Boss extends Remote {
      * @param matrix The DataMatrix object
      * @throws RemoteException if RMI communication fails
      */
-    public void broadcastMatrix(String sourceGoose, String targetGoose, DataMatrix matrix) throws RemoteException;
+    public void broadcastMatrix(String sourceGoose, String targetGoose,
+                                DataMatrix matrix) throws RemoteException;
 
     /**
      * Tells the boss to broadcast a GaggleTuple object.
@@ -81,7 +82,8 @@ public interface Boss extends Remote {
      * @param gaggleTuple the GaggleTuple object
      * @throws RemoteException if RMI communication fails
      */
-    public void broadcastTuple(String sourceGoose, String targetGoose, GaggleTuple gaggleTuple) throws RemoteException;
+    public void broadcastTuple(String sourceGoose, String targetGoose,
+                               GaggleTuple gaggleTuple) throws RemoteException;
 
     /**
      * Tells the boss to broadcast a Cluster object.
@@ -91,7 +93,8 @@ public interface Boss extends Remote {
      * @param cluster the Cluster object
      * @throws RemoteException if RMI communication fails
      */
-    public void broadcastCluster(String sourceGoose, String targetGoose, Cluster cluster) throws RemoteException;
+    public void broadcastCluster(String sourceGoose, String targetGoose,
+                                 Cluster cluster) throws RemoteException;
 
     /**
      * Tells the boss to broadcast a Network object.
@@ -101,7 +104,9 @@ public interface Boss extends Remote {
      * @param network the Network object
      * @throws RemoteException if RMI communication fails
      */
-    public void broadcastNetwork(String sourceGoose, String targetGoose, Network network) throws RemoteException;
+    public void broadcastNetwork(String sourceGoose, String targetGoose,
+                                 Network network) throws RemoteException;
+
 
     /**
      * Tells the boss to hide the specified goose.
@@ -119,11 +124,13 @@ public interface Boss extends Remote {
 
 
     /**
-     * @deprecated Goose.update() will automatically provide you with the latest list of goose names.
+     * todo - this can be removed when all geese implement update()
+     * @deprecated Goose.update() will automatically provide you with the latest
+     * list of goose names.
      * @return list of currently connected geese names
      * @throws RemoteException if there is an RMI connection error
      */
-    public String[] getGooseNames() throws RemoteException; // todo - this can be removed when all geese implement update()
+    public String[] getGooseNames() throws RemoteException;
 
 
     public String renameGoose(String oldName, String newName) throws RemoteException;
@@ -139,6 +146,4 @@ public interface Boss extends Remote {
      * @throws RemoteException if RMI communication fails
      */
     public void terminate(String gooseName) throws RemoteException;
-
 }
-

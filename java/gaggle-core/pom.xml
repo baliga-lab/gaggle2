@@ -6,10 +6,10 @@
   <parent>
     <groupId>org.systemsbiology.gaggle</groupId>
     <artifactId>gaggle</artifactId>
-    <version>2.0</version>
+    <version>2.0-SNAPSHOT</version>
   </parent>
   <artifactId>gaggle-core</artifactId>
-  <version>1.0</version>
+  <version>2.0-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>gaggle-core</name>
 
@@ -24,6 +24,12 @@
       <groupId>net.sourceforge.cobertura</groupId>
       <artifactId>cobertura</artifactId>
       <version>1.9.4.1</version>
+    </dependency>
+    <dependency>
+      <groupId>net.sf.json-lib</groupId>
+      <artifactId>json-lib</artifactId>
+      <version>2.4</version>
+      <classifier>jdk15</classifier>
     </dependency>
   </dependencies>
   <build>

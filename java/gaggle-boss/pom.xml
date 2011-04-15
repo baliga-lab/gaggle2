@@ -8,10 +8,10 @@
     <artifactId>gaggle</artifactId>
     <version>2.0-SNAPSHOT</version>
   </parent>
-  <artifactId>gaggle-bridge</artifactId>
+  <artifactId>gaggle-boss</artifactId>
   <version>2.0-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <name>gaggle-bridge</name>
+  <name>gaggle-boss</name>
 
   <dependencies>
     <dependency>
@@ -27,16 +27,15 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>netscape.javascript</groupId>
-      <artifactId>plugin</artifactId>
-      <version>1.6</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>org.systemsbiology.gaggle</groupId>
       <artifactId>gaggle-core</artifactId>
       <version>2.0-SNAPSHOT</version>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>urbanophile</groupId>
+      <artifactId>java-getopt</artifactId>
+      <version>1.0.9</version>
     </dependency>
   </dependencies>
   <build>
