@@ -10,12 +10,15 @@ public class JSONHelper {
     private static final String KEY_NAME         = "name";
     private static final String KEY_SPECIES      = "species";
 
+    private static final String KEY_MATRIX       = "matrix";
     private static final String KEY_NAMELIST     = "namelist";
     private static final String KEY_TUPLE        = "tuple";
     private static final String KEY_TYPE         = "type";
 
     private static final String KEY_ROW_NAMES    = "row-names";
+    private static final String KEY_COLUMNS      = "columns";
     private static final String KEY_COLUMN_NAMES = "column-names";
+    private static final String KEY_VALUES       = "values";
 
     private static final String TYPE_BICLUSTER   = "bicluster";
 
@@ -40,6 +43,8 @@ public class JSONHelper {
             return extractGaggleTuple(jsonGaggleData);
         } else if (isNameList(jsonGaggleData)) {
             return extractNamelist(jsonGaggleData);
+        } else if (isMatrix(jsonGaggleData)) {
+            return extractMatrix(jsonGaggleData);
         }
         throw new IllegalArgumentException("unknown data type specified in JSON");
     }
@@ -61,6 +66,9 @@ public class JSONHelper {
                 TYPE_BICLUSTER.equals(jsonTuple.get(KEY_TYPE));
         }
         return false;
+    }
+    private boolean isMatrix(JSONObject jsonGaggleData) {
+        return jsonGaggleData.containsKey(KEY_MATRIX);
     }
 
     private GaggleTuple extractGaggleTuple(JSONObject jsonGaggleData) {
@@ -111,12 +119,46 @@ public class JSONHelper {
         List<String> names = new ArrayList<String>();
         namelist.setName(extractName(jsonGaggleData));
         namelist.setSpecies(extractSpecies(jsonGaggleData));
+        namelist.setMetadata(extractMetadata(jsonGaggleData));
         JSONArray nameArray = jsonGaggleData.getJSONArray(KEY_NAMELIST);
         for (int i = 0; i < nameArray.size(); i++) {
             names.add(nameArray.getString(i));
         }
         namelist.setNames(names.toArray(new String[0]));
         return namelist;
+    }
+    
+    private DataMatrix extractMatrix(JSONObject jsonGaggleData) {
+        DataMatrix matrix = new DataMatrix();
+        matrix.setName(extractName(jsonGaggleData));
+        matrix.setSpecies(extractSpecies(jsonGaggleData));
+        matrix.setMetadata(extractMetadata(jsonGaggleData));
+        JSONObject jsonMatrix = jsonGaggleData.getJSONObject(KEY_MATRIX);
+        setRowTitles(matrix, jsonMatrix);
+        setColumnsAndValues(matrix, jsonMatrix);
+        return matrix;
+    }
+
+    private void setRowTitles(DataMatrix matrix, JSONObject jsonMatrix) {
+        JSONArray jsonRowNames = jsonMatrix.getJSONArray(KEY_ROW_NAMES);
+        String[] rowTitles = new String[jsonRowNames.size()];
+        for (int i = 0; i < rowTitles.length; i++) {
+            rowTitles[i] = jsonRowNames.getString(i);
+        }
+        matrix.setRowTitles(rowTitles);
+    }
+    private void setColumnsAndValues(DataMatrix matrix, JSONObject jsonMatrix) {
+        JSONArray jsonColumns  = jsonMatrix.getJSONArray(KEY_COLUMNS);
+        String[] columnTitles = new String[jsonColumns.size()];
+        matrix.setSize(matrix.getRowTitles().length, columnTitles.length);
+        for (int col = 0; col < jsonColumns.size(); col++) {
+            columnTitles[col] = jsonColumns.getJSONObject(col).getString(KEY_NAME);
+            JSONArray jsonValues = jsonColumns.getJSONObject(col).getJSONArray(KEY_VALUES);
+            for (int row = 0; row < jsonValues.size(); row++) {
+                matrix.set(row, col, jsonValues.getDouble(row));
+            }
+        }
+        matrix.setColumnTitles(columnTitles);
     }
 
     private String extractName(JSONObject jsonGaggleData) {

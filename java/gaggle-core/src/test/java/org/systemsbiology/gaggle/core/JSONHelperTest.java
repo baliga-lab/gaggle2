@@ -5,6 +5,8 @@ import static org.junit.Assert.*;
 import org.systemsbiology.gaggle.core.datatypes.*;
 
 public class JSONHelperTest {
+    private static final double EPS = 0.001;
+
     @Test public void testNonGaggleJson() {
         String json = "{ \"foo\": \"bar\"}";
         try {
@@ -83,6 +85,38 @@ public class JSONHelperTest {
         assertEquals("c1", cluster.getColumnNames()[0]);
         assertEquals("c2", cluster.getColumnNames()[1]);
     }
+
+    @Test public void testMatrix() {
+        String json = "{\"gaggle-data\": {" +
+            "\"name\": \"matrix-name\"," +
+            "\"metadata\": {" +
+            "  \"species\": \"Halo world\"" +
+            "}," +
+            "\"matrix\": {" +
+            "  \"row-names\":  [\"r1\", \"r2\"]," +
+            "  \"columns\": [" +
+            "      { \"name\": \"col1\", \"values\": [1.2, 3.4] }," +
+            "      { \"name\": \"col2\", \"values\": [2.3, 4.5] }" +
+            "  ]}" +
+            "}}";
+        DataMatrix matrix =
+            (DataMatrix) (new JSONHelper().createFromJsonString(json));
+        assertEquals("matrix-name", matrix.getName());
+        assertEquals("Halo world", matrix.getSpecies());
+        assertEquals(2, matrix.getRowTitles().length);
+        assertEquals("r1", matrix.getRowTitles()[0]);
+        assertEquals("r2", matrix.getRowTitles()[1]);
+        assertEquals(2, matrix.getColumnTitles().length);
+        assertEquals("col1", matrix.getColumnTitles()[0]);
+        assertEquals("col2", matrix.getColumnTitles()[1]);
+        assertEquals(2, matrix.getRowCount());
+        assertEquals(2, matrix.getColumnCount());
+        assertEquals(1.2, matrix.get(0, 0), EPS);
+        assertEquals(2.3, matrix.get(0, 1), EPS);
+        assertEquals(3.4, matrix.get(1, 0), EPS);
+        assertEquals(4.5, matrix.get(1, 1), EPS);
+    }
+
     private Single getNamedSingle(Tuple tuple, String name) {
         for (Single single : tuple.getSingleList()) {
             if (name.equals(single.getName())) return single;
