@@ -60,6 +60,29 @@ public class JSONHelperTest {
         assertEquals("name1", namelist.getNames()[0]);
     }
 
+    @Test public void testCluster() {
+        String json = "{\"gaggle-data\": {" +
+            "\"name\": \"cluster-name\"," +
+            "\"metadata\": {" +
+            "  \"species\": \"Halo world\"" +
+            "}," +
+            "\"tuple\": {" +
+            "  \"type\": \"bicluster\"," +
+            "  \"row-names\": { \"gaggle-data\": { \"name\": \"nl1\", \"namelist\": [\"r1\", \"r2\"] }}," +
+            "  \"column-names\": { \"gaggle-data\": { \"name\": \"nl2\", \"namelist\": [\"c1\", \"c2\"] }}," +
+            "}" +
+            "}}";
+        Cluster cluster =
+            (Cluster) (new JSONHelper().createFromJsonString(json));
+        assertEquals("cluster-name", cluster.getName());
+        assertEquals("Halo world", cluster.getSpecies());
+        assertEquals(2, cluster.getRowNames().length);
+        assertEquals("r1", cluster.getRowNames()[0]);
+        assertEquals("r2", cluster.getRowNames()[1]);
+        assertEquals(2, cluster.getColumnNames().length);
+        assertEquals("c1", cluster.getColumnNames()[0]);
+        assertEquals("c2", cluster.getColumnNames()[1]);
+    }
     private Single getNamedSingle(Tuple tuple, String name) {
         for (Single single : tuple.getSingleList()) {
             if (name.equals(single.getName())) return single;

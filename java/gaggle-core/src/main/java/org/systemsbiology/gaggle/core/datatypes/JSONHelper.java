@@ -5,13 +5,19 @@ import java.util.*;
 import java.io.Serializable;
 
 public class JSONHelper {
-    private static final String KEY_GAGGLE_DATA = "gaggle-data";
-    private static final String KEY_METADATA    = "metadata";
-    private static final String KEY_NAME        = "name";
-    private static final String KEY_SPECIES     = "species";
+    private static final String KEY_GAGGLE_DATA  = "gaggle-data";
+    private static final String KEY_METADATA     = "metadata";
+    private static final String KEY_NAME         = "name";
+    private static final String KEY_SPECIES      = "species";
 
-    private static final String KEY_NAMELIST    = "namelist";
-    private static final String KEY_TUPLE       = "tuple";
+    private static final String KEY_NAMELIST     = "namelist";
+    private static final String KEY_TUPLE        = "tuple";
+    private static final String KEY_TYPE         = "type";
+
+    private static final String KEY_ROW_NAMES    = "row-names";
+    private static final String KEY_COLUMN_NAMES = "column-names";
+
+    private static final String TYPE_BICLUSTER   = "bicluster";
 
     public GaggleData createFromJsonString(String json) {
         JSONObject obj = JSONObject.fromObject(json);
@@ -23,13 +29,14 @@ public class JSONHelper {
             throw new IllegalArgumentException("JSON object does specify a Gaggle data structure");
         } else { 
             JSONObject jsonGaggleData = jsonObj.getJSONObject(KEY_GAGGLE_DATA);
-            System.out.println("GAGGLEDATA: " + jsonGaggleData);
             return createGaggleData(jsonGaggleData);
         }
     }
 
     private GaggleData createGaggleData(JSONObject jsonGaggleData) {
-        if (isGaggleTuple(jsonGaggleData)) {
+        if (isBicluster(jsonGaggleData)) {
+            return extractCluster(jsonGaggleData);
+        } else if (isGaggleTuple(jsonGaggleData)) {
             return extractGaggleTuple(jsonGaggleData);
         } else if (isNameList(jsonGaggleData)) {
             return extractNamelist(jsonGaggleData);
@@ -47,6 +54,14 @@ public class JSONHelper {
     private boolean isNameList(JSONObject jsonGaggleData) {
         return jsonGaggleData.containsKey(KEY_NAMELIST);
     }
+    private boolean isBicluster(JSONObject jsonGaggleData) {
+        if (isGaggleTuple(jsonGaggleData)) {
+            JSONObject jsonTuple = jsonGaggleData.getJSONObject(KEY_TUPLE);
+            return jsonTuple.containsKey(KEY_TYPE) &&
+                TYPE_BICLUSTER.equals(jsonTuple.get(KEY_TYPE));
+        }
+        return false;
+    }
 
     private GaggleTuple extractGaggleTuple(JSONObject jsonGaggleData) {
         GaggleTuple gaggleTuple = new GaggleTuple();
@@ -55,6 +70,19 @@ public class JSONHelper {
         gaggleTuple.setMetadata(extractMetadata(jsonGaggleData));
         gaggleTuple.setData(createTuple(jsonGaggleData.getJSONObject(KEY_TUPLE)));
         return gaggleTuple;
+    }
+
+    private Cluster extractCluster(JSONObject jsonGaggleData) {
+        Cluster cluster = new Cluster();
+        cluster.setName(extractName(jsonGaggleData));
+        cluster.setSpecies(extractSpecies(jsonGaggleData));
+        cluster.setMetadata(extractMetadata(jsonGaggleData));
+        JSONObject jsonTuple = jsonGaggleData.getJSONObject(KEY_TUPLE);
+        Namelist rowNames = (Namelist) json2GaggleData(jsonTuple.getJSONObject(KEY_ROW_NAMES));
+        Namelist colNames = (Namelist) json2GaggleData(jsonTuple.getJSONObject(KEY_COLUMN_NAMES));
+        cluster.setRowNames(rowNames.getNames());
+        cluster.setColumnNames(colNames.getNames());
+        return cluster;
     }
 
     private Tuple createTuple(JSONObject jsonTuple) {
