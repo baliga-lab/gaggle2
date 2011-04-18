@@ -4,6 +4,10 @@ import net.sf.json.*;
 import java.util.*;
 import java.io.Serializable;
 
+/**
+ * This class reads Gaggle data structures in JSON format and turns
+ * them into Java Gaggle data objects.
+ */
 public class JSONHelper {
     private static final String KEY_GAGGLE_DATA  = "gaggle-data";
     private static final String KEY_METADATA     = "metadata";
@@ -12,6 +16,7 @@ public class JSONHelper {
 
     private static final String KEY_MATRIX       = "matrix";
     private static final String KEY_NAMELIST     = "namelist";
+    private static final String KEY_TABLE        = "table";
     private static final String KEY_TUPLE        = "tuple";
     private static final String KEY_TYPE         = "type";
 
@@ -45,6 +50,8 @@ public class JSONHelper {
             return extractNamelist(jsonGaggleData);
         } else if (isMatrix(jsonGaggleData)) {
             return extractMatrix(jsonGaggleData);
+        } else if (isTable(jsonGaggleData)) {
+            return extractTable(jsonGaggleData);
         }
         throw new IllegalArgumentException("unknown data type specified in JSON");
     }
@@ -69,6 +76,9 @@ public class JSONHelper {
     }
     private boolean isMatrix(JSONObject jsonGaggleData) {
         return jsonGaggleData.containsKey(KEY_MATRIX);
+    }
+    private boolean isTable(JSONObject jsonGaggleData) {
+        return jsonGaggleData.containsKey(KEY_TABLE);
     }
 
     private GaggleTuple extractGaggleTuple(JSONObject jsonGaggleData) {
@@ -128,6 +138,49 @@ public class JSONHelper {
         return namelist;
     }
     
+    private Table extractTable(JSONObject jsonGaggleData) {
+        Table table = new Table(extractName(jsonGaggleData),
+                                extractSpecies(jsonGaggleData),
+                                extractMetadata(jsonGaggleData),
+                                extractTableColumns(jsonGaggleData));
+        return table;
+    }
+    private Table.TableColumn[] extractTableColumns(JSONObject jsonGaggleData) {
+        JSONArray jsonColumns = jsonGaggleData.getJSONObject(KEY_TABLE)
+            .getJSONArray(KEY_COLUMNS);
+        Table.TableColumn[] result = new Table.TableColumn[jsonColumns.size()];
+        for (int col = 0; col < result.length; col++) {
+            result[col] = extractTableColumn(jsonColumns.getJSONObject(col));
+        }
+        return result;
+    }
+    private Table.TableColumn extractTableColumn(JSONObject jsonTableColumn) {
+        String jsonType = jsonTableColumn.getString(KEY_TYPE);
+        JSONArray jsonValues = jsonTableColumn.getJSONArray(KEY_VALUES);
+        if ("string".equals(jsonType)) {
+            String[] values = new String[jsonValues.size()];
+            for (int i = 0; i < jsonValues.size(); i++) values[i] = jsonValues.getString(i);
+            return Table.createStringColumn(jsonTableColumn.getString(KEY_NAME),
+                                            values);
+        } else if ("double".equals(jsonType)) {
+            double[] values = new double[jsonValues.size()];
+            for (int i = 0; i < jsonValues.size(); i++) values[i] = jsonValues.getDouble(i);
+            return Table.createDoubleColumn(jsonTableColumn.getString(KEY_NAME),
+                                            values);
+        } else if ("int".equals(jsonType)) {
+            int[] values = new int[jsonValues.size()];
+            for (int i = 0; i < jsonValues.size(); i++) values[i] = jsonValues.getInt(i);
+            return Table.createIntColumn(jsonTableColumn.getString(KEY_NAME),
+                                         values);
+        } else if ("boolean".equals(jsonType)) {
+            boolean[] values = new boolean[jsonValues.size()];
+            for (int i = 0; i < jsonValues.size(); i++) values[i] = jsonValues.getBoolean(i);
+            return Table.createBooleanColumn(jsonTableColumn.getString(KEY_NAME),
+                                             values);
+        }
+        throw new IllegalArgumentException("unsupported type: " + jsonType);
+    }
+
     private DataMatrix extractMatrix(JSONObject jsonGaggleData) {
         DataMatrix matrix = new DataMatrix();
         matrix.setName(extractName(jsonGaggleData));

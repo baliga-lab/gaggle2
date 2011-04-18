@@ -116,6 +116,41 @@ public class JSONHelperTest {
         assertEquals(4.5, matrix.get(1, 1), EPS);
     }
 
+    @Test public void testTable() {
+        String json = "{\"gaggle-data\": {" +
+            "\"name\": \"table-name\"," +
+            "\"metadata\": {" +
+            "  \"species\": \"Halo world\"" +
+            "}," +
+            "\"table\": {" +
+            "  \"columns\": [" +
+            "      { \"name\": \"col1\", \"type\": \"double\",  \"values\": [1.2, 3.4] }," +
+            "      { \"name\": \"col2\", \"type\": \"int\",     \"values\": [2, 4] }," +
+            "      { \"name\": \"col3\", \"type\": \"boolean\", \"values\": [true, false] }," +
+            "      { \"name\": \"col4\", \"type\": \"string\",  \"values\": [\"foo\", \"bar\"] }" +
+            "  ]}" +
+            "}}";
+        
+        Table table =
+            (Table) (new JSONHelper().createFromJsonString(json));
+        assertEquals("table-name", table.getName());
+        assertEquals("Halo world", table.getSpecies());
+        assertEquals(4, table.getColumnCount());
+        assertEquals(2, table.getRowCount());
+        assertEquals("col1", table.getColumnName(0));
+        assertEquals("col2", table.getColumnName(1));
+        assertEquals("col3", table.getColumnName(2));
+        assertEquals("col4", table.getColumnName(3));
+        assertEquals(double.class, table.getColumnClass(0));
+        assertEquals(int.class, table.getColumnClass(1));
+        assertEquals(boolean.class, table.getColumnClass(2));
+        assertEquals(String.class, table.getColumnClass(3));
+        assertEquals(1.2, table.doubleValueAt(0, 0), 0.001);
+        assertEquals(2, table.intValueAt(0, 1));
+        assertEquals(true, table.booleanValueAt(0, 2));
+        assertEquals("foo", table.stringValueAt(0, 3));
+    }
+
     private Single getNamedSingle(Tuple tuple, String name) {
         for (Single single : tuple.getSingleList()) {
             if (name.equals(single.getName())) return single;
