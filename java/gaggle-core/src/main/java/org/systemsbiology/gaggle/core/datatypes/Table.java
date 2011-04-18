@@ -12,13 +12,15 @@ import java.util.*;
 import java.io.*;
 
 /**
- * Table is implemented as an immutable data structure.
  */
 public class Table implements GaggleData {
     static abstract class TableColumn implements Serializable {
         private String name;
+        public TableColumn() { this(""); }
         public TableColumn(String name) { this.name = name; }
         public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+
         public abstract Class getColumnClass();
         public abstract int getRowCount();
         public boolean booleanValueAt(int row) {
@@ -34,59 +36,70 @@ public class Table implements GaggleData {
             throw new UnsupportedOperationException("this column does not hold double values");
         }
     }
-    private static class BooleanTableColumn extends TableColumn {
+    static class BooleanTableColumn extends TableColumn {
         private static final long serialVersionUID = 1L;
         private boolean[] values;
         public BooleanTableColumn(String name, boolean[] values) {
             super(name);
             this.values = values;
         }
+        public BooleanTableColumn() { this(null, new boolean[0]); }
+
         public Class getColumnClass() { return boolean.class; }
         public int getRowCount() { return values.length; }
         @Override public boolean booleanValueAt(int row) { return this.values[row]; }
+        public void setValues(boolean[] values) { this.values = values; }
     }
-    private static class StringTableColumn extends TableColumn {
+    static class StringTableColumn extends TableColumn {
         private static final long serialVersionUID = 1L;
         private String[] values;
         public StringTableColumn(String name, String[] values) {
             super(name);
             this.values = values;
         }
+        public StringTableColumn() { this(null, new String[0]); }
+
         public Class getColumnClass() { return String.class; }
         public int getRowCount() { return values.length; }
         @Override public String stringValueAt(int row) { return this.values[row]; }
+        public void setValues(String[] values) { this.values = values; }
     }
-    private static class IntTableColumn extends TableColumn {
+    static class IntTableColumn extends TableColumn {
         private static final long serialVersionUID = 1L;
         private int[] values;
         public IntTableColumn(String name, int[] values) {
             super(name);
             this.values = values;
         }
+        public IntTableColumn() { this(null, new int[0]); }
+
         public Class getColumnClass() { return int.class; }
         public int getRowCount() { return values.length; }
         @Override public int intValueAt(int row) { return this.values[row]; }
+        public void setValues(int[] values) { this.values = values; }
     }
-    private static class DoubleTableColumn extends TableColumn {
+    static class DoubleTableColumn extends TableColumn {
         private static final long serialVersionUID = 1L;
         private double[] values;
         public DoubleTableColumn(String name, double[] values) {
             super(name);
             this.values = values;
         }
+        public DoubleTableColumn() { this(null, new double[0]); }
+
         public Class getColumnClass() { return double.class; }
         public int getRowCount() { return values.length; }
         @Override public double doubleValueAt(int row) { return this.values[row]; }
+        public void setValues(double[] values) { this.values = values; }
     }
 
     private static final long serialVersionUID = 1L;
     private String name;
     private Tuple metadata;
-    private String species = "unknown";
+    private String species;
     private TableColumn[] columns;
 
-    public Table() {
-    }
+    public Table() { this(null, "unknown", null, new TableColumn[0]); }
     public Table(String name, String species, Tuple metadata,
                  TableColumn[] columns) {
         this.name     = name;
@@ -96,8 +109,13 @@ public class Table implements GaggleData {
     }
 
     public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
     public String getSpecies() { return species; }
+    public void setSpecies(String species) { this.species = species; }
     public Tuple getMetadata() { return metadata; }
+    public void setMetadata(Tuple metadata) { this.metadata = metadata; }
+    public void setColumns(TableColumn[] columns) { this.columns = columns; }
+
     public int getColumnCount() { return columns == null ? 0 : columns.length; }
     public int getRowCount() {
         if (columns == null) return 0;
