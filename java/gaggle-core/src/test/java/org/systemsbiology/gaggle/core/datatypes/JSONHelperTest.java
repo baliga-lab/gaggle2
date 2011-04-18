@@ -1,8 +1,7 @@
-package org.systemsbiology.gaggle.core;
+package org.systemsbiology.gaggle.core.datatypes;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.systemsbiology.gaggle.core.datatypes.*;
 
 public class JSONHelperTest {
     private static final double EPS = 0.001;

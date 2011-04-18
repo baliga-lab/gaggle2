@@ -1,12 +1,10 @@
-package org.systemsbiology.gaggle;
+package org.systemsbiology.gaggle.core.datatypes;
 
 import java.util.List;
 import java.util.ArrayList;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.systemsbiology.gaggle.core.datatypes.Single;
-import org.systemsbiology.gaggle.core.datatypes.Tuple;
 
 public class TupleTest {
     @Test public void testCreate() {

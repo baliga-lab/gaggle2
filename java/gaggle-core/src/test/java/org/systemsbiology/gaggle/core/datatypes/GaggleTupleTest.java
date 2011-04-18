@@ -1,9 +1,7 @@
-package org.systemsbiology.gaggle;
+package org.systemsbiology.gaggle.core.datatypes;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.systemsbiology.gaggle.core.datatypes.GaggleTuple;
-import org.systemsbiology.gaggle.core.datatypes.Tuple;
 
 public class GaggleTupleTest {
     @Test public void testCreateEmpty() {
