@@ -51,5 +51,10 @@ public class TableTest {
         assertEquals(boolean.class, table.getColumnClass(2));
         assertEquals("doublecol",   table.getColumnName(3));
         assertEquals(double.class,  table.getColumnClass(3));
+
+        assertEquals(1, table.intValueAt(0, 0));
+        assertEquals("foo", table.stringValueAt(0, 1));
+        assertEquals(true, table.booleanValueAt(0, 2));
+        assertEquals(1.0, table.doubleValueAt(0, 3), 0.001);
     }
 }
