@@ -8,22 +8,36 @@ import java.io.Serializable;
  * This class reads Gaggle data structures in JSON format and turns
  * them into Java Gaggle data objects.
  */
-public class JSONHelper {
+public class JSONReader {
+    // common
     private static final String KEY_GAGGLE_DATA  = "gaggle-data";
     private static final String KEY_METADATA     = "metadata";
     private static final String KEY_NAME         = "name";
     private static final String KEY_SPECIES      = "species";
 
+    // data types
     private static final String KEY_MATRIX       = "matrix";
     private static final String KEY_NAMELIST     = "namelist";
+    private static final String KEY_NETWORK      = "network";
     private static final String KEY_TABLE        = "table";
     private static final String KEY_TUPLE        = "tuple";
     private static final String KEY_TYPE         = "type";
 
+    // table/matrix specific
     private static final String KEY_ROW_NAMES    = "row-names";
     private static final String KEY_COLUMNS      = "columns";
     private static final String KEY_COLUMN_NAMES = "column-names";
     private static final String KEY_VALUES       = "values";
+
+    // network specific
+    private static final String KEY_ATTRIBUTES   = "attributes";
+    private static final String KEY_EDGES        = "edges";
+    private static final String KEY_DIRECTED     = "directed";
+    private static final String KEY_INTERACTION  = "interaction";
+    private static final String KEY_NODES        = "nodes";
+    private static final String KEY_NODE         = "node";
+    private static final String KEY_SOURCE       = "source";
+    private static final String KEY_TARGET       = "target";
 
     private static final String TYPE_BICLUSTER   = "bicluster";
 
@@ -52,6 +66,8 @@ public class JSONHelper {
             return extractMatrix(jsonGaggleData);
         } else if (isTable(jsonGaggleData)) {
             return extractTable(jsonGaggleData);
+        } else if (isNetwork(jsonGaggleData)) {
+            return extractNetwork(jsonGaggleData);
         }
         throw new IllegalArgumentException("unknown data type specified in JSON");
     }
@@ -80,6 +96,9 @@ public class JSONHelper {
     private boolean isTable(JSONObject jsonGaggleData) {
         return jsonGaggleData.containsKey(KEY_TABLE);
     }
+    private boolean isNetwork(JSONObject jsonGaggleData) {
+        return jsonGaggleData.containsKey(KEY_NETWORK);
+    }
 
     private GaggleTuple extractGaggleTuple(JSONObject jsonGaggleData) {
         GaggleTuple gaggleTuple = new GaggleTuple();
@@ -103,12 +122,15 @@ public class JSONHelper {
         return cluster;
     }
 
-    private Tuple createTuple(JSONObject jsonTuple) {
+    private Tuple createTuple(JSONObject jsonTuple) { return createTuple(jsonTuple, null); }
+    private Tuple createTuple(JSONObject jsonTuple, String exceptKey) {
         Tuple tuple = new Tuple(); // TODO: What about named tuples ?
         for (Object entry : jsonTuple.entrySet()) {
             Map.Entry<String, Object> mapEntry =
                 (Map.Entry<String, Object>) entry;
-            tuple.addSingle(createSingle(mapEntry.getKey(), mapEntry.getValue()));
+            if (exceptKey == null || !exceptKey.equals(mapEntry.getKey())) {
+                tuple.addSingle(createSingle(mapEntry.getKey(), mapEntry.getValue()));
+            }
         }
         return tuple;
     }
@@ -214,12 +236,81 @@ public class JSONHelper {
         matrix.setColumnTitles(columnTitles);
     }
 
+    private Network extractNetwork(JSONObject jsonGaggleData) {
+        JSONObject jsonNetwork = jsonGaggleData.getJSONObject(KEY_NETWORK);
+        Network network = new Network();
+        network.setName(extractName(jsonGaggleData));
+        network.setSpecies(extractSpecies(jsonGaggleData));
+        network.setMetadata(extractMetadata(jsonGaggleData));
+        extractAndSetNodes(network, jsonNetwork);
+        extractAndSetEdges(network, jsonNetwork);
+        return network;
+    }
+
+    private void extractAndSetNodes(Network network, JSONObject jsonNetwork) {
+        JSONArray jsonNodes = jsonNetwork.getJSONArray(KEY_NODES);
+        for (int i = 0; i < jsonNodes.size(); i++) {
+            JSONObject jsonNode = jsonNodes.getJSONObject(i);
+            network.add(jsonNode.getString(KEY_NODE));
+            extractAndSetNodeAttributes(network, jsonNode);
+        }
+    }
+
+    private void extractAndSetNodeAttributes(Network network, JSONObject jsonNode) {
+        JSONObject attribs = jsonNode.getJSONObject(KEY_ATTRIBUTES);
+        String nodeName = jsonNode.getString(KEY_NODE);
+        System.out.println("Extracting node: " + nodeName);
+        for (Object entry : attribs.entrySet()) {
+            Map.Entry<String, Object> mapEntry =
+                (Map.Entry<String, Object>) entry;
+            Object value = mapEntry.getValue();
+            validateSimpleValue(value);
+            network.addNodeAttribute(nodeName, mapEntry.getKey(), value);
+        }
+    }
+
+    private void validateSimpleValue(Object value) {
+        if (value instanceof JSONArray || value instanceof JSONObject) {
+            throw new UnsupportedOperationException("only simple values supported for node attributes");
+        }
+    }
+
+    private void extractAndSetEdges(Network network, JSONObject jsonNetwork) {
+        JSONArray jsonEdges = jsonNetwork.getJSONArray(KEY_EDGES);
+        for (int i = 0; i < jsonEdges.size(); i++) {
+            JSONObject jsonEdge = jsonEdges.getJSONObject(i);
+            boolean directed = false;
+            if (jsonEdge.containsKey(KEY_DIRECTED)) directed = jsonEdge.getBoolean(KEY_DIRECTED);
+            Interaction interaction = new Interaction(jsonEdge.getString(KEY_SOURCE),
+                                                      jsonEdge.getString(KEY_TARGET),
+                                                      jsonEdge.getString(KEY_INTERACTION),
+                                                      directed);
+            network.add(interaction);
+            extractAndSetEdgeAttributes(network, interaction, jsonEdge);
+        }
+    }
+    
+    private void extractAndSetEdgeAttributes(Network network,
+                                             Interaction interaction,
+                                             JSONObject jsonEdge) {
+        JSONObject attribs = jsonEdge.getJSONObject(KEY_ATTRIBUTES);
+        String edgeName = interaction.toString();
+
+        for (Object entry : attribs.entrySet()) {
+            Map.Entry<String, Object> mapEntry =
+                (Map.Entry<String, Object>) entry;
+            Object value = mapEntry.getValue();
+            validateSimpleValue(value);
+            network.addEdgeAttribute(edgeName, mapEntry.getKey(), value);
+        }
+    }
+
     private String extractName(JSONObject jsonGaggleData) {
         return jsonGaggleData.getString(KEY_NAME);
     }
 
     private Tuple extractMetadata(JSONObject jsonGaggleData) {
-        return null;
+        return createTuple(jsonGaggleData.getJSONObject(KEY_METADATA), "species");
     }
 
     private String extractSpecies(JSONObject jsonGaggleData) {
