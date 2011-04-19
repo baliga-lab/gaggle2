@@ -19,6 +19,7 @@ import java.io.*;
  * - double
  * - boolean
  * - String
+ * @author Wei-ju Wu
  */
 public class Table implements GaggleData {
     /**

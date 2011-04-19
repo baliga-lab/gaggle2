@@ -3,43 +3,14 @@ package org.systemsbiology.gaggle.core.datatypes;
 import net.sf.json.*;
 import java.util.*;
 import java.io.Serializable;
+import static org.systemsbiology.gaggle.core.datatypes.JSONConstants.*;
 
 /**
  * This class reads Gaggle data structures in JSON format and turns
  * them into Java Gaggle data objects.
+ * @author Wei-ju Wu
  */
 public class JSONReader {
-    // common
-    private static final String KEY_GAGGLE_DATA  = "gaggle-data";
-    private static final String KEY_METADATA     = "metadata";
-    private static final String KEY_NAME         = "name";
-    private static final String KEY_SPECIES      = "species";
-
-    // data types
-    private static final String KEY_MATRIX       = "matrix";
-    private static final String KEY_NAMELIST     = "namelist";
-    private static final String KEY_NETWORK      = "network";
-    private static final String KEY_TABLE        = "table";
-    private static final String KEY_TUPLE        = "tuple";
-    private static final String KEY_TYPE         = "type";
-
-    // table/matrix specific
-    private static final String KEY_ROW_NAMES    = "row-names";
-    private static final String KEY_COLUMNS      = "columns";
-    private static final String KEY_COLUMN_NAMES = "column-names";
-    private static final String KEY_VALUES       = "values";
-
-    // network specific
-    private static final String KEY_ATTRIBUTES   = "attributes";
-    private static final String KEY_EDGES        = "edges";
-    private static final String KEY_DIRECTED     = "directed";
-    private static final String KEY_INTERACTION  = "interaction";
-    private static final String KEY_NODES        = "nodes";
-    private static final String KEY_NODE         = "node";
-    private static final String KEY_SOURCE       = "source";
-    private static final String KEY_TARGET       = "target";
-
-    private static final String TYPE_BICLUSTER   = "bicluster";
 
     public GaggleData createFromJsonString(String json) {
         JSONObject obj = JSONObject.fromObject(json);
@@ -259,7 +230,6 @@ public class JSONReader {
     private void extractAndSetNodeAttributes(Network network, JSONObject jsonNode) {
         JSONObject attribs = jsonNode.getJSONObject(KEY_ATTRIBUTES);
         String nodeName = jsonNode.getString(KEY_NODE);
-        System.out.println("Extracting node: " + nodeName);
         for (Object entry : attribs.entrySet()) {
             Map.Entry<String, Object> mapEntry =
                 (Map.Entry<String, Object>) entry;
