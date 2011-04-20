@@ -106,8 +106,9 @@ public class JSONWriter {
     public void write(Network network) {
         JSONObject jsonGaggleData = writeCommon(network);
         writeToWriter(jsonGaggleData
-                      .element(KEY_NODES, networkNodes2JSON(network))
-                      .element(KEY_EDGES, networkEdges2JSON(network)));
+                      .element(KEY_NETWORK, new JSONObject()
+                               .element(KEY_NODES, networkNodes2JSON(network))
+                               .element(KEY_EDGES, networkEdges2JSON(network))));
     }
 
     private JSONArray networkNodes2JSON(final Network network) {
@@ -171,9 +172,18 @@ public class JSONWriter {
     private JSONObject writeCommon(GaggleData gaggleData) {
         JSONObject metadata = new JSONObject()
             .element(KEY_SPECIES, gaggleData.getSpecies());
+        if (gaggleData.getMetadata() != null) {
+            for (Single single : gaggleData.getMetadata().getSingleList()) {
+                metadata = metadata.element(single.getName(), jsonify(single.getValue()));
+            }
+        }
         return new JSONObject()
             .element(KEY_NAME, gaggleData.getName())
             .element(KEY_METADATA, metadata);
+    }
+
+    private Object jsonify(Object value) {
+        return value;
     }
 
     private void writeToWriter(JSONObject jsonGaggleData) {

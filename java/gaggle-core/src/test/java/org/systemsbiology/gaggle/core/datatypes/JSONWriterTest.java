@@ -22,6 +22,28 @@ public class JSONWriterTest {
             new JSONReader().createFromJsonString(stringWriter.toString());
         assertEquals(namelist.getName(), namelist2.getName());
     }
+    @Test public void testWriteNamelistWithMetadata() {
+        Namelist namelist = new Namelist("nlname", "species",
+                                         new String[] {"n1", "n2"} );
+        Tuple metadata = new Tuple();
+        metadata.addSingle(new Single("foo", "bar"));
+        namelist.setMetadata(metadata);
+
+        StringWriter stringWriter = new StringWriter();
+        JSONWriter writer = new JSONWriter(stringWriter);
+        writer.write(namelist);
+        Namelist namelist2 = (Namelist)
+            new JSONReader().createFromJsonString(stringWriter.toString());
+        assertEquals(namelist.getName(), namelist2.getName());
+        assertTrue(tupleContainsKey(namelist2.getMetadata(), "foo"));
+    }
+    private boolean tupleContainsKey(Tuple tuple, String key) {
+        for (Single single : tuple.getSingleList()) {
+            if (key.equals(single.getName())) return true;
+        }
+        return false;
+    }
+
     @Test public void testWriteGaggleTuple() {
         GaggleTuple gaggleTuple = new GaggleTuple();
         gaggleTuple.setName("gtname");
@@ -36,7 +58,6 @@ public class JSONWriterTest {
         StringWriter stringWriter = new StringWriter();
         JSONWriter writer = new JSONWriter(stringWriter);
         writer.write(gaggleTuple);
-        //System.out.println("SERIALIZED: " + stringWriter.toString());
         GaggleTuple gaggleTuple2 = (GaggleTuple)
             new JSONReader().createFromJsonString(stringWriter.toString());
         assertEquals(gaggleTuple.getName(), gaggleTuple2.getName());
@@ -49,7 +70,7 @@ public class JSONWriterTest {
         StringWriter stringWriter = new StringWriter();
         JSONWriter writer = new JSONWriter(stringWriter);
         writer.write(cluster);
-        System.out.println("SERIALIZED: " + stringWriter.toString());
+        System.out.println("CLUSTER SERIALIZED (TODO): " + stringWriter.toString());
         /*
         Cluster cluster2 = (Cluster)
             new JSONReader().createFromJsonString(stringWriter.toString());
@@ -102,7 +123,9 @@ public class JSONWriterTest {
         StringWriter stringWriter = new StringWriter();
         JSONWriter writer = new JSONWriter(stringWriter);
         writer.write(network);
-        
         System.out.println("NETWORK SERIALIZED: " + stringWriter.toString());
+        Network network2 = (Network)
+            new JSONReader().createFromJsonString(stringWriter.toString());
+        assertEquals(network.getName(), network2.getName());
     }
 }
