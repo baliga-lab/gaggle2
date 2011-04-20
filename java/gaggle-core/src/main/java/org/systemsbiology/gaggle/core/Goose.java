@@ -114,6 +114,5 @@ public interface Goose extends Remote {
      * @throws RemoteException if RMI communication fails
      */
     public void doExit() throws RemoteException;
-
 }
 
