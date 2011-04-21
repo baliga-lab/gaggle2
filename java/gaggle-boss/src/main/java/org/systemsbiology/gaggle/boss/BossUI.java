@@ -6,8 +6,6 @@ public interface BossUI {
     public void gooseUnregistered(String name);
     public void gooseRenamed(String oldName, String uniqueName);
 
-    public void refresh();
-    public void refresh(boolean resetTableColumnWidths);
     public String[] getListeningGeese();
     public void broadcastToPlugins(String[] names);
     public void show();

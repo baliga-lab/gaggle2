@@ -12,14 +12,15 @@ import org.systemsbiology.gaggle.geese.DeafGoose;
 import org.systemsbiology.gaggle.core.datatypes.*;
 import org.systemsbiology.gaggle.util.*;
 
-public class BossImpl extends UnicastRemoteObject implements Boss2 {
+import java.util.logging.*;
+
+public class BossImpl extends UnicastRemoteObject implements Boss {
     public static final String SERVICE_NAME = "gaggle";
     private Map<String, Goose> gooseMap = new HashMap<String, Goose>();
-    private Map gooseListeningMap = new HashMap();
-
-    private List<DeafGoose> deafGeese = new ArrayList<DeafGoose>();
     private NewNameHelper nameHelper;
     private BossUI ui;
+
+    private static Logger Log = Logger.getLogger("Boss");
 
     public BossImpl(BossUI ui, String nameHelperURI)
         throws Exception {
@@ -33,9 +34,11 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
     public void bind() throws Exception {
         LocateRegistry.createRegistry(1099);
         Naming.rebind(SERVICE_NAME, this);
+        Log.info("Boss Service bound");
     }
     public void unbind() throws Exception {
         Naming.unbind(SERVICE_NAME);
+        Log.info("Boss Service unbound");
     }
 
     public Goose getGoose(String name) {
@@ -62,7 +65,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
                                       gooseMap.keySet().toArray(new String[0]));
 
         if (gooseMap.containsKey(oldName)) {
-            Goose goose = (Goose) gooseMap.get(oldName);
+            Goose goose = gooseMap.get(oldName);
             gooseMap.remove(oldName);
             gooseMap.put(uniqueName, goose);
             goose.setName(uniqueName);
@@ -75,14 +78,15 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
     public String renameGoose(String oldName, String proposedName) {
         String uniqueName = null;
         try {
-           uniqueName = renameGooseDirectly(oldName, proposedName);
+            Log.info("renameGoose()");
+            uniqueName = renameGooseDirectly(oldName, proposedName);
+            ui.gooseRenamed(oldName, uniqueName);
+            Log.info("goose renamed");
         } catch (RemoteException ex) {
             String msg = "Failed to contact goose to rename: " + oldName + " -> " +
                 proposedName;
             ui.displayErrorMessage(msg);
-            return null;
         }
-        ui.gooseRenamed(oldName, uniqueName);
         return uniqueName;
     }
 
@@ -99,7 +103,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
             try {
                 gooseMap.get(gooseName).getName();
             } catch (RemoteException e) {
-                System.out.println("Removing idle goose '" + gooseName + "'");
+                Log.info("Removing idle goose '" + gooseName + "'");
                 idleGeeseNames.add(gooseName);
             }
         }
@@ -112,9 +116,9 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
     public String register(Goose goose) throws RemoteException {
         String uniqueName = NameUniquifier.makeUnique(goose.getName(),
                 gooseMap.keySet().toArray(new String[0]));
+        Log.info("register(), uniqueName: " + uniqueName);
         goose.setName(uniqueName);
         addNewGoose(uniqueName, goose);
-        ui.refresh();
         unregisterIdleGeeseAndUpdate();
         return uniqueName;
     }
@@ -127,7 +131,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         String[] keys = gooseMap.keySet().toArray(new String[0]);
         Arrays.sort(keys); // why does this need to be sorted?
         for (String gooseName : keys) {
-            Goose goose = (Goose) gooseMap.get(gooseName);
+            Goose goose = gooseMap.get(gooseName);
             try {
                 goose.update(keys);
             } catch (Exception ex) {
@@ -136,10 +140,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         }
     }
 
-    public String register(DeafGoose deafGoose) throws RemoteException {
-        deafGeese.add(deafGoose);
-        return "";
-    }
+    public String register(DeafGoose deafGoose) { return ""; }
 
     /**
      * Unregisters a goose
@@ -150,13 +151,11 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
     }
 
     public void unregister(String gooseName, boolean doUpdate) {
-        System.out.println("boss: received unregister request for " + gooseName);
+        Log.info("boss: received unregister request for " + gooseName);
         try {
             if (gooseMap.containsKey(gooseName)) {
                 gooseMap.remove(gooseName);
             }
-            if (gooseListeningMap.containsKey(gooseName))
-                gooseListeningMap.remove(gooseName);
             ui.gooseUnregistered(gooseName);
         } catch (Exception e) {
             e.printStackTrace();
@@ -190,12 +189,11 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
             try {
                 goose.handleNameList(sourceGoose, nameList);
             } catch (Exception ex0) {
-                System.err.println("error in select request to " + gooseName + ": " +
-                        ex0.getMessage());
+                Log.severe("error in select request to " + gooseName + ": " +
+                           ex0.getMessage());
                 ex0.printStackTrace();
             }
         }
-        ui.refresh(true);
         long duration = System.currentTimeMillis() - startTime;
     }
 
@@ -220,19 +218,17 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
             try {
                 goose.handleMatrix(sourceGoose, matrix);
             } catch (Exception ex0) {
-                System.err.println("error in handleMatrix request to " + gooseName + ": " +
-                        ex0.getMessage());
+                Log.severe("error in handleMatrix request to " + gooseName + ": " +
+                           ex0.getMessage());
                 ex0.printStackTrace();
             }
         }
-        ui.refresh(true);
         long duration = System.currentTimeMillis() - startTime;
     }
 
     public void broadcastTuple(String sourceGoose, String targetGoose,
                                GaggleTuple gaggleTuple) {
         long startTime = System.currentTimeMillis();
-        ui.refresh();
         String[] gooseNames;
         if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
             targetGoose.equalsIgnoreCase("all")) {
@@ -249,8 +245,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
                 System.out.println("broadcastTuple to " + gooseName);
                 goose.handleTuple(sourceGoose, gaggleTuple);
             } catch (Exception ex0) {
-                System.err.println("error in broadcastTuple to " + gooseName + ": " +
-                        ex0.getMessage());
+                Log.severe("error in broadcastTuple to " + gooseName + ": " +
+                           ex0.getMessage());
                 ex0.printStackTrace();
             }
         }
@@ -277,15 +273,14 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
             try {
                 goose.handleCluster(sourceGoose, cluster);
             } catch (Exception ex0) {
-                System.err.println("error in broadcastCluster () to " + gooseName + ": " +
-                        ex0.getMessage());
+                Log.severe("error in broadcastCluster () to " + gooseName + ": " +
+                           ex0.getMessage());
                 ex0.printStackTrace();
             }
         }
 
         long duration = System.currentTimeMillis() - startTime;
-        ui.refresh();
-        System.out.println("GuiBoss.broadcastCluster  " + cluster.getName() + ", " +
+        Log.info("GuiBoss.broadcastCluster  " + cluster.getName() + ", " +
                 "rows: " + cluster.getRowNames().length +
                 "columns: " + cluster.getColumnNames().length +
                 ": " + duration + " msecs");
@@ -314,7 +309,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
                 ex0.printStackTrace();
             }
         }
-        ui.refresh();
     }
 
     public void broadcastJson(String source, String target, String json) {
@@ -336,7 +330,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
             try {
                 goose.doHide();
             } catch (Exception ex0) {
-                System.err.println("error in hide request to " + targetGoose + ": " +
+                Log.severe("error in hide request to " + targetGoose + ": " +
                                    ex0.getMessage());
                 ex0.printStackTrace();
             }
@@ -352,8 +346,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
             try {
                 goose.doShow();
             } catch (Exception ex0) {
-                System.err.println("error in show request to " + gooseName + ": " +
-                                   ex0.getMessage());
+                Log.severe("error in show request to " + gooseName + ": " +
+                           ex0.getMessage());
                 ex0.printStackTrace();
             }
         }
@@ -367,7 +361,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         } catch (java.rmi.UnmarshalException ignore0) {
             ignore0.printStackTrace();
         } catch (Exception ex1) {
-            System.err.println("error in terminate request to " + gooseName + ": " + ex1.getMessage());
+            Log.severe("error in terminate request to " + gooseName + ": " + ex1.getMessage());
         }
     }
 

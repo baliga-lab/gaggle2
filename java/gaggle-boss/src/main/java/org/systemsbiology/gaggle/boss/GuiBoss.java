@@ -27,62 +27,67 @@ import org.systemsbiology.gaggle.util.*;
 import org.systemsbiology.gaggle.core.*;
 import org.systemsbiology.gaggle.core.datatypes.*;
 
-public final class GuiBoss
-    implements WindowStateListener, Serializable, BossUI {
+import java.util.logging.*;
 
-    private static final String BOSS_REVISION = "4360";
+public final class GuiBoss implements Serializable, BossUI {
+
+    private static final Logger Log = Logger.getLogger("Boss UI");
+    private static final String FRAME_TITLE = "Gaggle Boss v.4360";
+    private static final String ABOUT_MESSAGE =
+        "<html><center>" +
+        "<h3>The Gaggle is developed by the Baliga Laboratory<br>" +
+        "at the Institute for Systems Biology.<br></h3>" +
+        "<a href=\"http://www.systemsbiology.org\">http://www.systemsbiology.org</a><br>" +
+        "Software Developers: Paul Shannon, Wei-ju Wu<br>" +
+        "Principal Investigator: Nitin S. Baliga<br><br>" +
+        "Supported by research grants from NSF, DoE and DoD<br><br>" +
+        "For more information visit the Baliga Laboratory: <br>" +
+        "<a href=\"http://baliga.systemsbiology.net\">" +
+        "http://baliga.systembiology.net</a></center></html>";
 
     private JFrame frame;
     private JTable gooseTable;
-    private JScrollPane scrollPane;
     private JTextField searchBox;
     private GaggleBossTableModel gooseTableModel;
 
     private List<GaggleBossPlugin> plugins = new ArrayList<GaggleBossPlugin>();
 
-    private JPanel outerPanel;
     private JTabbedPane tabbedPanel;
     private JButton frameSizeToggleButton;
     private boolean bodyVisible = true;
     private BossConfig config;
     private BossImpl bossImpl;
 
-    public GuiBoss() { this(new String[0]); }
-
     public GuiBoss(String[] args) {
         Security.setProperty("networkaddress.cache.ttl","0");
         Security.setProperty("networkaddress.cache.negative.ttl","0");
-        System.out.println("ttl settings changed in boss");
+        Log.info("ttl settings changed in boss");
 
         config = new BossConfig(args);
         String nameHelperURI = config.getNameHelperUri();
         try {
             this.bossImpl = new BossImpl(this, nameHelperURI);
         } catch (Exception ex0) {
-            String msg = "Error reading name helper file from " +
-                nameHelperURI + "\n" + ex0.getMessage();
-            JOptionPane.showMessageDialog(frame, msg);
+            displayErrorMessage("Error reading name helper file from " +
+                                nameHelperURI + "\n" + ex0.getMessage());
         }
-        System.out.println("start invisibly? " + config.startInvisibly());
-        System.out.println("start minimized? " + config.startMinimized());
+        Log.info("start invisibly? " + config.startInvisibly());
+        Log.info("start minimized? " + config.startMinimized());
 
-        frame = new JFrame(createFrameTitle());
-        frame.addWindowStateListener(this);
-
+        frame = new JFrame(FRAME_TITLE);
         MiscUtil.setApplicationIcon(frame);
 
         try {
             bossImpl.bind();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Gaggle Port already in use.  Exiting....");
+            displayErrorMessage("Gaggle Port already in use.  Exiting....");
             System.exit(0);
         }
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.addWindowStateListener(this);
         frame.getContentPane().add(createGui());
-
         frame.pack();
+
         if (!config.startInvisibly()) {
             frame.setVisible(true);
             frame.toFront();
@@ -97,15 +102,6 @@ public final class GuiBoss
     public BossConfig getConfig() { return config; }
     public JFrame getFrame() { return frame; }
 
-    public void windowStateChanged(WindowEvent e) { }
-
-    private String createFrameTitle() {
-        return "Gaggle Boss v." + BOSS_REVISION;
-    }
-
-    /**
-     * return the names of the geese currently selected in the goose table
-     */
     private String[] getSelectedGooseNames() {
         List<String> list = new ArrayList<String>();
         int[] selectedRows = gooseTable.getSelectedRows();
@@ -122,6 +118,7 @@ public final class GuiBoss
         int[] selectedRows = gooseTable.getSelectedRows();
         String[] selectedGooseNames = getSelectedGooseNames();
         String[] allNames = bossImpl.getGooseNames();
+
         Arrays.sort(selectedGooseNames);
         Arrays.sort(allNames);
         for (int i = 0; i < allNames.length; i++) {
@@ -133,10 +130,7 @@ public final class GuiBoss
     }
 
     public void broadcastToPlugins(String[] names) {
-        for (int i = 0; i < plugins.size(); i++) {
-            GaggleBossPlugin plugin = plugins.get(i);
-            plugin.select(names);
-        }
+        for (GaggleBossPlugin plugin : plugins) plugin.select(names);
     }
     public void broadcastNamelist(String sourceGoose, String targetGoose,
                                   Namelist nameList) {
@@ -144,13 +138,9 @@ public final class GuiBoss
     }
 
     public String renameGooseDirectly(String oldName,
-                                      String proposedName)
-    throws RemoteException {
+                                      String proposedName) throws RemoteException {
         return bossImpl.renameGooseDirectly(oldName, proposedName);
     }
-
-    public void cleanUpOnExit(String appName) { }
-
 
     public void show() {
         if (getFrame().getExtendedState() != java.awt.Frame.NORMAL)
@@ -180,16 +170,14 @@ public final class GuiBoss
         frame.pack();
     }
 
-    protected JPanel createGui() {
-        outerPanel = new JPanel();
+    private JPanel createGui() {
+        JPanel outerPanel = new JPanel();
         outerPanel.setLayout(new BorderLayout());
         JToolBar toolbar = new JToolBar();
         toolbar.setFloatable(false);
         frameSizeToggleButton = new JButton("Shrink");
         frameSizeToggleButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                toggleVisibility();
-            }
+            public void actionPerformed(ActionEvent e) { toggleVisibility(); }
         });
         toolbar.add(frameSizeToggleButton);
         outerPanel.add(toolbar, BorderLayout.NORTH);
@@ -197,31 +185,10 @@ public final class GuiBoss
         JButton aboutButton = new JButton("About");
         aboutButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                StringBuffer sb = new StringBuffer();
-                sb.append("<html><center>");
-                sb.append("<h3>");
-                sb.append("The Gaggle is developed by the Baliga Laboratory<br>");
-                sb.append("at the Institute for Systems Biology.<br>");
-                sb.append("</h3>");
-                sb.append("<font color='blue'>");
-                sb.append("http://www.systemsbiology.org<br>");
-                sb.append("</font>");
-                sb.append("<br>");
-                sb.append("Software engineer:  Paul Shannon<br>");
-                sb.append("Principal Investigator: Nitin S. Baliga<br>");
-                sb.append("<br>");
-                sb.append("Supported by research grants from NSF, DoE and DoD<br>");
-                sb.append("<br>");
-                sb.append("For more information visit the Baliga Laboratory: <br>");
-                sb.append("<font color='blue' size='-1'>");
-                sb.append("http://www.systembiology.org/Scientists_and_Research/Faculty_Groups/Baliga_Group");
-                sb.append("</font>");
-                sb.append("</center></html>");
-                String msg = sb.toString();
                 String title = "About the Gaggle";
                 int messageType = JOptionPane.INFORMATION_MESSAGE;
                 Icon icon = null;
-                JOptionPane.showMessageDialog(frame, msg, title, messageType, icon);
+                JOptionPane.showMessageDialog(frame, ABOUT_MESSAGE, title, messageType, icon);
             }
         });
         toolbar.add(aboutButton);
@@ -233,7 +200,7 @@ public final class GuiBoss
 
         String[] pluginClassNames = config.getPluginNames();
         for (int i = 0; i < pluginClassNames.length; i++) {
-            System.out.println("about to load boss plugin: " + pluginClassNames[i]);
+            Log.info("about to load boss plugin: " + pluginClassNames[i]);
             GaggleBossPlugin plugin = loadPlugin(pluginClassNames[i], this);
             if (plugin == null) {
                 String msg = "Could not locate plugin '" + pluginClassNames[i] + "'";
@@ -246,24 +213,17 @@ public final class GuiBoss
         return outerPanel;
     }
 
-    protected JPanel createGaggleControlPanel() {
+    private JPanel createGaggleControlPanel() {
         JPanel tablePanel = new JPanel();
         tablePanel.setLayout(new BorderLayout());
-        int topBorder = 20;
-        int bottomBorder = 10;
-        int sideBorder = 20;
-
-        tablePanel.setBorder(BorderFactory.createEmptyBorder(topBorder, sideBorder,
-                bottomBorder, sideBorder));
+        tablePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
         JPanel tableOuterPanel = new JPanel();
         tableOuterPanel.setLayout(new BorderLayout());
         tableOuterPanel.add(tablePanel, BorderLayout.CENTER);
         JPanel controlsPanel = new JPanel();
         controlsPanel.setLayout(new BorderLayout());
         controlsPanel.add(createButtonsInPanel(), BorderLayout.CENTER);
-        // controlsPanel.add (createSearchBoxInPanel (), BorderLayout.NORTH);
         tableOuterPanel.add(controlsPanel, BorderLayout.SOUTH);
-
 
         gooseTableModel = new GaggleBossTableModel(this);
         gooseTable = new JTable(gooseTableModel);
@@ -272,18 +232,16 @@ public final class GuiBoss
         gooseTable.setGridColor(Color.gray);
         gooseTable.setDefaultRenderer(JButton.class, new ButtonCellRenderer(
                 gooseTable.getDefaultRenderer(JButton.class)));
-        setTableColumnWidths();
 
         gooseTable.setPreferredScrollableViewportSize(new Dimension(400, 200));
-        gooseTable.addMouseListener(new GaggleMouseListener(gooseTable));
-        scrollPane = new JScrollPane(gooseTable);
+        gooseTable.addMouseListener(new GaggleMouseListener());
 
-        tablePanel.add(scrollPane, BorderLayout.CENTER);
+        tablePanel.add(new JScrollPane(gooseTable), BorderLayout.CENTER);
 
         return tableOuterPanel;
     }
 
-    protected JPanel createButtonsInPanel() {
+    private JPanel createButtonsInPanel() {
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new BorderLayout());
         JPanel actionButtonPanel = new JPanel();
@@ -306,16 +264,54 @@ public final class GuiBoss
         JButton terminateButton = new JButton("Terminate");
         JButton quitButton = new JButton("Quit");
 
-        showButton.addActionListener(new ShowAction());
-        showOthersButton.addActionListener(new ShowOthersAction());
-        hideButton.addActionListener(new HideAction());
-        hideOthersButton.addActionListener(new HideOthersAction());
-        selectAllButton.addActionListener(new SelectAllAction());
-        refreshButton.addActionListener(new RefreshAction());
-        listenAllButton.addActionListener(new ListenAllAction());
-        listenNoneButton.addActionListener(new ListenNoneAction());
-        terminateButton.addActionListener(new TerminateAction());
-        quitButton.addActionListener(new QuitAction());
+        showButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    showSelectedGeese();
+                }
+            });
+        showOthersButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    showNonSelectedGeese();
+                } 
+            });
+        hideButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    hideSelectedGeese();
+                }
+            });
+        hideOthersButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    hideNonSelectedGeese();
+                }
+            });
+        selectAllButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    gooseTable.selectAll();
+                }
+            });
+        refreshButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    bossImpl.unregisterIdleGeeseAndUpdate();
+                }
+            });
+        listenAllButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    listenAll();
+                }
+            });
+        listenNoneButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    listenNone();
+                }
+            });
+        terminateButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    terminateSelectedGeese();
+                }
+            });
+        quitButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) { quit(); }
+            });
 
         upperActionButtonPanel.add(showButton);
         upperActionButtonPanel.add(showOthersButton);
@@ -336,205 +332,85 @@ public final class GuiBoss
         return buttonPanel;
     }
 
-    protected void setTableColumnWidths() { }
-
-    class SelectAllAction extends AbstractAction {
-
-        SelectAllAction() { super(""); }
-        public void actionPerformed(ActionEvent e) {
-            gooseTable.selectAll();
+    private void listenAll() {
+        for (String name : bossImpl.getGooseNames()) {
+            gooseTableModel.setListeningState(name, true);
         }
     }
 
-    class ShowAction extends AbstractAction {
-
-        ShowAction() { super(""); }
-
-        public void actionPerformed(ActionEvent e) {
-            String[] names = getSelectedGooseNames();
-            for (int i = 0; i < names.length; i++) {
-                bossImpl.show(names[i]);
-            }
+    private void listenNone() {
+        for (String name : bossImpl.getGooseNames()) {
+            gooseTableModel.setListeningState(name, false);
         }
     }
 
-    class ShowOthersAction extends AbstractAction {
-
-        ShowOthersAction() { super(""); }
-        public void actionPerformed(ActionEvent e) {
-            String[] names = getUnselectedGooseNames();
-            for (int i = 0; i < names.length; i++) {
-                bossImpl.show(names[i]);
-            }
+    private void terminateSelectedGeese() {
+        for (String name : getSelectedGooseNames()) {
+            bossImpl.terminate(name);
         }
     }
 
-    class HideAction extends AbstractAction {
-
-        HideAction() { super(""); }
-        public void actionPerformed(ActionEvent e) {
-            String[] names = getSelectedGooseNames();
-            for (int i = 0; i < names.length; i++) {
-                bossImpl.hide(names[i]);
-            }
-        }
-    }
-
-    class HideOthersAction extends AbstractAction {
-
-        HideOthersAction() { super(""); }
-        public void actionPerformed(ActionEvent e) {
-            String[] names = getUnselectedGooseNames();
-            for (int i = 0; i < names.length; i++) {
-                bossImpl.hide(names[i]);
-            }
-        }
-    }
-
-    public String[] getListeningGeese() {
-        String[] allGeese = bossImpl.getGooseNames();
-        List<String> tmp = new ArrayList<String>();
-        for (int i = 0; i < allGeese.length; i++) {
-            if (isListening(allGeese[i])) tmp.add(allGeese[i]);
-        }
-        return tmp.toArray(new String[0]);
-
-    }
-
-    protected void setSelectionCount(String gooseName, int count) {
-        gooseTableModel.setSelectionCount(gooseName, count);
-    }
-
-    public void refresh() { refresh(false); }
-
-    public void refresh(boolean resetTableColumnWidths) {
-        // todo - remove the following? is it used?
-        if (resetTableColumnWidths) setTableColumnWidths();
-    }
-
-    class RefreshAction extends AbstractAction {
-
-        RefreshAction() {
-            super("");
-            putValue(AbstractAction.SHORT_DESCRIPTION,
-                    "Remove disconnected geese from list.");
-        }
-        public void actionPerformed(ActionEvent e) {
-            bossImpl.unregisterIdleGeeseAndUpdate();
-            refresh(true);
-        }
-    }
-
-    class ListenAllAction extends AbstractAction {
-
-        ListenAllAction() { super(""); }
-        public void actionPerformed(ActionEvent e) {
-            String[] gooseNames = bossImpl.getGooseNames();
-            for (int i = 0; i < gooseNames.length; i++) {
-                String name = gooseNames[i];
-                gooseTableModel.setListeningState(name, true);
-            }
-        }
-    }
-
-    class ListenNoneAction extends AbstractAction {
-
-        ListenNoneAction() { super(""); }
-        public void actionPerformed(ActionEvent e) {
-            String[] gooseNames = bossImpl.getGooseNames();
-            for (int i = 0; i < gooseNames.length; i++) {
-                String name = gooseNames[i];
-                gooseTableModel.setListeningState(name, false);
-            }
-        }
-    }
-
-    class TileAction extends AbstractAction {
-
-        TileAction() { super(""); }
-        public void actionPerformed(ActionEvent e) { }
-    }
-
-    class StaggerAction extends AbstractAction {
-
-        StaggerAction() { super(""); }
-
-        public void actionPerformed(ActionEvent e) {
-            System.out.println("StaggerAction");
-        }
-
-    }
-
-    class TerminateAction extends AbstractAction {
-
-        TerminateAction() { super(""); }
-        
-        public void actionPerformed(ActionEvent e) {
-            refresh();
-            String[] names = getSelectedGooseNames();
-            for (int i = 0; i < names.length; i++) {
-                bossImpl.terminate(names[i]);
-            }
-            refresh(true);
-        }
-    }
-
-    class QuitAction extends AbstractAction {
-        QuitAction() { super(""); }
-
-        public void actionPerformed(ActionEvent e) {
-            int dialogResult =
-                JOptionPane.showConfirmDialog(frame, "Really Quit?",
-                                              "Exit the Gaggle Boss?",
-                                              JOptionPane.YES_NO_OPTION);
-            if (dialogResult == JOptionPane.NO_OPTION) return;
-
+    private void quit() {
+        int dialogResult =
+            JOptionPane.showConfirmDialog(frame, "Really Quit?",
+                                          "Exit the Gaggle Boss?",
+                                          JOptionPane.YES_NO_OPTION);
+        if (dialogResult == JOptionPane.YES_OPTION) {
             try {
                 bossImpl.unbind();
-            } catch (Exception ex0) {
-                ex0.printStackTrace();
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
             System.exit(0);
         }
     }
 
-    class GaggleMouseListener extends MouseAdapter {
-        private JTable table;
+    private void showSelectedGeese() {
+        for (String name : getSelectedGooseNames()) bossImpl.show(name);
+    }
 
-        public GaggleMouseListener(JTable table) {
-            this.table = table;
+    private void showNonSelectedGeese() {
+        for (String name : getUnselectedGooseNames()) bossImpl.show(name);
+    }
+    private void hideSelectedGeese() {
+        for (String name : getSelectedGooseNames()) bossImpl.hide(name);
+    }
+    private void hideNonSelectedGeese() {
+        for (String name : getUnselectedGooseNames()) bossImpl.hide(name);
+    }
+
+    public String[] getListeningGeese() {
+        List<String> result = new ArrayList<String>();
+        for (String goose : bossImpl.getGooseNames()) {
+            if (isListening(goose)) result.add(goose);
         }
+        return result.toArray(new String[0]);
 
+    }
+
+    private void setSelectionCount(String gooseName, int count) {
+        gooseTableModel.setSelectionCount(gooseName, count);
+    }
+    class GaggleMouseListener extends MouseAdapter {
         private void forwardEventToButton(MouseEvent e) {
-            TableColumnModel columnModel = table.getColumnModel();
+            TableColumnModel columnModel = gooseTable.getColumnModel();
             int column = columnModel.getColumnIndexAtX(e.getX());
-            int row = e.getY() / table.getRowHeight();
+            int row = e.getY() / gooseTable.getRowHeight();
             Object value;
             JButton button;
             MouseEvent buttonEvent;
-            if (row >= table.getRowCount() || row < 0 ||
-                    column >= table.getColumnCount() || column < 0)
-                return;
-            value = table.getValueAt(row, column);
+
+            if (row >= gooseTable.getRowCount() || row < 0 ||
+                column >= gooseTable.getColumnCount() || column < 0) return;
+            value = gooseTable.getValueAt(row, column);
             if (!(value instanceof JButton)) return;
             button = (JButton) value;
-            buttonEvent = (MouseEvent) SwingUtilities.convertMouseEvent(table, e, button);
+            buttonEvent = (MouseEvent) SwingUtilities.convertMouseEvent(gooseTable, e, button);
             button.doClick();
-            //button.dispatchEvent (buttonEvent);
-            table.repaint();
+            gooseTable.repaint();
         }
         public void mouseReleased(MouseEvent e) { forwardEventToButton(e); }
     }
-
-    public void windowClosed(WindowEvent event) { }
-    public void windowClosing(WindowEvent event) { }
-    public void windowOpened(WindowEvent event) { }
-    public void windowIconified(WindowEvent event) { }
-    public void windowDeiconified(WindowEvent event) { }
-    public void windowActivated(WindowEvent event) { }
-    public void windowDeactivated(WindowEvent event) { }
-    public void windowGainedFocus(WindowEvent event) { }
-    public void windowLostFocus(WindowEvent event) { }
 
     class ButtonCellRenderer implements TableCellRenderer {
 
@@ -567,15 +443,12 @@ public final class GuiBoss
 
     }
 
-    public void gooseAdded(String name) {
-        gooseTableModel.addClient(name);
-        setTableColumnWidths();
-    }
+    public void gooseAdded(String name) { gooseTableModel.addClient(name); }
 
     public void gooseUnregistered(String gooseName) {
         gooseTableModel.removeGoose(gooseName);
-        setTableColumnWidths();
     }
+
     public void gooseRenamed(String oldName, String uniqueName) {
         String[] appNames = GuiBoss.this.gooseTableModel.getAppNames();
         for (int i = 0; i < appNames.length; i++) {
@@ -614,10 +487,6 @@ public final class GuiBoss
     }
 
     public static void main(String[] args) throws Exception {
-        try {
-            GuiBoss app = new GuiBoss(args);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+        GuiBoss app = new GuiBoss(args);
     }
 }
