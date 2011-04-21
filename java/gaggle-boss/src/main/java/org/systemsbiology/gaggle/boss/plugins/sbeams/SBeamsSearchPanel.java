@@ -1,5 +1,3 @@
-// SBeamsSearchPanel.java
-//---------------------------------------------------------------------------------------
 /*
  * Copyright (C) 2006 by Institute for Systems Biology,
  * Seattle, Washington, USA.  All rights reserved.
@@ -10,7 +8,7 @@
  */
 
 package org.systemsbiology.gaggle.boss.plugins.sbeams;
-//---------------------------------------------------------------------------------------
+
 import java.io.*;
 import javax.swing.*;
 import javax.swing.event.*;
@@ -194,16 +192,10 @@ class BroadcastSbeamsSelectionAction extends AbstractAction {
     Namelist nameList = new Namelist();
     nameList.setSpecies(species);
     nameList.setNames(selectedOrfs.toArray(new String[0]));
-    try {
-      gaggleBoss.broadcastNamelist(name, targetGoose, nameList);
-      }
-    catch (RemoteException rex) {
-      rex.printStackTrace ();
-      }
-    } // actionPerformed
-  
-} // inner class BroadcastSbeamsSelectionAction
-//-------------------------------------------------------------------------------
+    gaggleBoss.broadcastNamelist(name, targetGoose, nameList);
+    }
+}
+
 class SelectAllSbeamsRowsAction extends AbstractAction {
 
   SelectAllSbeamsRowsAction () { super (""); }

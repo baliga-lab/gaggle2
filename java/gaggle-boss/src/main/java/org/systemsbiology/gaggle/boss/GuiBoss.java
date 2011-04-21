@@ -25,9 +25,10 @@ import java.security.Security;
 import org.systemsbiology.gaggle.boss.plugins.*;
 import org.systemsbiology.gaggle.util.*;
 import org.systemsbiology.gaggle.core.*;
+import org.systemsbiology.gaggle.core.datatypes.*;
 
 public final class GuiBoss
-implements WindowStateListener, Serializable {
+    implements WindowStateListener, Serializable, BossUI {
 
     private static final String BOSS_REVISION = "4360";
 
@@ -36,7 +37,6 @@ implements WindowStateListener, Serializable {
     private JScrollPane scrollPane;
     private JTextField searchBox;
     private GaggleBossTableModel gooseTableModel;
-    private NewNameHelper nameHelper;
 
     private List<GaggleBossPlugin> plugins = new ArrayList<GaggleBossPlugin>();
 
@@ -45,7 +45,7 @@ implements WindowStateListener, Serializable {
     private JButton frameSizeToggleButton;
     private boolean bodyVisible = true;
     private BossConfig config;
-    private BossImpl bossImpl = new BossImpl();
+    private BossImpl bossImpl;
 
     public GuiBoss() { this(new String[0]); }
 
@@ -55,15 +55,13 @@ implements WindowStateListener, Serializable {
         System.out.println("ttl settings changed in boss");
 
         config = new BossConfig(args);
-        String nameHelperUri = config.getNameHelperUri();
-        if (nameHelperUri != null && nameHelperUri.length() > 0) {
-            try {
-                nameHelper = new NewNameHelper(nameHelperUri);
-            } catch (Exception ex0) {
-                String msg = "Error reading name helper file from " +
-                    nameHelperUri + "\n" + ex0.getMessage();
-                JOptionPane.showMessageDialog(frame, msg);
-            }
+        String nameHelperURI = config.getNameHelperUri();
+        try {
+            this.bossImpl = new BossImpl(this, nameHelperURI);
+        } catch (Exception ex0) {
+            String msg = "Error reading name helper file from " +
+                nameHelperURI + "\n" + ex0.getMessage();
+            JOptionPane.showMessageDialog(frame, msg);
         }
         System.out.println("start invisibly? " + config.startInvisibly());
         System.out.println("start minimized? " + config.startMinimized());
@@ -97,7 +95,6 @@ implements WindowStateListener, Serializable {
     }
 
     public BossConfig getConfig() { return config; }
-    public NewNameHelper getNameHelper() { return nameHelper; }
     public JFrame getFrame() { return frame; }
 
     public void windowStateChanged(WindowEvent e) { }
@@ -135,39 +132,37 @@ implements WindowStateListener, Serializable {
         return list.toArray(new String[0]);
     }
 
-    protected void broadcastToPlugins(String[] names) {
+    public void broadcastToPlugins(String[] names) {
         for (int i = 0; i < plugins.size(); i++) {
             GaggleBossPlugin plugin = plugins.get(i);
             plugin.select(names);
         }
     }
+    public void broadcastNamelist(String sourceGoose, String targetGoose,
+                                  Namelist nameList) {
+        bossImpl.broadcastNamelist(sourceGoose, targetGoose, nameList);
+    }
+
+    public String renameGooseDirectly(String oldName,
+                                      String proposedName)
+    throws RemoteException {
+        return bossImpl.renameGooseDirectly(oldName, proposedName);
+    }
 
     public void cleanUpOnExit(String appName) { }
 
 
-    public void show(String gooseName) {
-        if (gooseName.equalsIgnoreCase("boss")) {
-            if (getFrame().getExtendedState() != java.awt.Frame.NORMAL)
-                getFrame().setExtendedState(java.awt.Frame.NORMAL);
-            getFrame().setAlwaysOnTop(true);
-            MiscUtil.setJFrameAlwaysOnTop(getFrame(), true);
-            getFrame().setVisible(true);
-            getFrame().setAlwaysOnTop(false);
-            MiscUtil.setJFrameAlwaysOnTop(getFrame(), false);
-            return;
-        }
-
-        final Goose goose = bossImpl.getGoose(gooseName);
-        if (goose == null) return;
-
-        try {
-            goose.doShow();
-        } catch (Exception ex0) {
-            System.err.println("error in show request to " + gooseName + ": " +
-                               ex0.getMessage());
-            ex0.printStackTrace();
-        }
+    public void show() {
+        if (getFrame().getExtendedState() != java.awt.Frame.NORMAL)
+            getFrame().setExtendedState(java.awt.Frame.NORMAL);
+        getFrame().setAlwaysOnTop(true);
+        MiscUtil.setJFrameAlwaysOnTop(getFrame(), true);
+        getFrame().setVisible(true);
+        getFrame().setAlwaysOnTop(false);
+        MiscUtil.setJFrameAlwaysOnTop(getFrame(), false);
     }
+
+    public void hide() { frame.setVisible(false); }
 
     public void askForShow(String gooseName) {
         getFrame().toBack();
@@ -358,12 +353,7 @@ implements WindowStateListener, Serializable {
         public void actionPerformed(ActionEvent e) {
             String[] names = getSelectedGooseNames();
             for (int i = 0; i < names.length; i++) {
-                try {
-                    show(names[i]);
-                }
-                catch (RemoteException rex) {
-                    rex.printStackTrace();
-                }
+                bossImpl.show(names[i]);
             }
         }
     }
@@ -374,11 +364,7 @@ implements WindowStateListener, Serializable {
         public void actionPerformed(ActionEvent e) {
             String[] names = getUnselectedGooseNames();
             for (int i = 0; i < names.length; i++) {
-                try {
-                    show(names[i]);
-                } catch (RemoteException rex) {
-                    rex.printStackTrace();
-                }
+                bossImpl.show(names[i]);
             }
         }
     }
@@ -389,11 +375,7 @@ implements WindowStateListener, Serializable {
         public void actionPerformed(ActionEvent e) {
             String[] names = getSelectedGooseNames();
             for (int i = 0; i < names.length; i++) {
-                try {
-                    bossImpl.hide(names[i]);
-                } catch (RemoteException rex) {
-                    rex.printStackTrace();
-                }
+                bossImpl.hide(names[i]);
             }
         }
     }
@@ -404,27 +386,19 @@ implements WindowStateListener, Serializable {
         public void actionPerformed(ActionEvent e) {
             String[] names = getUnselectedGooseNames();
             for (int i = 0; i < names.length; i++) {
-                try {
-                    bossImpl.hide(names[i]);
-                } catch (RemoteException rex) {
-                    rex.printStackTrace();
-                }
+                bossImpl.hide(names[i]);
             }
         }
     }
 
-    protected String[] getListeningGeese() {
+    public String[] getListeningGeese() {
         String[] allGeese = bossImpl.getGooseNames();
         List<String> tmp = new ArrayList<String>();
         for (int i = 0; i < allGeese.length; i++) {
-            if (listening(allGeese[i])) tmp.add(allGeese[i]);
+            if (isListening(allGeese[i])) tmp.add(allGeese[i]);
         }
         return tmp.toArray(new String[0]);
 
-    }
-
-    protected boolean listening(String gooseName) {
-        return gooseTableModel.isListening(gooseName);
     }
 
     protected void setSelectionCount(String gooseName, int count) {
@@ -499,11 +473,7 @@ implements WindowStateListener, Serializable {
             refresh();
             String[] names = getSelectedGooseNames();
             for (int i = 0; i < names.length; i++) {
-                try {
-                    bossImpl.terminate(names[i]);
-                } catch (RemoteException rex) {
-                    rex.printStackTrace();
-                }
+                bossImpl.terminate(names[i]);
             }
             refresh(true);
         }
@@ -597,10 +567,27 @@ implements WindowStateListener, Serializable {
 
     }
 
-    public void addNewGoose(String name, Goose goose) {
-        gooseMap.put(name, goose);
+    public void gooseAdded(String name) {
         gooseTableModel.addClient(name);
         setTableColumnWidths();
+    }
+
+    public void gooseUnregistered(String gooseName) {
+        gooseTableModel.removeGoose(gooseName);
+        setTableColumnWidths();
+    }
+    public void gooseRenamed(String oldName, String uniqueName) {
+        String[] appNames = GuiBoss.this.gooseTableModel.getAppNames();
+        for (int i = 0; i < appNames.length; i++) {
+            if (appNames[i].equals(oldName)) {
+                GuiBoss.this.gooseTableModel.setAppNameAtRow(uniqueName, i);
+                GuiBoss.this.gooseTableModel.fireTableDataChanged();
+            }
+        }
+    }
+
+    public void displayErrorMessage(String message) {
+        JOptionPane.showMessageDialog(frame, message);
     }
 
     public boolean isListening(String gooseName) {

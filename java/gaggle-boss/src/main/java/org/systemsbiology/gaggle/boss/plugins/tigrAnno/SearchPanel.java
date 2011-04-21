@@ -235,16 +235,10 @@ class BroadcastSelectionAction extends AbstractAction {
     Namelist nameList = new Namelist();
     nameList.setSpecies(species);
     nameList.setNames(selectedOrfs.toArray (new String [0]));
-    try {
-      gaggleBoss.broadcastNamelist(name, "all", nameList);
-      }
-    catch (RemoteException rex) {
-      rex.printStackTrace ();
-      }
-    } // actionPerformed
-  
-} // inner class BroadcastSelectionAction
-//-------------------------------------------------------------------------------
+    gaggleBoss.broadcastNamelist(name, "all", nameList);
+    }
+}
+
 class SelectAllRowsAction extends AbstractAction {
 
   SelectAllRowsAction () { super (""); }
