@@ -1,9 +1,3 @@
-// TextHttpReader.java
-//---------------------------------------------------------------------------
-//  $Revision$ 
-//  $Date$
-//  $Author$
-//---------------------------------------------------------------------------
 /*
  * Copyright (C) 2006 by Institute for Systems Biology,
  * Seattle, Washington, USA.  All rights reserved.
@@ -12,72 +6,57 @@
  * General Public License, the text of which is available at:
  *   http://www.gnu.org/copyleft/lesser.html
  */
-
 package org.systemsbiology.gaggle.util;
-//------------------------------------------------------------------------------
+
 import java.io.*;
 import java.util.*;
 import java.net.*;
-//---------------------------------------------------------------------------
+
 public class TextHttpReader {
-  InputStreamReader reader;
-  StringBuffer sb;
-  String uri;
-//---------------------------------------------------------------------------
-public TextHttpReader (String URI) throws Exception
-{
-  // TODO change to url encode
-  uri = URI.replaceAll (" ", "%20");
-  sb = new StringBuffer ();
-
-} // ctor
-//-----------------------------------------------------------------------------------
-public int read () throws Exception
-{
-  sb.append (getPage (uri));
-  return sb.length ();
-
-} // read
-//---------------------------------------------------------------------------
-public String getText ()
-{
-  return sb.toString ();
-
-} // read
-//---------------------------------------------------------------------------
-static public String getPage (String urlString) throws Exception
-{
-  return getPage (new URL (urlString));
-}
-//-----------------------------------------------------------------------------------------------
-static public String getPage (URL url) throws Exception
-{
-  int characterCount = 0;
-  StringBuffer result = new StringBuffer ();
-
-  HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection ();
-  int responseCode = urlConnection.getResponseCode ();
-  String contentType = urlConnection.getContentType ();
-
-  int contentLength = urlConnection.getContentLength ();
-
-  String contentEncoding = urlConnection.getContentEncoding ();
-
-  if (responseCode != HttpURLConnection.HTTP_OK)
-    throw new IOException ("\nHTTP response code: " + responseCode + " url: " + url.toString () + "\n");
-
-  BufferedReader theHTML = new BufferedReader 
-                   (new InputStreamReader (urlConnection.getInputStream ()));
-  String thisLine;
-  while ((thisLine = theHTML.readLine ()) != null) {
-    result.append (thisLine);
-    result.append ("\n");
+    private InputStreamReader reader;
+    private StringBuilder sb;
+    private String uri;
+    public TextHttpReader(String URI) throws Exception {
+        // TODO change to url encode
+        uri = URI.replaceAll(" ", "%20");
+        sb = new StringBuilder();
     }
 
-  return result.toString ();
+    public int read() throws Exception {
+        sb.append(getPage(uri));
+        return sb.length();
+    }
 
-} // getPage
-//-----------------------------------------------------------------------------------------------
-} // TextReader
+    public String getText() {
+        return sb.toString();
+    }
+
+    static public String getPage(String urlString) throws Exception {
+        return getPage(new URL(urlString)); 
+    }
+
+    static public String getPage(URL url) throws Exception {
+        int characterCount = 0;
+        StringBuilder result = new StringBuilder();
+
+        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+        int responseCode = urlConnection.getResponseCode();
+        String contentType = urlConnection.getContentType();
+        int contentLength = urlConnection.getContentLength();
+        String contentEncoding = urlConnection.getContentEncoding();
+
+        if (responseCode != HttpURLConnection.HTTP_OK)
+            throw new IOException("\nHTTP response code: " + responseCode + " url: " + url.toString() + "\n");
+
+        BufferedReader theHTML = new BufferedReader 
+            (new InputStreamReader(urlConnection.getInputStream()));
+        String thisLine;
+        while ((thisLine = theHTML.readLine()) != null) {
+            result.append(thisLine);
+            result.append("\n");
+        }
+        return result.toString();
+    }
+}
 
 
