@@ -25,9 +25,8 @@ public class PluginLoader {
             argClasses [0] = gaggleBoss.getClass();
             Object[] args = new Object[1];
             args[0] = gaggleBoss;
-            Constructor[] ctors = pluginClass.getConstructors();
             Constructor ctor = pluginClass.getConstructor(argClasses);
-            Object plugin = ctor.newInstance(args);
+            ctor.newInstance(args);
         } catch (Exception ex) {
             ex.printStackTrace();
             System.err.println(ex.getMessage());

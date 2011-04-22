@@ -29,7 +29,7 @@ import org.systemsbiology.gaggle.core.datatypes.*;
 
 import java.util.logging.*;
 
-public final class GuiBoss implements Serializable, BossUI {
+public final class GuiBoss implements BossUI {
 
     private static final Logger Log = Logger.getLogger("Boss UI");
     private static final String FRAME_TITLE = "Gaggle Boss v.4360";
@@ -114,7 +114,6 @@ public final class GuiBoss implements Serializable, BossUI {
 
     private String[] getUnselectedGooseNames() {
         List<String> list = new ArrayList<String>();
-        int[] selectedRows = gooseTable.getSelectedRows();
         String[] selectedGooseNames = getSelectedGooseNames();
         String[] allNames = bossImpl.getGooseNames();
 
@@ -383,21 +382,19 @@ public final class GuiBoss implements Serializable, BossUI {
             int row = e.getY() / gooseTable.getRowHeight();
             Object value;
             JButton button;
-            MouseEvent buttonEvent;
 
             if (row >= gooseTable.getRowCount() || row < 0 ||
                 column >= gooseTable.getColumnCount() || column < 0) return;
             value = gooseTable.getValueAt(row, column);
             if (!(value instanceof JButton)) return;
             button = (JButton) value;
-            buttonEvent = (MouseEvent) SwingUtilities.convertMouseEvent(gooseTable, e, button);
             button.doClick();
             gooseTable.repaint();
         }
         public void mouseReleased(MouseEvent e) { forwardEventToButton(e); }
     }
 
-    class ButtonCellRenderer implements TableCellRenderer {
+    static class ButtonCellRenderer implements TableCellRenderer {
 
         private TableCellRenderer defaultRenderer;
 
@@ -459,7 +456,6 @@ public final class GuiBoss implements Serializable, BossUI {
             argClasses[0] = gaggleBoss.getClass();
             Object[] args = new Object[1];
             args[0] = gaggleBoss;
-            Constructor[] ctors = pluginClass.getConstructors();
             Constructor ctor = pluginClass.getConstructor(argClasses);
             Object plugin = ctor.newInstance(args);
             return (GaggleBossPlugin) plugin;
@@ -472,6 +468,6 @@ public final class GuiBoss implements Serializable, BossUI {
     }
 
     public static void main(String[] args) throws Exception {
-        GuiBoss app = new GuiBoss(args);
+        new GuiBoss(args);
     }
 }

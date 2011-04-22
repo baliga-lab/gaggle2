@@ -44,7 +44,6 @@ public class SBEAMSClient {
         boolean cookieFound = false;
         try {
             BufferedReader bufferedReader = new BufferedReader(new FileReader(cookiePath));
-            StringBuilder strbuf = new StringBuilder();
             String newLineOfText;
             while ((newLineOfText = bufferedReader.readLine()) != null) {
                 Pattern cookieSeek = Pattern.compile("(SBEAMSName\\=(.+)\\;)");
@@ -183,7 +182,7 @@ public class SBEAMSClient {
 
     public String fetchSbeamsPage(String urlString, String params) throws Exception {
         if (cookie == null) fetchCookie();
-        String paramsInUrl = new String();
+        String paramsInUrl = "";
         String unparameterizedUrl = urlString;
         Pattern potentialParams = Pattern.compile("(.*)\\?(.*)");
         Matcher match = potentialParams.matcher(urlString);
@@ -194,9 +193,7 @@ public class SBEAMSClient {
             else params += paramsInUrl;
         }
 
-        Response res = new Response();
-        res = postRequest(unparameterizedUrl, params);
-        return res.content;
+        return postRequest(unparameterizedUrl, params).content;
     }
 
     public String fetchSbeamsPage(String url) throws Exception {

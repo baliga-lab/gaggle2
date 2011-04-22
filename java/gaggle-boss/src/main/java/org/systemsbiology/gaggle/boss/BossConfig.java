@@ -23,13 +23,11 @@ public class BossConfig {
 
     private String argSpecificationString = "p:n:";
     private String[] commandLineArguments;
-    private String[] commandLineArgumentsCopy;
     private String propsFilename;
     private String nameHelperURI = null;
     private File projectFileDirectoryAbsolute;
 
     private Properties props;
-    private boolean helpRequested = false;
     private boolean startInvisibly = false;
     private boolean startMinimized = false;
 
@@ -45,7 +43,6 @@ public class BossConfig {
     public Properties getProperties() { return props; }
 
     private void parseArgs() {
-        helpRequested = false;
         boolean argsError = false;
         String tmp;
 
@@ -63,10 +60,10 @@ public class BossConfig {
         while ((c = g.getopt()) != -1) {
             switch (c) {
                 case'p':
-                    propsFilename = (g.getOptarg());
+                    propsFilename = g.getOptarg();
                     break;
                 case'n':
-                    nameHelperURI = (g.getOptarg());
+                    nameHelperURI = g.getOptarg();
                     break;
                 case'?':
                     // ignore

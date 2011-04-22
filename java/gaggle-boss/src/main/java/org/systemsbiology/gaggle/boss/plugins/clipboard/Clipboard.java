@@ -37,7 +37,6 @@ public class Clipboard extends GaggleBossPlugin {
     private void createGui() {
         setLayout(new BorderLayout());
         JPanel innerPanel = new JPanel(new BorderLayout());
-        JPanel searchPanel = new JPanel();
   
         textArea = new JTextArea();
         JScrollPane scrollPane = new JScrollPane(textArea);

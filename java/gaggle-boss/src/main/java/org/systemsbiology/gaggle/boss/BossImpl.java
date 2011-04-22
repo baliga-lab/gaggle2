@@ -14,7 +14,7 @@ import org.systemsbiology.gaggle.util.*;
 
 import java.util.logging.*;
 
-public class BossImpl extends UnicastRemoteObject implements Boss {
+public class BossImpl extends UnicastRemoteObject implements Boss2 {
     public static final String SERVICE_NAME = "gaggle";
     private Map<String, Goose> gooseMap = new HashMap<String, Goose>();
     private NewNameHelper nameHelper;
@@ -194,12 +194,10 @@ public class BossImpl extends UnicastRemoteObject implements Boss {
                 ex0.printStackTrace();
             }
         }
-        long duration = System.currentTimeMillis() - startTime;
     }
 
     public void broadcastMatrix(String sourceGoose, String targetGoose,
                                 DataMatrix matrix) {
-        long startTime = System.currentTimeMillis();
         ui.broadcastToPlugins(matrix.getRowTitles());
 
         String[] gooseNames;
@@ -223,7 +221,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss {
                 ex0.printStackTrace();
             }
         }
-        long duration = System.currentTimeMillis() - startTime;
     }
 
     public void broadcastTuple(String sourceGoose, String targetGoose,

@@ -146,7 +146,7 @@ public class SBeamsSearchPanel extends GaggleBossPlugin {
         return tablePanel;
     }
 
-    class WebPageLoader extends MouseInputAdapter {
+    static class WebPageLoader extends MouseInputAdapter {
         private JTable table;
         public WebPageLoader(JTable table) { this.table = table; }
         public void mouseClicked(MouseEvent e) {
