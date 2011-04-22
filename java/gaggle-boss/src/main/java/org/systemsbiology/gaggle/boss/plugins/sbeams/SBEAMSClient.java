@@ -42,8 +42,9 @@ public class SBEAMSClient {
 
     private boolean findCookie(String cookiePath) {
         boolean cookieFound = false;
+        BufferedReader bufferedReader = null;
         try {
-            BufferedReader bufferedReader = new BufferedReader(new FileReader(cookiePath));
+            bufferedReader = new BufferedReader(new FileReader(cookiePath));
             String newLineOfText;
             while ((newLineOfText = bufferedReader.readLine()) != null) {
                 Pattern cookieSeek = Pattern.compile("(SBEAMSName\\=(.+)\\;)");
@@ -57,6 +58,8 @@ public class SBEAMSClient {
         } catch (IOException e) {
             System.err.println("Cookie File Error or Not Found");
             cookieFound = false;
+        } finally {
+            if (bufferedReader != null) try { bufferedReader.close(); } catch (Exception ex) { }
         }
         return cookieFound;
     }
@@ -66,14 +69,17 @@ public class SBEAMSClient {
     }
 
     private void saveCookie(String cookieFile) {
+        BufferedWriter bufferedWriter = null;
         try {
-            BufferedWriter bufferedWriter = new BufferedWriter (new FileWriter (cookieFile));
+            bufferedWriter = new BufferedWriter (new FileWriter (cookieFile));
             bufferedWriter.write(cookie);
             bufferedWriter.newLine();
             bufferedWriter.flush();
         } catch (IOException e) {
             System.err.println("Can't write to cookie file");
             e.printStackTrace();
+        } finally {
+            if (bufferedWriter != null) try { bufferedWriter.close(); } catch (Exception ex) { }
         }
     }
 
