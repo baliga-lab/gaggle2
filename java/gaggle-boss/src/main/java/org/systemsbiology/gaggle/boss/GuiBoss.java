@@ -64,12 +64,11 @@ public final class GuiBoss implements Serializable, BossUI {
         Log.info("ttl settings changed in boss");
 
         config = new BossConfig(args);
-        String nameHelperURI = config.getNameHelperUri();
         try {
-            this.bossImpl = new BossImpl(this, nameHelperURI);
+            this.bossImpl = new BossImpl(this, config.getNameHelperURI());
         } catch (Exception ex0) {
             displayErrorMessage("Error reading name helper file from " +
-                                nameHelperURI + "\n" + ex0.getMessage());
+                                config.getNameHelperURI() + "\n" + ex0.getMessage());
         }
         Log.info("start invisibly? " + config.startInvisibly());
         Log.info("start minimized? " + config.startMinimized());
@@ -162,17 +161,13 @@ public final class GuiBoss implements Serializable, BossUI {
 
     public void toggleVisibility() {
         bodyVisible = !bodyVisible;
-        String label = "Shrink";
-        if (!bodyVisible)
-            label = "Boss";
-        frameSizeToggleButton.setText(label);
+        frameSizeToggleButton.setText(bodyVisible ? "Shrink" : "Boss");
         tabbedPanel.setVisible(bodyVisible);
         frame.pack();
     }
 
     private JPanel createGui() {
-        JPanel outerPanel = new JPanel();
-        outerPanel.setLayout(new BorderLayout());
+        JPanel outerPanel = new JPanel(new BorderLayout());
         JToolBar toolbar = new JToolBar();
         toolbar.setFloatable(false);
         frameSizeToggleButton = new JButton("Shrink");
@@ -185,10 +180,8 @@ public final class GuiBoss implements Serializable, BossUI {
         JButton aboutButton = new JButton("About");
         aboutButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                String title = "About the Gaggle";
-                int messageType = JOptionPane.INFORMATION_MESSAGE;
-                Icon icon = null;
-                JOptionPane.showMessageDialog(frame, ABOUT_MESSAGE, title, messageType, icon);
+                JOptionPane.showMessageDialog(frame, ABOUT_MESSAGE, "About the Gaggle",
+                                              JOptionPane.INFORMATION_MESSAGE, null);
             }
         });
         toolbar.add(aboutButton);
@@ -214,14 +207,11 @@ public final class GuiBoss implements Serializable, BossUI {
     }
 
     private JPanel createGaggleControlPanel() {
-        JPanel tablePanel = new JPanel();
-        tablePanel.setLayout(new BorderLayout());
+        JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
-        JPanel tableOuterPanel = new JPanel();
-        tableOuterPanel.setLayout(new BorderLayout());
+        JPanel tableOuterPanel = new JPanel(new BorderLayout());
         tableOuterPanel.add(tablePanel, BorderLayout.CENTER);
-        JPanel controlsPanel = new JPanel();
-        controlsPanel.setLayout(new BorderLayout());
+        JPanel controlsPanel = new JPanel(new BorderLayout());
         controlsPanel.add(createButtonsInPanel(), BorderLayout.CENTER);
         tableOuterPanel.add(controlsPanel, BorderLayout.SOUTH);
 
@@ -242,14 +232,12 @@ public final class GuiBoss implements Serializable, BossUI {
     }
 
     private JPanel createButtonsInPanel() {
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new BorderLayout());
-        JPanel actionButtonPanel = new JPanel();
+        JPanel buttonPanel = new JPanel(new BorderLayout());
+        JPanel actionButtonPanel = new JPanel(new GridLayout(2, 1));
         JPanel upperActionButtonPanel = new JPanel();
         JPanel lowerActionButtonPanel = new JPanel();
         JPanel quitButtonPanel = new JPanel();
 
-        actionButtonPanel.setLayout(new GridLayout(2, 1));
         actionButtonPanel.add(upperActionButtonPanel);
         actionButtonPanel.add(lowerActionButtonPanel);
 
@@ -388,9 +376,6 @@ public final class GuiBoss implements Serializable, BossUI {
 
     }
 
-    private void setSelectionCount(String gooseName, int count) {
-        gooseTableModel.setSelectionCount(gooseName, count);
-    }
     class GaggleMouseListener extends MouseAdapter {
         private void forwardEventToButton(MouseEvent e) {
             TableColumnModel columnModel = gooseTable.getColumnModel();

@@ -1,5 +1,3 @@
-// BossConfig.java
-// a class to handle run-time configuration
 /*
  * Copyright (C) 2006 by Institute for Systems Biology,
  * Seattle, Washington, USA.  All rights reserved.
@@ -18,25 +16,24 @@ import gnu.getopt.LongOpt;
 
 import org.systemsbiology.gaggle.util.*;
 
+/**
+ * A class to handle run-time configuration.
+ */
 public class BossConfig {
 
-    String argSpecificationString = "p:n:";
+    private String argSpecificationString = "p:n:";
+    private String[] commandLineArguments;
+    private String[] commandLineArgumentsCopy;
+    private String propsFilename;
+    private String nameHelperURI = null;
+    private File projectFileDirectoryAbsolute;
 
-    String[] commandLineArguments;
-    String[] commandLineArgumentsCopy;
-    String propsFilename;
-    String nameHelperUri = null;
-    File projectFileDirectoryAbsolute;
+    private Properties props;
+    private boolean helpRequested = false;
+    private boolean startInvisibly = false;
+    private boolean startMinimized = false;
 
-    Properties props;
-    StringBuffer errorMessages = new StringBuffer();
-    boolean helpRequested = false;
-    protected boolean startInvisibly = false;
-    protected boolean startMinimized = false;
-
-    public BossConfig() {
-        this(new String[0]);
-    }
+    public BossConfig() { this(new String[0]); }
 
     public BossConfig(String[] args) {
         commandLineArguments = new String[args.length];
@@ -47,7 +44,7 @@ public class BossConfig {
 
     public Properties getProperties() { return props; }
 
-    protected void parseArgs() {
+    private void parseArgs() {
         helpRequested = false;
         boolean argsError = false;
         String tmp;
@@ -69,15 +66,10 @@ public class BossConfig {
                     propsFilename = (g.getOptarg());
                     break;
                 case'n':
-                    nameHelperUri = (g.getOptarg());
+                    nameHelperURI = (g.getOptarg());
                     break;
                 case'?':
-                    // Optopt==0 indicates an unrecognized long option,
-                    // which is reserved for plugins
-                    int theOption = g.getOptopt();
-                    if (theOption != 0)
-                        errorMessages.append("The option '" + (char) theOption +
-                                             "' is not valid\n");
+                    // ignore
                     break;
                 case'~':
                     startInvisibly = true;
@@ -94,21 +86,20 @@ public class BossConfig {
 
     public String[] getPluginNames() {
         String[] keys = (String[]) props.keySet().toArray(new String[0]);
-        ArrayList list = new ArrayList();
-        for (int i = 0; i < keys.length; i++) {
-            String propertyName = keys[i];
+        List<String> result = new ArrayList<String>();
+        for (String propertyName : keys) {
             if (propertyName.toLowerCase().startsWith("plugin"))
-                list.add(props.get(propertyName));
+                result.add(props.get(propertyName).toString());
         }
-        return (String[]) list.toArray(new String[0]);
+        return result.toArray(new String[0]);
     }
 
-    public String getNameHelperUri() { return nameHelperUri; }
+    public String getNameHelperURI() { return nameHelperURI; }
     public String getPropsFilename() { return propsFilename; }
     public boolean startInvisibly() { return startInvisibly; }
     public boolean startMinimized() { return startMinimized; }
 
-    protected Properties readProperties() {
+    private Properties readProperties() {
         if (propsFilename == null) return new Properties();
         System.out.println("BossConfig about to read from " + propsFilename);
         Properties projectProps = readPropertyFileAsText(propsFilename);
@@ -149,7 +140,7 @@ public class BossConfig {
         return newProps;
     }
 
-    protected String absolutizeFilename(File parentDirectory, String filename) {
+    private String absolutizeFilename(File parentDirectory, String filename) {
         if (filename.trim().startsWith("/")) return filename;
         else return (new File(parentDirectory, filename)).getPath();
     }

@@ -12,43 +12,34 @@ import org.systemsbiology.gaggle.core.Boss;
 
 import javax.swing.*;
 import javax.swing.table.*;
+import java.util.List;
 import java.util.ArrayList;
 
 public class GaggleBossTableModel extends AbstractTableModel {
 
     private GuiBoss parentApp;
-    private ArrayList applicationNames = new ArrayList();
-    private ArrayList listeningState = new ArrayList();
-    private ArrayList selectionCounts = new ArrayList();
+    private List<String> applicationNames = new ArrayList<String>();
+    private List<Boolean> listeningState = new ArrayList<Boolean>();
 
-    private String[] appNames;
     private String[] columnNames = {"Geese", "Listening?"};
 
     public GaggleBossTableModel(GuiBoss parentApp) {
         this.parentApp = parentApp;
     }
 
-    public String getColumnName(int column) {
-        return columnNames[column];
-    }
-
-    public int getRowCount() {
-        return applicationNames.size();
-    }
-
-    public int getColumnCount() {
-        return columnNames.length;
-    }
+    public String getColumnName(int column) { return columnNames[column]; }
+    public int getRowCount() { return applicationNames.size(); }
+    public int getColumnCount() { return columnNames.length; }
 
     public void setValueAt(Object value, int row, int column) {
         try {
             if (column == 0) {
                 String proposedName = (String) value;
-                String uniquifiedName = parentApp.renameGooseDirectly((String) applicationNames.get(row), proposedName);
+                String uniquifiedName = parentApp.renameGooseDirectly(applicationNames.get(row), proposedName);
                 if (uniquifiedName != null)
                     applicationNames.set(row, uniquifiedName);
             } else if (column == 1) {
-                listeningState.set(row, value);
+                listeningState.set(row, (Boolean) value);
             }
         } catch (Exception ex0) {
             System.out.println("GaggleBossTableModel.setValueAt exception: " + ex0.getMessage());
@@ -61,65 +52,55 @@ public class GaggleBossTableModel extends AbstractTableModel {
         Object result = null;
 
         if (column == 0 && row < applicationNames.size())
-            result = (String) applicationNames.get(row);
+            result = applicationNames.get(row);
         else if (column == 1 && row < listeningState.size())
-            result = (Boolean) listeningState.get(row);
+            result = listeningState.get(row);
 
         return result;
     }
 
-    public boolean isCellEditable(int row, int column) {
-        return true;
-    }
+    public boolean isCellEditable(int row, int column) { return true; }
 
     public Class getColumnClass(int column) {
         return getValueAt(0, column).getClass();
     }
 
-    protected int getGooseRow(String gooseName) {
+    private int getGooseRow(String gooseName) {
         for (int row = 0; row < getRowCount(); row++) {
-            String name = (String) getValueAt(row, 0);
-            if (name.equals(gooseName))
-                return row;
+            if (gooseName.equals(applicationNames.get(row))) return row;
         }
         throw new IllegalArgumentException("could not find row for goose named '" +
-                gooseName + "'");
+                                           gooseName + "'");
     }
 
     public boolean isListening(String gooseName) {
-        int row = getGooseRow(gooseName);
-        return ((Boolean) getValueAt(row, 1)).booleanValue();
+        return listeningState.get(getGooseRow(gooseName));
     }
 
     public void setListeningState(String gooseName, boolean newValue) {
         int row = getGooseRow(gooseName);
-        setValueAt(new Boolean(newValue), row, 1);
-        fireTableStructureChanged();
+        listeningState.set(row, newValue);
+        fireTableDataChanged();
     }
 
     public void addClient(String newClientName) {
         applicationNames.add(newClientName);
-        listeningState.add(new Boolean(true));
-        JButton button = (new JButton(" "));
-        selectionCounts.add(new Integer(0));
-        fireTableStructureChanged();
+        listeningState.add(true);
+        fireTableDataChanged();
     }
 
     public void removeGoose(String gooseName) {
         int row = getGooseRow(gooseName);
         applicationNames.remove(row);
         listeningState.remove(row);
-        selectionCounts.remove(row);
-        fireTableStructureChanged();
+        fireTableDataChanged();
     }
 
     public void setAppNameAtRow(Object value, int row) {
-        applicationNames.set(row, value);
+        applicationNames.set(row, value.toString());
     }
 
-    public void setSelectionCount(String gooseName, int selectionCount) { }
-
     public String[] getAppNames() {
-        return (String[]) applicationNames.toArray(new String[0]);
+        return applicationNames.toArray(new String[0]);
     }
 }

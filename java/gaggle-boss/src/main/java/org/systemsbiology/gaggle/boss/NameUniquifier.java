@@ -14,15 +14,10 @@ import java.util.ArrayList;
 */
 public class NameUniquifier {
 
-
     public static String makeUnique(String candidate, String[] existingGooseNames) {
-        if (existingGooseNames.length == 0) {
-            return candidate;
-        }
 
-
+        if (existingGooseNames.length == 0) return candidate;
         List<String> gooseNamesList = Arrays.asList(existingGooseNames);
-
 
         String basename = "";
 
@@ -33,25 +28,15 @@ public class NameUniquifier {
 
             for (int i = 0; i < (segs.length -1); i++) {
                 basename += segs[i];
-                if (i < segs.length -2) {
-                    basename += "-";
-                }
+                if (i < segs.length -2) basename += "-";
             }
         }
-
 
         List<String> temp = new ArrayList<String>();
         for (String name : gooseNamesList) {
-            if (name.startsWith(basename)) {
-                temp.add(name);
-            }
+            if (name.startsWith(basename)) temp.add(name);
         }
-        if (temp.size() == 0) {
-            return candidate;
-        }
-
-
-
+        if (temp.size() == 0) return candidate;
 
         int max = 0;
         int suffix;
@@ -60,23 +45,14 @@ public class NameUniquifier {
             String lastSeg = segs[segs.length-1];
             try {
                 suffix = Integer.parseInt(lastSeg);
-            } catch (NumberFormatException nfe) {
-                continue;
-            }
-            if (suffix > max) {
-                max = suffix;
-            }
+                if (suffix > max) max = suffix;
+            } catch (NumberFormatException ignore) { }
         }
         String stringToReturn = candidate;
         max++;
 
         stringToReturn += "-";
-        if (max < 10) {
-            stringToReturn += "0";
-        }
+        if (max < 10) stringToReturn += "0";
         return stringToReturn += max;
-
-     
     }
-
 }
