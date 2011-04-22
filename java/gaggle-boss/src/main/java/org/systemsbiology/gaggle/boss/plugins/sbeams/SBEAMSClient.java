@@ -224,27 +224,29 @@ public class SBEAMSClient {
             }
             prompt.dispose();
         } else {
-            System.out.print( "Enter SBEAMS Username: " );
-            try {
-                String line;
-                BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
-                while ((line = stdin.readLine()) == null) { };
-                userName = line;
-            } catch(Exception e) { 
-                success = false;
-            }
+            System.out.print("Enter SBEAMS Username: ");
+            userName = readFromStdin();
+            if (userName == null) success = false;
             System.out.print("Enter Password: ");
-            try {
-                String line;
-                BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
-                while ((line = stdin.readLine()) == null) { };
-                password = line;
-            } catch( Exception e ) { 
-                success = false;
-            }
-            System.out.println("Thanks for the Username/Password Information, "+userName+"!");
+            password = readFromStdin();
+            if (password == null) success = false;
+            System.out.println("Thanks for the Username/Password Information, " + userName + " !");
         }
         return success;
+    }
+
+    private String readFromStdin() {
+        BufferedReader stdin = null;
+        try {
+            String line;
+            stdin = new BufferedReader(new InputStreamReader(System.in));
+            while ((line = stdin.readLine()) == null) ;
+            return line;
+        } catch(Exception e) { 
+            return null;
+        } finally {
+            if (stdin != null) try { stdin.close(); } catch (Exception ignore) { }
+        }
     }
 
     private void fetchCookie() throws Exception{

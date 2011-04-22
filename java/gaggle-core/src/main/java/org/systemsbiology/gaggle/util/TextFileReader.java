@@ -18,8 +18,7 @@ public class TextFileReader {
         this.filename = filename;
         try {
             bufferedReader = new BufferedReader(new FileReader(filename));
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
             return;
         }
@@ -37,7 +36,6 @@ public class TextFileReader {
             e.printStackTrace();
             return -1;
         }
-
         return strbuf.length();
     }
 
