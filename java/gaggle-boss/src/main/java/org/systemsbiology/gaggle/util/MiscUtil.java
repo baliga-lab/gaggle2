@@ -82,21 +82,22 @@ public class MiscUtil {
         StringBuilder result            = new StringBuilder();
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         int responseCode                = urlConnection.getResponseCode();
-        //String contentType              = urlConnection.getContentType();
-        //int contentLength               = urlConnection.getContentLength();
-        //String contentEncoding          = urlConnection.getContentEncoding();
 
         if (responseCode != HttpURLConnection.HTTP_OK)
             throw new IOException("\nHTTP response code: " + responseCode);
 
-        BufferedReader theHTML = new BufferedReader 
-            (new InputStreamReader(urlConnection.getInputStream()));
-        String thisLine;
-        while ((thisLine = theHTML.readLine()) != null) {
-            result.append(thisLine);
-            result.append(" ");
+        BufferedReader theHTML = null;
+        try {
+            theHTML = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+            String thisLine;
+            while ((thisLine = theHTML.readLine()) != null) {
+                result.append(thisLine);
+                result.append(" ");
+            }
+            return result.toString();
+        } finally {
+            if (theHTML != null) theHTML.close();
         }
-        return result.toString();
     }
 
     /**

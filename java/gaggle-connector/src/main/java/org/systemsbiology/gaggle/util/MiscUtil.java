@@ -103,7 +103,7 @@ public class MiscUtil {
                 if (exitCode != 0) {
                     //System.out.println("cmd failed, start new browser");
                     cmd = UNIX_PATH + " "  + url;
-                    p = Runtime.getRuntime().exec(cmd);
+                    Runtime.getRuntime().exec(cmd);
                 }
             } catch (InterruptedException ignore) { ignore.printStackTrace(); }
         } catch (IOException ignore) { ignore.printStackTrace(); }

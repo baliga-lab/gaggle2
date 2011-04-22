@@ -13,7 +13,6 @@ import java.util.*;
 import java.net.*;
 
 public class TextHttpReader {
-    private InputStreamReader reader;
     private StringBuilder sb;
     private String uri;
     public TextHttpReader(String URI) throws Exception {
@@ -41,9 +40,6 @@ public class TextHttpReader {
 
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         int responseCode = urlConnection.getResponseCode();
-        String contentType = urlConnection.getContentType();
-        int contentLength = urlConnection.getContentLength();
-        String contentEncoding = urlConnection.getContentEncoding();
 
         if (responseCode != HttpURLConnection.HTTP_OK)
             throw new IOException("\nHTTP response code: " + responseCode + " url: " + url.toString() + "\n");
