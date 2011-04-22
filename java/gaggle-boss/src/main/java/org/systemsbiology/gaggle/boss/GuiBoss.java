@@ -47,7 +47,6 @@ public final class GuiBoss implements BossUI {
 
     private JFrame frame;
     private JTable gooseTable;
-    private JTextField searchBox;
     private GaggleBossTableModel gooseTableModel;
 
     private List<GaggleBossPlugin> plugins = new ArrayList<GaggleBossPlugin>();

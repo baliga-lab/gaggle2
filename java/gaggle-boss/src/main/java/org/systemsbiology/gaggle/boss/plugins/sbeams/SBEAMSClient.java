@@ -16,8 +16,8 @@ import java.util.regex.*;
 public class SBEAMSClient {
 
     private String cookie = null;
-    private static String userName; 
-    private static String password;
+    private String userName; 
+    private String password;
     private boolean useGui = false;
     private int passwordAttempts = 3;
     private static boolean DEBUG = false;
@@ -26,9 +26,15 @@ public class SBEAMSClient {
     private static String COOKIE_ERROR = "badCookie";
 
     private static class Response {
-        String contentType = null;
-        String cookie = null;
-        String content = null;
+        private String content;
+        private String cookie;
+
+        public Response(String content, String cookie) {
+            this.content = content;
+            this.cookie = cookie;
+        }
+        public String getCookie() { return cookie; }
+        public String getContent() { return content; }
     }
 
     public SBEAMSClient() { }
@@ -39,75 +45,25 @@ public class SBEAMSClient {
     }
 
     private void destroyCookie() { cookie = null; }
-
-    private boolean findCookie(String cookiePath) {
-        boolean cookieFound = false;
-        BufferedReader bufferedReader = null;
-        try {
-            bufferedReader = new BufferedReader(new FileReader(cookiePath));
-            String newLineOfText;
-            while ((newLineOfText = bufferedReader.readLine()) != null) {
-                Pattern cookieSeek = Pattern.compile("(SBEAMSName\\=(.+)\\;)");
-                Matcher match = cookieSeek.matcher(newLineOfText);
-                if (match.matches()) {
-                    cookie = match.group(1);
-                    cookieFound = true;
-                    continue;
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Cookie File Error or Not Found");
-            cookieFound = false;
-        } finally {
-            if (bufferedReader != null) try { bufferedReader.close(); } catch (Exception ex) { }
-        }
-        return cookieFound;
-    }
-
-    private boolean findCookie() {
-        return findCookie(DEFAULT_COOKIE_FILE);
-    }
-
-    private void saveCookie(String cookieFile) {
-        BufferedWriter bufferedWriter = null;
-        try {
-            bufferedWriter = new BufferedWriter (new FileWriter (cookieFile));
-            bufferedWriter.write(cookie);
-            bufferedWriter.newLine();
-            bufferedWriter.flush();
-        } catch (IOException e) {
-            System.err.println("Can't write to cookie file");
-            e.printStackTrace();
-        } finally {
-            if (bufferedWriter != null) try { bufferedWriter.close(); } catch (Exception ex) { }
-        }
-    }
-
-    // Saves whatever is stored as "cookie" in a cookie file .sbeamsCookie
-    private void saveCookie() {
-        saveCookie(DEFAULT_COOKIE_FILE);
-    }
-
     public String getCookie() { return cookie; }
-
-  public void setCookie(String cookie) { this.cookie = cookie; }
+    public void setCookie(String cookie) { this.cookie = cookie; }
 
     public boolean goodCookie() {
         if (cookie == null) return false;
         // Hash for translating month to number
         Map<String, Integer> monthHash = new HashMap<String, Integer>();
-        monthHash.put("Jan", new Integer(1));
-        monthHash.put("Feb", new Integer(2));
-        monthHash.put("Mar", new Integer(3));
-        monthHash.put("Apr", new Integer(4));
-        monthHash.put("May", new Integer(5));
-        monthHash.put("Jun", new Integer(6));
-        monthHash.put("Jly", new Integer(7));
-        monthHash.put("Aug", new Integer(8));
-        monthHash.put("Sep", new Integer(9));
-        monthHash.put("Oct", new Integer(10));
-        monthHash.put("Nov", new Integer(11));
-        monthHash.put("Dec", new Integer(12));
+        monthHash.put("Jan", Integer.valueOf(1));
+        monthHash.put("Feb", Integer.valueOf(2));
+        monthHash.put("Mar", Integer.valueOf(3));
+        monthHash.put("Apr", Integer.valueOf(4));
+        monthHash.put("May", Integer.valueOf(5));
+        monthHash.put("Jun", Integer.valueOf(6));
+        monthHash.put("Jly", Integer.valueOf(7));
+        monthHash.put("Aug", Integer.valueOf(8));
+        monthHash.put("Sep", Integer.valueOf(9));
+        monthHash.put("Oct", Integer.valueOf(10));
+        monthHash.put("Nov", Integer.valueOf(11));
+        monthHash.put("Dec", Integer.valueOf(12));
 
         // Extract cookie expiration information
         int cookieYear = 0;
@@ -179,11 +135,7 @@ public class SBEAMSClient {
         }
         in.close();
 
-        Response res = new Response();
-        res.content = sb.toString();
-        res.contentType = uc.getHeaderField("Content-Type");
-        res.cookie = uc.getHeaderField("Set-Cookie");
-        return res;
+        return new Response(sb.toString(), uc.getHeaderField("Set-Cookie"));
     }
 
     public String fetchSbeamsPage(String urlString, String params) throws Exception {
@@ -199,7 +151,7 @@ public class SBEAMSClient {
             else params += paramsInUrl;
         }
 
-        return postRequest(unparameterizedUrl, params).content;
+        return postRequest(unparameterizedUrl, params).getContent();
     }
 
     public String fetchSbeamsPage(String url) throws Exception {
@@ -274,8 +226,8 @@ public class SBEAMSClient {
             params.append("=");
             params.append(URLEncoder.encode(" Login ", "UTF8"));
             Response res = postRequest(COOKIE_URL, params.toString());
-            this.cookie = res.cookie;
-            if (res.cookie == null) {
+            this.cookie = res.getCookie();
+            if (res.getCookie() == null) {
                 password = null;
                 passwordAttempts--;
             } else {

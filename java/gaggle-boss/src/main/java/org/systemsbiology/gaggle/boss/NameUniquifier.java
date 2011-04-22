@@ -21,15 +21,15 @@ public class NameUniquifier {
 
         String basename = "";
 
-        if (!candidate.contains("-")) {
-            basename = candidate;
-        } else {
+        if (!candidate.contains("-")) basename = candidate;
+        else {
             String[] segs = candidate.split("-");
-
+            StringBuilder basenameBuilder = new StringBuilder();
             for (int i = 0; i < (segs.length -1); i++) {
-                basename += segs[i];
-                if (i < segs.length -2) basename += "-";
+                basenameBuilder.append(segs[i]);
+                if (i < segs.length -2) basenameBuilder.append("-");
             }
+            basename = basenameBuilder.toString();
         }
 
         List<String> temp = new ArrayList<String>();

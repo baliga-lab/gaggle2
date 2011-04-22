@@ -169,7 +169,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
 
     public void broadcastNamelist(String sourceGoose, String targetGoose,
                                   Namelist nameList) {
-        long startTime = System.currentTimeMillis();
         ui.broadcastToPlugins(nameList.getNames());
 
         String[] gooseNames;
@@ -225,7 +224,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
 
     public void broadcastTuple(String sourceGoose, String targetGoose,
                                GaggleTuple gaggleTuple) {
-        long startTime = System.currentTimeMillis();
         String[] gooseNames;
         if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
             targetGoose.equalsIgnoreCase("all")) {
