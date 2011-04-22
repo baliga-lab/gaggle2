@@ -17,6 +17,7 @@ import java.util.logging.*;
 public class BossImpl extends UnicastRemoteObject implements Boss2 {
     public static final String SERVICE_NAME = "gaggle";
     private Map<String, Goose> gooseMap = new HashMap<String, Goose>();
+    private Map<String, JSONGoose> jsonGooseMap = new HashMap<String, JSONGoose>();
     private NewNameHelper nameHelper;
     private BossUI ui;
 
@@ -44,10 +45,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
     public Goose getGoose(String name) {
         return gooseMap.get(name);
     }
-    public void addNewGoose(String name, Goose goose) {
-        gooseMap.put(name, goose);
-        ui.gooseAdded(name);
-    }
     public String[] getGooseNames() {
         return gooseMap.keySet().toArray(new String[0]);
     }
@@ -60,9 +57,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
     public String renameGooseDirectly(String oldName,
                                       String proposedName)
         throws RemoteException {
-        String uniqueName =
-            NameUniquifier.makeUnique(proposedName,
-                                      gooseMap.keySet().toArray(new String[0]));
+        String uniqueName = uniqueNameBasedOn(proposedName);
 
         if (gooseMap.containsKey(oldName)) {
             Goose goose = gooseMap.get(oldName);
@@ -75,19 +70,24 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         return null;
     }
 
+    private String uniqueNameBasedOn(String name) {
+        return NameUniquifier.makeUnique(name,
+                                         gooseMap.keySet().toArray(new String[0]));
+    }
+
     public String renameGoose(String oldName, String proposedName) {
-        String uniqueName = null;
         try {
             Log.info("renameGoose()");
-            uniqueName = renameGooseDirectly(oldName, proposedName);
+            String uniqueName = renameGooseDirectly(oldName, proposedName);
             ui.gooseRenamed(oldName, uniqueName);
             Log.info("goose renamed");
+            return uniqueName;
         } catch (RemoteException ex) {
             String msg = "Failed to contact goose to rename: " + oldName + " -> " +
                 proposedName;
             ui.displayErrorMessage(msg);
         }
-        return uniqueName;
+        return null;
     }
 
     /**
@@ -97,34 +97,24 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
      * the refresh button, and also by any goose registering or unregistering
      * or being renamed.
      */
-    protected void unregisterIdleGeeseAndUpdate() {
-        List<String> idleGeeseNames = new ArrayList<String>();
+    public void unregisterIdleGeeseAndUpdate() {
+        for (String gooseName : disconnectedGooseNames()) {
+            unregister(gooseName, false);
+        }
+        updateGeese();
+    }
+
+    private List<String> disconnectedGooseNames() {
+        List<String> result = new ArrayList<String>();
         for (String gooseName : gooseMap.keySet()) {
             try {
                 gooseMap.get(gooseName).getName();
             } catch (RemoteException e) {
                 Log.info("Removing idle goose '" + gooseName + "'");
-                idleGeeseNames.add(gooseName);
+                result.add(gooseName);
             }
         }
-        for (String idleGooseName : idleGeeseNames) {
-            unregister(idleGooseName, false);
-        }
-        updateGeese();
-    }
-
-    public String register(Goose goose) throws RemoteException {
-        String uniqueName = NameUniquifier.makeUnique(goose.getName(),
-                gooseMap.keySet().toArray(new String[0]));
-        Log.info("register(), uniqueName: " + uniqueName);
-        goose.setName(uniqueName);
-        addNewGoose(uniqueName, goose);
-        unregisterIdleGeeseAndUpdate();
-        return uniqueName;
-    }
-
-    public String register(JSONGoose goose) {
-        return "TODO";
+        return result;
     }
 
     private void updateGeese() {
@@ -140,6 +130,20 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         }
     }
 
+    public String register(Goose goose) throws RemoteException {
+        String uniqueName = uniqueNameBasedOn(goose.getName());
+
+        Log.info("register(), uniqueName: " + uniqueName);
+        goose.setName(uniqueName);
+        addNewGoose(uniqueName, goose);
+        unregisterIdleGeeseAndUpdate();
+        return uniqueName;
+    }
+    private void addNewGoose(String name, Goose goose) {
+        gooseMap.put(name, goose);
+        ui.gooseAdded(name);
+    }
+
     public String register(DeafGoose deafGoose) { return ""; }
 
     /**
@@ -150,7 +154,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         unregister(gooseName, true);
     }
 
-    public void unregister(String gooseName, boolean doUpdate) {
+    private void unregister(String gooseName, boolean doUpdate) {
         Log.info("boss: received unregister request for " + gooseName);
         try {
             if (gooseMap.containsKey(gooseName)) {
@@ -306,10 +310,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         }
     }
 
-    public void broadcastJson(String source, String target, String json) {
-        throw new UnsupportedOperationException("TODO");
-    }
-
     public void hide(String targetGoose) {
         String[] gooseNames;
         if (targetGoose == null) {
@@ -360,4 +360,15 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         }
     }
 
+    public void broadcastJSON(String source, String target, String json) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    public void broadcastTable(String source, String target, Table table) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    public String register(JSONGoose goose) {
+        return "TODO";
+    }
 }

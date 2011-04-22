@@ -34,9 +34,9 @@ public class RmiGaggleConnector {
     private Goose goose;
     private Boss boss;
     private final static String DEFAULT_HOSTNAME = "localhost";
-    String serviceName = "gaggle";
-    String hostname = DEFAULT_HOSTNAME;
-    String uri = "rmi://" + hostname + "/" + serviceName;
+    private String serviceName = "gaggle";
+    private String hostname = DEFAULT_HOSTNAME;
+    private String uri = "rmi://" + hostname + "/" + serviceName;
     private Set<GaggleConnectionListener> listeners =
         new CopyOnWriteArraySet<GaggleConnectionListener>();
 
@@ -55,7 +55,7 @@ public class RmiGaggleConnector {
     public RmiGaggleConnector(Goose goose) {
         Security.setProperty("networkaddress.cache.ttl","0");
         Security.setProperty("networkaddress.cache.negative.ttl","0");
-        System.out.println("ttl settings changed in goose");
+        Log.info("ttl settings changed in goose");
         
         if (goose == null)
             throw new NullPointerException("RmiGaggleConnector requires a non-null goose.");
@@ -70,8 +70,8 @@ public class RmiGaggleConnector {
             UnicastRemoteObject.exportObject(goose, 0);
             exported = true;
         } catch (Exception e) {
-            System.err.println("RmiGaggleConnector failed to export remote object: "
-                    + e.getMessage());
+            Log.severe("RmiGaggleConnector failed to export remote object: "
+                       + e.getMessage());
             throw e;
         }
     }
@@ -115,11 +115,10 @@ public class RmiGaggleConnector {
             goose.setName(gooseName);
             fireConnectionEvent(true);
         } catch (NullPointerException npe) {
-            System.out.println("Boss isn't quite ready yet, trying again...");
-            //npe.printStackTrace();
+            Log.warning("Boss isn't quite ready yet, trying again...");
         } catch (Exception e) {
             if (!autoStartBoss) {
-                System.err.println("failed to connect to gaggle at " + uri + ": " + e.getMessage());
+                Log.severe("failed to connect to gaggle at " + uri + ": " + e.getMessage());
                 if (verbose) e.printStackTrace();
             }
             boss = null;
@@ -134,7 +133,7 @@ public class RmiGaggleConnector {
         public void run() {
             long elapsed = System.currentTimeMillis() - startTime;
             if (elapsed > timerTimeout) {
-                System.out.println("Didn't hear from the boss for 15 seconds, timing out.");
+                Log.info("Didn't hear from the boss for 15 seconds, timing out.");
                 this.cancel();
             }
 
@@ -149,8 +148,7 @@ public class RmiGaggleConnector {
                    connectToGaggle();
                    this.cancel();
                 } catch (Exception ex) {
-                    System.out.println("exception trying to connect using boss autostart: " + ex.getMessage());
-                    //ex.printStackTrace();
+                    Log.severe("exception trying to connect using boss autostart: " + ex.getMessage());
                 }
             } catch (Exception ex) {
                 // reduce noise by not printing anything here. This will be
@@ -171,7 +169,7 @@ public class RmiGaggleConnector {
             Timer timer = new Timer();
             timer.schedule(new WaitForBossStart(), 0, timerInterval);
         } catch (IOException e) {
-            System.out.println("Failed to start boss process!");
+            Log.severe("Failed to start boss process!");
             e.printStackTrace();
         }
     }
@@ -185,10 +183,9 @@ public class RmiGaggleConnector {
     public synchronized void disconnectFromGaggle(boolean printStackTrace) {
         if (boss != null) {
             try {
-                System.out.println("received disconnect request from " + goose.getName());
+                Log.info("received disconnect request from " + goose.getName());
                 boss.unregister(goose.getName());
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             boss = null;
@@ -196,13 +193,10 @@ public class RmiGaggleConnector {
 
         if (exported) {
             try {
-                System.out.println("received disconnect request from " + goose.getName());
+                Log.info("received disconnect request from " + goose.getName());
                 UnicastRemoteObject.unexportObject(goose, true);
-            }
-            catch (Exception e) {
-                if (printStackTrace) {
-                    e.printStackTrace();
-                }
+            } catch (Exception e) {
+                if (printStackTrace) e.printStackTrace();
             }
             exported = false;
         }
@@ -232,7 +226,7 @@ public class RmiGaggleConnector {
         }
     }
     
-    public synchronized boolean isConnected() { return (boss != null); }
+    public synchronized boolean isConnected() { return boss != null; }
 
     /**
      * Determines whether we should try and start a boss if a boss cannot
