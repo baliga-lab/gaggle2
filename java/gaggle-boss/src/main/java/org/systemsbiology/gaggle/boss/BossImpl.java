@@ -42,45 +42,26 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         Log.info("Boss Service unbound");
     }
 
+    // ***** Goose Management *****
     public Goose getGoose(String name) { return gooseManager.getGoose(name); }
     public String[] getGooseNames() { return gooseManager.getGooseNames(); }
-
-    //public Map<String, Goose> getGooseMap() { return gooseMap; }
-    
-
     public String renameGoose(String oldName, String proposedName) {
-        try {
-            Log.info("renameGoose()");
-            String uniqueName = renameGooseDirectly(oldName, proposedName);
-            ui.gooseRenamed(oldName, uniqueName);
-            Log.info("goose renamed");
-            return uniqueName;
-        } catch (RemoteException ex) {
-            String msg = "Failed to contact goose to rename: " + oldName + " -> " +
-                proposedName;
-            ui.displayErrorMessage(msg);
-        }
-        return null;
+        return gooseManager.renameGoose(oldName, proposedName);
     }
     public String renameGooseDirectly(String oldName,
                                       String proposedName) throws RemoteException {
         return gooseManager.renameGooseDirectly(oldName, proposedName);
     }
-
     public String register(Goose goose) throws RemoteException {
         return gooseManager.register(goose);
     }
     public String register(DeafGoose deafGoose) { return ""; }
-
-    /**
-     * Unregisters a goose
-     * @param gooseName the name of the goose to unregister
-     */
     public void unregister(String gooseName) { gooseManager.unregister(gooseName); }
     public void unregisterIdleGeeseAndUpdate() {
         gooseManager.unregisterIdleGeeseAndUpdate();
     }
 
+    // ***** Broadcasting *****
     public void broadcastNamelist(String sourceGoose, String targetGoose,
                                   Namelist nameList) {
         ui.broadcastToPlugins(nameList.getNames());
@@ -163,7 +144,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
 
     public void broadcastCluster(String sourceGoose, String targetGoose,
                                  Cluster cluster) {
-        long startTime = System.currentTimeMillis();
         ui.broadcastToPlugins(cluster.getRowNames());
 
         String[] gooseNames;
@@ -187,12 +167,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
                 ex0.printStackTrace();
             }
         }
-
-        long duration = System.currentTimeMillis() - startTime;
-        Log.info("GuiBoss.broadcastCluster  " + cluster.getName() + ", " +
-                "rows: " + cluster.getRowNames().length +
-                "columns: " + cluster.getColumnNames().length +
-                ": " + duration + " msecs");
     }
 
     public void broadcastNetwork(String sourceGoose, String targetGoose,

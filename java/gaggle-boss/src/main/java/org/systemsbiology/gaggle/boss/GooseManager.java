@@ -6,6 +6,9 @@ import java.util.logging.*;
 
 import org.systemsbiology.gaggle.core.*;
 
+/**
+ * A class for Goose management.
+ */
 public class GooseManager {
     private static Logger Log = Logger.getLogger("GooseManager");
     private Map<String, Goose> gooseMap = new HashMap<String, Goose>();
@@ -70,7 +73,7 @@ public class GooseManager {
         return null;
     }
 
-    public String uniqueNameBasedOn(String name) {
+    private String uniqueNameBasedOn(String name) {
         return NameUniquifier.makeUnique(name,
                                          gooseMap.keySet().toArray(new String[0]));
     }
@@ -115,4 +118,18 @@ public class GooseManager {
         }
     }
 
+    public String renameGoose(String oldName, String proposedName) {
+        try {
+            Log.info("renameGoose()");
+            String uniqueName = renameGooseDirectly(oldName, proposedName);
+            ui.gooseRenamed(oldName, uniqueName);
+            Log.info("goose renamed");
+            return uniqueName;
+        } catch (RemoteException ex) {
+            String msg = "Failed to contact goose to rename: " + oldName + " -> " +
+                proposedName;
+            ui.displayErrorMessage(msg);
+        }
+        return null;
+    }
 }
