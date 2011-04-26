@@ -23,7 +23,6 @@ public class Clipboard extends GaggleBossPlugin {
 
     private static final Border EMPTY_BORDER = new EmptyBorder(10, 10, 10, 10);
     private static final String PLUGIN_NAME = "Clipboard";
-    private JScrollPane scrollPane;
     private JTextArea textArea;
     private GuiBoss gaggleBoss;
     private String species = "unknown";

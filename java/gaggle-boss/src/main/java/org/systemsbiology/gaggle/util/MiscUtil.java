@@ -13,9 +13,6 @@ package org.systemsbiology.gaggle.util;
 import java.awt.Desktop;
 import java.awt.Toolkit;
 import java.awt.GraphicsConfiguration;
-import java.awt.event.ActionListener;
-
-import javax.swing.JFrame;
 
 import java.net.URI;
 import java.net.URL;
@@ -78,7 +75,6 @@ public class MiscUtil {
         }
     }
     static public String getPage(URL url) throws Exception {
-        int characterCount = 0;
         StringBuilder result            = new StringBuilder();
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         int responseCode                = urlConnection.getResponseCode();

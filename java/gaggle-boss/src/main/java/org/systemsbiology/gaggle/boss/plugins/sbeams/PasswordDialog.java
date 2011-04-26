@@ -11,8 +11,6 @@ package org.systemsbiology.gaggle.boss.plugins.sbeams;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.ResourceBundle;
-import java.util.Locale;
 
 public class PasswordDialog extends JDialog {
 
@@ -88,7 +86,6 @@ public class PasswordDialog extends JDialog {
         // Layout
         GridBagLayout gridbag = new GridBagLayout();
         JPanel panel = new JPanel();
-        JLabel label;
 
         GridBagConstraints constraints = new GridBagConstraints();
         constraints.insets.top = 5;

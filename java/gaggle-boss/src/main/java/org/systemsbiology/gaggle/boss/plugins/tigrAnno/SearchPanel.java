@@ -34,7 +34,6 @@ public class SearchPanel extends GaggleBossPlugin {
     private JButton selectAllRowsButton;
     private JButton clearAllSelectionsButton;
     private JButton clearTableButton;
-    private JTextField conditionCounterTextField;
 
     private GuiBoss gaggleBoss;
     private Map<String, String> searchMap = new HashMap<String, String>();

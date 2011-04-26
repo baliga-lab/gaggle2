@@ -20,10 +20,7 @@ public class SBEAMSClient {
     private String password;
     private boolean useGui = false;
     private int passwordAttempts = 3;
-    private static boolean DEBUG = false;
     private static String COOKIE_URL = "https://db.systemsbiology.net/sbeams/cgi/main.cgi";
-    private static String DEFAULT_COOKIE_FILE = "./.sbeamsCookie";
-    private static String COOKIE_ERROR = "badCookie";
 
     private static class Response {
         private String content;
@@ -44,7 +41,6 @@ public class SBEAMSClient {
         this.password = password;
     }
 
-    private void destroyCookie() { cookie = null; }
     public String getCookie() { return cookie; }
     public void setCookie(String cookie) { this.cookie = cookie; }
 
@@ -198,7 +194,7 @@ public class SBEAMSClient {
         try {
             String line;
             stdin = new BufferedReader(new InputStreamReader(System.in));
-            while ((line = stdin.readLine()) == null) ;
+            while ((line = stdin.readLine()) == null) { }
             return line;
         } catch(Exception e) { 
             return null;
