@@ -10,8 +10,6 @@ package org.systemsbiology.gaggle.boss;
 
 import javax.swing.*;
 import javax.swing.table.*;
-import javax.swing.table.TableColumnModel;
-import javax.swing.SwingUtilities;
 import java.awt.*;
 import java.awt.event.*;
 
@@ -412,16 +410,6 @@ public final class GuiBoss implements BossUI {
                         hasFocus, row, column);
             }
         }
-    }
-
-    private void placeInCenter() {
-        GraphicsConfiguration gc = frame.getGraphicsConfiguration();
-        int screenHeight = (int) gc.getBounds().getHeight();
-        int screenWidth = (int) gc.getBounds().getWidth();
-        int windowWidth = frame.getWidth();
-        int windowHeight = frame.getHeight();
-        frame.setLocation((screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2);
-
     }
 
     public void gooseAdded(String name) { gooseTableModel.addClient(name); }

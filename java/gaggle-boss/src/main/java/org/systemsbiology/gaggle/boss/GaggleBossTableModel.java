@@ -8,8 +8,6 @@
  */
 package org.systemsbiology.gaggle.boss;
 
-import org.systemsbiology.gaggle.core.Boss;
-
 import javax.swing.*;
 import javax.swing.table.*;
 import java.util.List;

@@ -43,9 +43,6 @@ public class BossConfig {
     public Properties getProperties() { return props; }
 
     private void parseArgs() {
-        boolean argsError = false;
-        String tmp;
-
         if (commandLineArguments == null || commandLineArguments.length == 0)
             return;
 
@@ -75,7 +72,6 @@ public class BossConfig {
                     startMinimized = true;
                     break;
                 default:
-                    argsError = true;
                     break;
             }
         }
