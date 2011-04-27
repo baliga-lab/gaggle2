@@ -12,7 +12,7 @@ import static org.systemsbiology.gaggle.core.datatypes.JSONConstants.*;
  */
 public class JSONReader {
 
-    public GaggleData createFromJsonString(String json) {
+    public GaggleData createFromJSONString(String json) {
         JSONObject obj = JSONObject.fromObject(json);
         return json2GaggleData(obj);
     }

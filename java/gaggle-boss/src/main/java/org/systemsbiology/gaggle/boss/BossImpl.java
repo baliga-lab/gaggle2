@@ -252,7 +252,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         throw new UnsupportedOperationException("TODO");
     }
 
-    public String register(JSONGoose goose) {
-        return "TODO";
+    public String register(JSONGoose goose) throws RemoteException {
+        return gooseManager.register(goose);
     }
 }

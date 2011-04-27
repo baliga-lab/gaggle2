@@ -19,7 +19,7 @@ public class JSONWriterTest {
         JSONWriter writer = new JSONWriter(stringWriter);
         writer.write(namelist);
         Namelist namelist2 = (Namelist)
-            new JSONReader().createFromJsonString(stringWriter.toString());
+            new JSONReader().createFromJSONString(stringWriter.toString());
         assertEquals(namelist.getName(), namelist2.getName());
     }
     @Test public void testWriteNamelistWithMetadata() {
@@ -33,7 +33,7 @@ public class JSONWriterTest {
         JSONWriter writer = new JSONWriter(stringWriter);
         writer.write(namelist);
         Namelist namelist2 = (Namelist)
-            new JSONReader().createFromJsonString(stringWriter.toString());
+            new JSONReader().createFromJSONString(stringWriter.toString());
         assertEquals(namelist.getName(), namelist2.getName());
         assertTrue(tupleContainsKey(namelist2.getMetadata(), "foo"));
     }
@@ -59,7 +59,7 @@ public class JSONWriterTest {
         JSONWriter writer = new JSONWriter(stringWriter);
         writer.write(gaggleTuple);
         GaggleTuple gaggleTuple2 = (GaggleTuple)
-            new JSONReader().createFromJsonString(stringWriter.toString());
+            new JSONReader().createFromJSONString(stringWriter.toString());
         assertEquals(gaggleTuple.getName(), gaggleTuple2.getName());
     }
 
@@ -73,7 +73,7 @@ public class JSONWriterTest {
         System.out.println("CLUSTER SERIALIZED (TODO): " + stringWriter.toString());
         /*
         Cluster cluster2 = (Cluster)
-            new JSONReader().createFromJsonString(stringWriter.toString());
+            new JSONReader().createFromJSONString(stringWriter.toString());
             assertEquals(cluster.getName(), cluster2.getName());*/
     }
 
@@ -91,7 +91,7 @@ public class JSONWriterTest {
         writer.write(matrix);
 
         DataMatrix matrix2 = (DataMatrix)
-            new JSONReader().createFromJsonString(stringWriter.toString());
+            new JSONReader().createFromJSONString(stringWriter.toString());
         assertEquals(matrix.getName(), matrix2.getName());
     }
 
@@ -105,7 +105,7 @@ public class JSONWriterTest {
         writer.write(table);
 
         Table table2 = (Table)
-            new JSONReader().createFromJsonString(stringWriter.toString());
+            new JSONReader().createFromJSONString(stringWriter.toString());
         assertEquals(table.getName(), table2.getName());
     }
 
@@ -125,7 +125,7 @@ public class JSONWriterTest {
         writer.write(network);
         System.out.println("NETWORK SERIALIZED: " + stringWriter.toString());
         Network network2 = (Network)
-            new JSONReader().createFromJsonString(stringWriter.toString());
+            new JSONReader().createFromJSONString(stringWriter.toString());
         assertEquals(network.getName(), network2.getName());
     }
 }

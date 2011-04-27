@@ -11,7 +11,7 @@ public class JSONReaderTest {
     @Test public void testNonGaggleJson() {
         String json = "{ \"foo\": \"bar\"}";
         try {
-            new JSONReader().createFromJsonString(json);
+            new JSONReader().createFromJSONString(json);
             fail("Providing a non-Gaggle JSON object should throw an exception");
         } catch (IllegalArgumentException ex) {
             assertTrue(true);
@@ -28,7 +28,7 @@ public class JSONReaderTest {
             "}," +
             "\"namelist\": [\"name1\", \"name2\"]" +
             "}}";
-        Namelist namelist = (Namelist) (new JSONReader().createFromJsonString(json));
+        Namelist namelist = (Namelist) (new JSONReader().createFromJSONString(json));
         assertEquals("nl-name", namelist.getName());
         assertEquals("Halo world", namelist.getSpecies());
         assertEquals(2, namelist.getNames().length);
@@ -56,7 +56,7 @@ public class JSONReaderTest {
             "}" +
             "}}";
         GaggleTuple gaggleTuple =
-            (GaggleTuple) (new JSONReader().createFromJsonString(json));        
+            (GaggleTuple) (new JSONReader().createFromJSONString(json));        
         assertEquals("tuple-name", gaggleTuple.getName());
         assertEquals("Halo world", gaggleTuple.getSpecies());
         Tuple t = gaggleTuple.getData();
@@ -83,7 +83,7 @@ public class JSONReaderTest {
             "}" +
             "}}";
         Cluster cluster =
-            (Cluster) (new JSONReader().createFromJsonString(json));
+            (Cluster) (new JSONReader().createFromJSONString(json));
         assertEquals("cluster-name", cluster.getName());
         assertEquals("Halo world", cluster.getSpecies());
         assertEquals(2, cluster.getRowNames().length);
@@ -108,7 +108,7 @@ public class JSONReaderTest {
             "  ]}" +
             "}}";
         DataMatrix matrix =
-            (DataMatrix) (new JSONReader().createFromJsonString(json));
+            (DataMatrix) (new JSONReader().createFromJSONString(json));
         assertEquals("matrix-name", matrix.getName());
         assertEquals("Halo world", matrix.getSpecies());
         assertEquals(2, matrix.getRowTitles().length);
@@ -141,7 +141,7 @@ public class JSONReaderTest {
             "}}";
         
         Table table =
-            (Table) (new JSONReader().createFromJsonString(json));
+            (Table) (new JSONReader().createFromJSONString(json));
         assertEquals("table-name", table.getName());
         assertEquals("Halo world", table.getSpecies());
         assertEquals(4, table.getColumnCount());
@@ -182,7 +182,7 @@ public class JSONReaderTest {
             "}}";
         
         Network network =
-            (Network) (new JSONReader().createFromJsonString(json));
+            (Network) (new JSONReader().createFromJSONString(json));
         assertEquals("network-name", network.getName());
         assertEquals("Halo world", network.getSpecies());
         assertEquals(3, network.nodeCount());

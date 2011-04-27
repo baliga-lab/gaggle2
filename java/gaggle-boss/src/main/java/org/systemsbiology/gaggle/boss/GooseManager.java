@@ -11,7 +11,7 @@ import org.systemsbiology.gaggle.core.*;
  */
 public class GooseManager {
     private static Logger Log = Logger.getLogger("GooseManager");
-    private Map<String, Goose> gooseMap = new HashMap<String, Goose>();
+    private Map<String, SuperGoose> gooseMap = new HashMap<String, SuperGoose>();
     private BossUI ui;
 
     public GooseManager(BossUI ui) {
@@ -23,7 +23,15 @@ public class GooseManager {
         return gooseMap.keySet().toArray(new String[0]);
     }
 
+    public String register(JSONGoose goose) throws RemoteException {
+        return register(new JSONGooseAdapter(goose));
+    }
+
     public String register(Goose goose) throws RemoteException {
+        return register(new JavaGooseAdapter(goose));
+    }
+
+    private String register(SuperGoose goose) throws RemoteException {
         String uniqueName = uniqueNameBasedOn(goose.getName());
         Log.info("register(), uniqueName: " + uniqueName);
         goose.setName(uniqueName);
@@ -32,7 +40,7 @@ public class GooseManager {
         return uniqueName;
     }
 
-    private void addNewGoose(String name, Goose goose) {
+    private void addNewGoose(String name, SuperGoose goose) {
         gooseMap.put(name, goose);
         ui.gooseAdded(name);
     }
@@ -63,7 +71,7 @@ public class GooseManager {
         String uniqueName = uniqueNameBasedOn(proposedName);
 
         if (gooseMap.containsKey(oldName)) {
-            Goose goose = gooseMap.get(oldName);
+            SuperGoose goose = gooseMap.get(oldName);
             gooseMap.remove(oldName);
             gooseMap.put(uniqueName, goose);
             goose.setName(uniqueName);
