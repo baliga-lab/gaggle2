@@ -10,12 +10,10 @@ package org.systemsbiology.gaggle.util;
 import java.io.*;
 
 public class TextFileReader {
-    private String filename;
     private BufferedReader bufferedReader;
     private StringBuilder strbuf;
 
     public TextFileReader(String filename) {
-        this.filename = filename;
         try {
             bufferedReader = new BufferedReader(new FileReader(filename));
         } catch (IOException e) {

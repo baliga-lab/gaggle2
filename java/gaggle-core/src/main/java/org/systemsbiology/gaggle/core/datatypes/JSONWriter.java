@@ -3,7 +3,6 @@ package org.systemsbiology.gaggle.core.datatypes;
 import net.sf.json.*;
 import java.util.*;
 import java.io.Writer;
-import java.io.Serializable;
 import static org.systemsbiology.gaggle.core.datatypes.JSONConstants.*;
 
 /**

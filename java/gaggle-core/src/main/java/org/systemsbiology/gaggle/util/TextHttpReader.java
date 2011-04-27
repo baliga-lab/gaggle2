@@ -35,7 +35,6 @@ public class TextHttpReader {
     }
 
     static public String getPage(URL url) throws Exception {
-        int characterCount = 0;
         StringBuilder result = new StringBuilder();
 
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
