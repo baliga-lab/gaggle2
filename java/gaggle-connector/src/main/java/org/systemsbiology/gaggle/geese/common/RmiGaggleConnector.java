@@ -12,9 +12,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.security.Security;
 
-import org.systemsbiology.gaggle.core.Boss;
-import org.systemsbiology.gaggle.core.Goose;
-import org.systemsbiology.gaggle.core.GaggleConstants;
+import org.systemsbiology.gaggle.core.*;
 
 
 /**
@@ -32,7 +30,8 @@ public class RmiGaggleConnector {
      * todo - factor this out to the GaggleConstants interface
      */
     private Goose goose;
-    private Boss boss;
+    private JSONGoose jsonGoose;
+    private Boss2 boss;
     private final static String DEFAULT_HOSTNAME = "localhost";
     private String serviceName = "gaggle";
     private String hostname = DEFAULT_HOSTNAME;
@@ -49,25 +48,48 @@ public class RmiGaggleConnector {
     private boolean verbose = true;
     private static Logger Log = Logger.getLogger("RmiGaggleConnector"); 
 
+    public RmiGaggleConnector(Goose goose) {
+        this(goose, null);
+    }
+
+    public RmiGaggleConnector(JSONGoose jsonGoose) {
+        this(null, jsonGoose);
+    }
+
     /**
      * @param goose a non-null goose
      */
-    public RmiGaggleConnector(Goose goose) {
+    private RmiGaggleConnector(Goose goose, JSONGoose jsonGoose) {
         Security.setProperty("networkaddress.cache.ttl","0");
         Security.setProperty("networkaddress.cache.negative.ttl","0");
         Log.info("ttl settings changed in goose");
         
-        if (goose == null)
+        if (goose == null && jsonGoose == null)
             throw new NullPointerException("RmiGaggleConnector requires a non-null goose.");
         this.goose = goose;
-        if (goose instanceof GaggleConnectionListener) {
+        this.jsonGoose = jsonGoose;
+
+        if (goose != null && goose instanceof GaggleConnectionListener) {
         	addListener((GaggleConnectionListener)goose);
+        }
+        if (jsonGoose != null && jsonGoose instanceof GaggleConnectionListener) {
+        	addListener((GaggleConnectionListener)jsonGoose);
         }
     }
 
     private synchronized void exportObject(Goose goose) throws Exception {
         try {
             UnicastRemoteObject.exportObject(goose, 0);
+            exported = true;
+        } catch (Exception e) {
+            Log.severe("RmiGaggleConnector failed to export remote object: "
+                       + e.getMessage());
+            throw e;
+        }
+    }
+    private synchronized void exportObject(JSONGoose jsonGoose) throws Exception {
+        try {
+            UnicastRemoteObject.exportObject(jsonGoose, 0);
             exported = true;
         } catch (Exception e) {
             Log.severe("RmiGaggleConnector failed to export remote object: "
@@ -92,13 +114,14 @@ public class RmiGaggleConnector {
         Log.info("connectToGaggle(%s)".format(uri));
         try {
             // if goose is not already a live RMI object, make it so
-            if (!exported) exportObject(goose);
+            if (!exported && goose != null) exportObject(goose);
+            else if (!exported && jsonGoose != null) exportObject(jsonGoose);
 
             // connect to the Boss
             if (autoStartBoss && hostname.equals(DEFAULT_HOSTNAME)) {
                 Log.info("AUTOSTART BOSS & DEFAULT HOST");
                 try {
-                    boss = (Boss) Naming.lookup(uri);
+                    boss = (Boss2) Naming.lookup(uri);
                 } catch (Exception ex) {
                     Log.info("EXCEPT MESSAGE: " + ex.getMessage());
                     if (ex.getMessage().startsWith("Connection refused to host:")) {
@@ -109,10 +132,9 @@ public class RmiGaggleConnector {
 
             } else {
                 Log.info("NO AUTOSTART, CONNECT TO EXIST");
-                boss = (Boss) Naming.lookup(uri);                
+                boss = (Boss2) Naming.lookup(uri);                
             }  
-            String gooseName = boss.register(goose);
-            goose.setName(gooseName);
+            registerGoose();
             fireConnectionEvent(true);
         } catch (NullPointerException npe) {
             Log.warning("Boss isn't quite ready yet, trying again...");
@@ -124,6 +146,16 @@ public class RmiGaggleConnector {
             boss = null;
             fireConnectionEvent(false);
             throw e;
+        }
+    }
+
+    private void registerGoose() throws java.rmi.RemoteException {
+        if (goose != null) {
+            String gooseName = boss.register(goose);
+            goose.setName(gooseName);
+        } else if (jsonGoose != null) {
+            String gooseName = boss.register(jsonGoose);
+            jsonGoose.setName(gooseName);
         }
     }
 
@@ -181,6 +213,11 @@ public class RmiGaggleConnector {
      * @param printStackTrace allows a stack trace to be printed if the call fails
      */
     public synchronized void disconnectFromGaggle(boolean printStackTrace) {
+        if (goose != null) disconnectJavaGooseFromGaggle(printStackTrace);
+        else if (jsonGoose != null) disconnectJSONGooseFromGaggle(printStackTrace);
+    }
+
+    private void disconnectJavaGooseFromGaggle(boolean printStackTrace) {
         if (boss != null) {
             try {
                 Log.info("received disconnect request from " + goose.getName());
@@ -202,6 +239,30 @@ public class RmiGaggleConnector {
         }
         fireConnectionEvent(false);
     }
+
+    private void disconnectJSONGooseFromGaggle(boolean printStackTrace) {
+        if (boss != null) {
+            try {
+                Log.info("received disconnect request from " + jsonGoose.getName());
+                boss.unregister(jsonGoose.getName());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            boss = null;
+        }
+
+        if (exported) {
+            try {
+                Log.info("received disconnect request from " + jsonGoose.getName());
+                UnicastRemoteObject.unexportObject(jsonGoose, true);
+            } catch (Exception e) {
+                if (printStackTrace) e.printStackTrace();
+            }
+            exported = false;
+        }
+        fireConnectionEvent(false);
+    }
+
 
     /**
      * listeners will be notified on connect and disconnect.
