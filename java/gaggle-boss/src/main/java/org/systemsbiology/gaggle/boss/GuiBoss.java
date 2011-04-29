@@ -54,6 +54,7 @@ public final class GuiBoss implements BossUI {
     private boolean bodyVisible = true;
     private BossConfig config;
     private BossImpl bossImpl;
+    private BossHttpServer httpServer = new BossHttpServer(8082);
 
     public GuiBoss(String[] args) {
         Security.setProperty("networkaddress.cache.ttl","0");
@@ -75,6 +76,7 @@ public final class GuiBoss implements BossUI {
 
         try {
             bossImpl.bind();
+            httpServer.startListen();
         } catch (Exception e) {
             displayErrorMessage("Gaggle Port already in use.  Exiting....");
             System.exit(0);
