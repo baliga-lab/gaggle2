@@ -54,7 +54,7 @@ public final class GuiBoss implements BossUI {
     private boolean bodyVisible = true;
     private BossConfig config;
     private BossImpl bossImpl;
-    private BossHttpServer httpServer = new BossHttpServer(8082);
+    private BossHttpServer httpServer;
 
     public GuiBoss(String[] args) {
         Security.setProperty("networkaddress.cache.ttl","0");
@@ -75,6 +75,7 @@ public final class GuiBoss implements BossUI {
         MiscUtil.setApplicationIcon(frame);
 
         try {
+            this.httpServer = new BossHttpServer(bossImpl, 8082);
             bossImpl.bind();
             httpServer.startListen();
         } catch (Exception e) {

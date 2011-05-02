@@ -14,7 +14,7 @@ public class JSONGooseAdapter implements SuperGoose {
     public JSONGooseAdapter(JSONGoose jsonGoose) {
         this.jsonGoose = jsonGoose;
     }
-    
+    public JSONGoose getWrappedGoose() { return jsonGoose; }
     public void doExit() { }
     public void doShow() { }
     public void doHide() { }

@@ -1,6 +1,7 @@
 package org.systemsbiology.gaggle.boss;
 
 import java.io.*;
+import java.rmi.*;
 import java.util.*;
 
 import javax.servlet.*;
@@ -8,61 +9,76 @@ import javax.servlet.http.*;
 
 import org.mortbay.jetty.*;
 import org.mortbay.jetty.handler.*;
+import org.mortbay.jetty.servlet.*;
 
-class BossHttpServer extends AbstractHandler {
+import org.systemsbiology.gaggle.core.*;
+
+class BossHttpServer extends HttpServlet {
 
     private Server server;
+    private BossImpl bossImpl;
 
-    public BossHttpServer(int port) {
+    public BossHttpServer(BossImpl bossImpl, int port) {
+        this.bossImpl = bossImpl;
         server = new Server(port);
-        server.setHandler(this);
+        Context root = new Context(server, "/", Context.SESSIONS);
+        ServletHandler handler = new ServletHandler();
+        root.addServlet(new ServletHolder(this), "/*");
     }
 
     public void startListen() throws Exception {
-        System.out.println("startListen()");
         server.start();
-        System.out.println("startListen() - end");
     }
 
-    public void handle(String target, final HttpServletRequest request,
-                       final HttpServletResponse response, int dispatch)
-        throws IOException, ServletException {
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        System.out.println("REQUEST: " + request);
-        String responseString = "Hello Boss";
+    @Override public void doGet(final HttpServletRequest request,
+                                final HttpServletResponse response)
+        throws IOException {
         if (request.isInitial()) {
-            System.out.println("Initial GET request !!");
             String command = request.getParameter("command");
             if ("register".equals(command)) {
-                String gooseName = request.getParameter("name");
-                System.out.println("register goose");
-                responseString = gooseName;
-                response.setContentType("text/plain");
-                response.setStatus(HttpServletResponse.SC_OK);
-                response.getWriter().println(responseString);
-                ((Request) request).setHandled(true);
-
+                String gooseName = registerHttpGoose(request.getParameter("name"));
+                setJSONResponse(response, jsonGooseName(gooseName));
             } else if ("waitBroadcast".equals(command)) {
                 String gooseName = request.getParameter("name");
-                System.out.printf("Goose '%s' is waiting for broadcast\n", gooseName);
-                request.suspend();
-                new Timer().schedule(new TimerTask() {
-                        public void run() {
-                            try {
-                                request.resume();
-                                response.setContentType("text/plain");
-                                response.setStatus(HttpServletResponse.SC_OK);
-                                response.getWriter().println("Ma cool broadcast");
-                                ((Request) request).setHandled(true);
-                            } catch (IOException ex) {
-                                ex.printStackTrace();
-                            }
-                        }
-                    }, 3000);
+                HttpGoose httpGoose = getHttpGooseFor(gooseName);
+                if (httpGoose != null) {
+                    request.suspend();
+                    httpGoose.waitForBroadcast(new HttpGoose.RequestHandler(request));
+                } else {
+                    System.out.println("HTTP Goose unavailable");
+                }
                 return;
+            } else if ("doBroadcast".equals(command)) {
+                String gooseName = request.getParameter("name");
+                String jsonData = request.getParameter("data");
+                bossImpl.broadcastJSON(gooseName, "boss", jsonData);
+                setJSONResponse(response, "{\"status\":\"ok\"}");
             }
         }
-        if (request.isTimeout()) {
+    }
+
+    private HttpGoose getHttpGooseFor(String gooseName) {
+        Goose goose = bossImpl.getGoose(gooseName);
+        if (goose != null && goose instanceof JSONGooseAdapter) {
+            return (HttpGoose) ((JSONGooseAdapter) goose).getWrappedGoose();
         }
+        return null;
+    }
+
+    private String jsonGooseName(String gooseName) {
+        return String.format("{ \"gooseName\": \"%s\" }", gooseName);
+    }
+
+    private void setJSONResponse(HttpServletResponse response,
+                                 String json) throws IOException {
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setContentType("application/json");
+        response.setStatus(HttpServletResponse.SC_OK);
+        response.getWriter().println(json);
+        response.getWriter().flush();
+    }
+
+    private String registerHttpGoose(String gooseName) throws RemoteException {
+        return bossImpl.register(new HttpGoose(gooseName));
     }
 }

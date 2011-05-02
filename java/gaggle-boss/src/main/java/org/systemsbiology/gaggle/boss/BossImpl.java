@@ -53,6 +53,11 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         return gooseManager.renameGooseDirectly(oldName, proposedName);
     }
     public String register(Goose goose) throws RemoteException {
+        Log.info("BossImpl.register(Goose)");
+        return gooseManager.register(goose);
+    }
+    public String register(JSONGoose goose) throws RemoteException {
+        Log.info("BossImpl.register(JSONGoose)");
         return gooseManager.register(goose);
     }
     public String register(DeafGoose deafGoose) { return ""; }
@@ -245,14 +250,30 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
     }
 
     public void broadcastJSON(String source, String target, String json) {
-        throw new UnsupportedOperationException("TODO");
+        String[] gooseNames;
+        if (target == null || target.equalsIgnoreCase("boss") ||
+            target.equalsIgnoreCase("all")) {
+            gooseNames = ui.getListeningGeese();
+        } else {
+            gooseNames = new String[]{target};
+        }
+
+        for (int i = 0; i < gooseNames.length; i++) {
+            String gooseName = gooseNames[i];
+            if (gooseName.equals(source)) continue;
+            SuperGoose goose = gooseManager.getGoose(gooseName);
+            if (goose == null) continue;
+            try {
+                goose.handleJSON(source, json);
+            } catch (Exception ex0) {
+                System.err.println("error in broadcastJSON() to " + gooseName + ": " +
+                                   ex0.getMessage());
+                ex0.printStackTrace();
+            }
+        }
     }
 
     public void broadcastTable(String source, String target, Table table) {
         throw new UnsupportedOperationException("TODO");
-    }
-
-    public String register(JSONGoose goose) throws RemoteException {
-        return gooseManager.register(goose);
     }
 }
