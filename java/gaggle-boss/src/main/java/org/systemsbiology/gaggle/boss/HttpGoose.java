@@ -50,9 +50,7 @@ public class HttpGoose implements JSONGoose {
         }
     }
 
-    private String originalName;
     private String gooseName;
-    private String[] knownGeese = new String[0];
     private RequestHandler currentHandler;
 
     /**
@@ -60,7 +58,6 @@ public class HttpGoose implements JSONGoose {
      * @param originalName original goose name
      */
     public HttpGoose(String originalName) {
-        this.originalName = originalName;
         this.gooseName = originalName;
     }
 
@@ -70,7 +67,7 @@ public class HttpGoose implements JSONGoose {
     public String getName() { return gooseName; }
     /** {@inheritDoc} */
     public void update(String[] gooseNames) {
-        this.knownGeese = gooseNames;
+        // TODO: Broadcast to handler
     }
     /** {@inheritDoc} */
     public void handleJSON(String source,

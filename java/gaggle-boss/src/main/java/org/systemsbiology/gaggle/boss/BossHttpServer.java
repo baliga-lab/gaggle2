@@ -38,7 +38,6 @@ class BossHttpServer extends HttpServlet {
         this.bossImpl = bossImpl;
         server = new Server(port);
         Context root = new Context(server, HTTP_CONTEXT, Context.SESSIONS);
-        ServletHandler handler = new ServletHandler();
         root.addServlet(new ServletHolder(this), SERVLET_PATTERN);
     }
 
