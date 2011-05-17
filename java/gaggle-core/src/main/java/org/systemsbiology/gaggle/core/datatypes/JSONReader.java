@@ -20,55 +20,43 @@ public class JSONReader {
     private GaggleData json2GaggleData(JSONObject jsonObj) {
         if (!isGaggleData(jsonObj)) {
             throw new IllegalArgumentException("JSON object does specify a Gaggle data structure");
-        } else { 
-            JSONObject jsonGaggleData = jsonObj.getJSONObject(KEY_GAGGLE_DATA);
-            return createGaggleData(jsonGaggleData);
+        } else {
+            return createGaggleData(jsonObj);
         }
     }
 
     private GaggleData createGaggleData(JSONObject jsonGaggleData) {
-        if (isBicluster(jsonGaggleData)) {
-            return extractCluster(jsonGaggleData);
-        } else if (isGaggleTuple(jsonGaggleData)) {
-            return extractGaggleTuple(jsonGaggleData);
-        } else if (isNameList(jsonGaggleData)) {
+        String dataType = jsonGaggleData.getString(KEY_TYPE);
+        if (TYPE_NAMELIST.equals(dataType)) {
             return extractNamelist(jsonGaggleData);
-        } else if (isMatrix(jsonGaggleData)) {
+        } else if (TYPE_TUPLE.equals(dataType)) {
+            String subtype = jsonGaggleData.getString(KEY_SUBTYPE);
+            return TYPE_BICLUSTER.equals(subtype) ?
+                extractCluster(jsonGaggleData) :
+                extractGaggleTuple(jsonGaggleData);
+        } else if (TYPE_MATRIX.equals(dataType)) {
             return extractMatrix(jsonGaggleData);
-        } else if (isTable(jsonGaggleData)) {
+        } else if (TYPE_TABLE.equals(dataType)) {
             return extractTable(jsonGaggleData);
-        } else if (isNetwork(jsonGaggleData)) {
+        } else if (TYPE_NETWORK.equals(dataType)) {
             return extractNetwork(jsonGaggleData);
+        } else {
+            throw new UnsupportedOperationException("unsupported type: " + dataType);
         }
-        throw new IllegalArgumentException("unknown data type specified in JSON");
     }
 
-    private boolean isGaggleData(JSONObject jsonObj) {
-        return jsonObj.containsKey(KEY_GAGGLE_DATA);
-    }
-
-    private boolean isGaggleTuple(JSONObject jsonGaggleData) {
-        return jsonGaggleData.containsKey(KEY_TUPLE);
-    }
-    private boolean isNameList(JSONObject jsonGaggleData) {
-        return jsonGaggleData.containsKey(KEY_NAMELIST);
-    }
-    private boolean isBicluster(JSONObject jsonGaggleData) {
-        if (isGaggleTuple(jsonGaggleData)) {
-            JSONObject jsonTuple = jsonGaggleData.getJSONObject(KEY_TUPLE);
-            return jsonTuple.containsKey(KEY_TYPE) &&
-                TYPE_BICLUSTER.equals(jsonTuple.get(KEY_TYPE));
+    private Namelist extractNamelist(JSONObject jsonGaggleData) {
+        Namelist namelist = new Namelist();
+        List<String> names = new ArrayList<String>();
+        namelist.setName(extractName(jsonGaggleData));
+        namelist.setSpecies(extractSpecies(jsonGaggleData));
+        namelist.setMetadata(extractMetadata(jsonGaggleData));
+        JSONArray nameArray = jsonGaggleData.getJSONArray(KEY_GAGGLE_DATA);
+        for (int i = 0; i < nameArray.size(); i++) {
+            names.add(nameArray.getString(i));
         }
-        return false;
-    }
-    private boolean isMatrix(JSONObject jsonGaggleData) {
-        return jsonGaggleData.containsKey(KEY_MATRIX);
-    }
-    private boolean isTable(JSONObject jsonGaggleData) {
-        return jsonGaggleData.containsKey(KEY_TABLE);
-    }
-    private boolean isNetwork(JSONObject jsonGaggleData) {
-        return jsonGaggleData.containsKey(KEY_NETWORK);
+        namelist.setNames(names.toArray(new String[0]));
+        return namelist;
     }
 
     private GaggleTuple extractGaggleTuple(JSONObject jsonGaggleData) {
@@ -76,7 +64,9 @@ public class JSONReader {
         gaggleTuple.setName(extractName(jsonGaggleData));
         gaggleTuple.setSpecies(extractSpecies(jsonGaggleData));
         gaggleTuple.setMetadata(extractMetadata(jsonGaggleData));
-        gaggleTuple.setData(createTuple(jsonGaggleData.getJSONObject(KEY_TUPLE)));
+        Tuple tuple = createTuple(jsonGaggleData.getJSONObject(KEY_GAGGLE_DATA)
+                                  .getJSONObject(KEY_VALUES));
+        gaggleTuple.setData(tuple);
         return gaggleTuple;
     }
 
@@ -85,12 +75,17 @@ public class JSONReader {
         cluster.setName(extractName(jsonGaggleData));
         cluster.setSpecies(extractSpecies(jsonGaggleData));
         cluster.setMetadata(extractMetadata(jsonGaggleData));
-        JSONObject jsonTuple = jsonGaggleData.getJSONObject(KEY_TUPLE);
-        Namelist rowNames = (Namelist) json2GaggleData(jsonTuple.getJSONObject(KEY_ROW_NAMES));
-        Namelist colNames = (Namelist) json2GaggleData(jsonTuple.getJSONObject(KEY_COLUMN_NAMES));
+
+        JSONObject data = jsonGaggleData.getJSONObject(KEY_GAGGLE_DATA);
+        Namelist rowNames = (Namelist) json2GaggleData(data.getJSONObject(KEY_GENES));
+        Namelist colNames = (Namelist) json2GaggleData(data.getJSONObject(KEY_CONDITIONS));
         cluster.setRowNames(rowNames.getNames());
         cluster.setColumnNames(colNames.getNames());
         return cluster;
+    }
+
+    private boolean isGaggleData(JSONObject jsonObj) {
+        return jsonObj.containsKey(KEY_GAGGLE_DATA);
     }
 
     private Tuple createTuple(JSONObject jsonTuple) { return createTuple(jsonTuple, null); }
@@ -117,20 +112,6 @@ public class JSONReader {
         return single;
     }
 
-    private Namelist extractNamelist(JSONObject jsonGaggleData) {
-        Namelist namelist = new Namelist();
-        List<String> names = new ArrayList<String>();
-        namelist.setName(extractName(jsonGaggleData));
-        namelist.setSpecies(extractSpecies(jsonGaggleData));
-        namelist.setMetadata(extractMetadata(jsonGaggleData));
-        JSONArray nameArray = jsonGaggleData.getJSONArray(KEY_NAMELIST);
-        for (int i = 0; i < nameArray.size(); i++) {
-            names.add(nameArray.getString(i));
-        }
-        namelist.setNames(names.toArray(new String[0]));
-        return namelist;
-    }
-    
     private Table extractTable(JSONObject jsonGaggleData) {
         Table table = new Table(extractName(jsonGaggleData),
                                 extractSpecies(jsonGaggleData),
@@ -139,7 +120,7 @@ public class JSONReader {
         return table;
     }
     private Table.TableColumn[] extractTableColumns(JSONObject jsonGaggleData) {
-        JSONArray jsonColumns = jsonGaggleData.getJSONObject(KEY_TABLE)
+        JSONArray jsonColumns = jsonGaggleData.getJSONObject(KEY_GAGGLE_DATA)
             .getJSONArray(KEY_COLUMNS);
         Table.TableColumn[] result = new Table.TableColumn[jsonColumns.size()];
         for (int col = 0; col < result.length; col++) {
@@ -179,7 +160,8 @@ public class JSONReader {
         matrix.setName(extractName(jsonGaggleData));
         matrix.setSpecies(extractSpecies(jsonGaggleData));
         matrix.setMetadata(extractMetadata(jsonGaggleData));
-        JSONObject jsonMatrix = jsonGaggleData.getJSONObject(KEY_MATRIX);
+        
+        JSONObject jsonMatrix = jsonGaggleData.getJSONObject(KEY_GAGGLE_DATA);
         setRowTitles(matrix, jsonMatrix);
         setColumnsAndValues(matrix, jsonMatrix);
         return matrix;
@@ -208,7 +190,7 @@ public class JSONReader {
     }
 
     private Network extractNetwork(JSONObject jsonGaggleData) {
-        JSONObject jsonNetwork = jsonGaggleData.getJSONObject(KEY_NETWORK);
+        JSONObject jsonNetwork = jsonGaggleData.getJSONObject(KEY_GAGGLE_DATA);
         Network network = new Network();
         network.setName(extractName(jsonGaggleData));
         network.setSpecies(extractSpecies(jsonGaggleData));

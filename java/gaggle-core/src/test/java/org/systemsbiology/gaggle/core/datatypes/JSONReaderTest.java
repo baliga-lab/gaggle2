@@ -19,46 +19,52 @@ public class JSONReaderTest {
     }
 
     @Test public void testNamelist() {
-        String json = "{\"gaggle-data\": {" +
-            "\"name\": \"nl-name\"," +
-            "\"metadata\": {" +
-            "  \"species\": \"Halo world\"," +
-            "  \"md1\": 1," +
-            "  \"md2\": \"bla\"" +
+        String json = "{" +
+            "\"name\":\"RNA polymerase genes\"," +
+            "\"version\":\"0.1\"," +
+            "\"type\":\"namelist\"," +
+            "\"metadata\":{" +
+            "  \"species\":\"Halobacterium salinarium NRC-1\"" +
             "}," +
-            "\"namelist\": [\"name1\", \"name2\"]" +
-            "}}";
+            "\"gaggle-data\":[\"VNG2662G\",\"VNG2664G\"]" +
+            "}";
         Namelist namelist = (Namelist) (new JSONReader().createFromJSONString(json));
-        assertEquals("nl-name", namelist.getName());
-        assertEquals("Halo world", namelist.getSpecies());
+        assertEquals("RNA polymerase genes", namelist.getName());
+        assertEquals("Halobacterium salinarium NRC-1", namelist.getSpecies());
         assertEquals(2, namelist.getNames().length);
-        assertEquals("name1", namelist.getNames()[0]);
-        assertEquals("name2", namelist.getNames()[1]);
+        assertEquals("VNG2662G", namelist.getNames()[0]);
+        assertEquals("VNG2664G", namelist.getNames()[1]);
+        /*
         Tuple metadata = namelist.getMetadata();
         List<Single> singleList = metadata.getSingleList();
         assertEquals(2, singleList.size());
         assertEquals("md1", singleList.get(0).getName());
         assertEquals("md2", singleList.get(1).getName());
+        */
     }
 
     @Test public void testTuple() {
-        String json = "{\"gaggle-data\": {" +
-            "\"name\": \"tuple-name\"," +
-            "\"metadata\": {" +
-            "  \"species\": \"Halo world\"" +
+        String json = "{" +
+            "\"name\":\"RNA polymerase expression\"," +
+            "\"version\":\"0.1\"," +
+            "\"type\":\"tuple\"," +
+            "\"subtype\":\"cytoscape node attributes\"," +
+            "\"metadata\":{" +
+            "  \"species\":\"Halobacterium salinarium NRC-1\"" +
             "}," +
-            "\"tuple\": {" +
-            "  \"astring\": \"value\"," +
-            "  \"adouble\": 1.23," +
-            "  \"anint\": 1," +
-            "  \"abool\": true," +
-            "  \"anamelist\": { \"gaggle-data\": { \"name\": \"nl\", \"namelist\": [\"name1\"] }}" +
-            "}" +
-            "}}";
+            "\"gaggle-data\":{" +
+            "\"attribute-name\":\"gene expression\"," +
+            "\"values\":{" +
+            "  \"astring\":\"value\"," +
+            "  \"adouble\":1.23," +
+            "  \"anint\":1," +
+            "  \"abool\":true," +
+            "  \"anamelist\":{\"name\":\"nl\",\"type\":\"namelist\",\"gaggle-data\":[\"name1\"]}," +
+            "}}}";
         GaggleTuple gaggleTuple =
-            (GaggleTuple) (new JSONReader().createFromJSONString(json));        
-        assertEquals("tuple-name", gaggleTuple.getName());
-        assertEquals("Halo world", gaggleTuple.getSpecies());
+            (GaggleTuple) (new JSONReader().createFromJSONString(json));
+        assertEquals("RNA polymerase expression", gaggleTuple.getName());
+        assertEquals("Halobacterium salinarium NRC-1", gaggleTuple.getSpecies());
         Tuple t = gaggleTuple.getData();
         assertEquals("value", getNamedSingle(t, "astring").getValue());
         assertEquals(new Double(1.23), getNamedSingle(t, "adouble").getValue());
@@ -69,54 +75,62 @@ public class JSONReaderTest {
         assertEquals(1, namelist.getNames().length);
         assertEquals("name1", namelist.getNames()[0]);
     }
-
     @Test public void testCluster() {
-        String json = "{\"gaggle-data\": {" +
-            "\"name\": \"cluster-name\"," +
-            "\"metadata\": {" +
-            "  \"species\": \"Halo world\"" +
+        String json = "{" +
+            "\"name\":\"RNA polymerase bicluster\"," +
+            "\"version\":\"0.1\"," +
+            "\"type\":\"tuple\"," +
+            "\"subtype\":\"bicluster\"," +
+            "\"metadata\":{" +
+            "  \"species\":\"Halobacterium salinarum NRC-1\"" +
             "}," +
-            "\"tuple\": {" +
-            "  \"type\": \"bicluster\"," +
-            "  \"row-names\": { \"gaggle-data\": { \"name\": \"nl1\", \"namelist\": [\"r1\", \"r2\"] }}," +
-            "  \"column-names\": { \"gaggle-data\": { \"name\": \"nl2\", \"namelist\": [\"c1\", \"c2\"] }}," +
-            "}" +
-            "}}";
+            "\"gaggle-data\":{" +
+            "\"genes\":{" +
+            "\"name\":\"RNA polymerase genes\"," +
+            "\"type\":\"namelist\"," +
+            "\"gaggle-data\":[\"VNG2662G\",\"VNG2664G\"]" +
+            "}," +
+            "\"conditions\":{" +
+            "\"name\":\"special conditions\"," +
+            "\"type\":\"namelist\"," +
+            "\"gaggle-data\":[\"condition1\",\"condition2\"]" +
+            "}}}";
+
         Cluster cluster =
             (Cluster) (new JSONReader().createFromJSONString(json));
-        assertEquals("cluster-name", cluster.getName());
-        assertEquals("Halo world", cluster.getSpecies());
+        assertEquals("RNA polymerase bicluster", cluster.getName());
+        assertEquals("Halobacterium salinarum NRC-1", cluster.getSpecies());
         assertEquals(2, cluster.getRowNames().length);
-        assertEquals("r1", cluster.getRowNames()[0]);
-        assertEquals("r2", cluster.getRowNames()[1]);
+        assertEquals("VNG2662G", cluster.getRowNames()[0]);
+        assertEquals("VNG2664G", cluster.getRowNames()[1]);
         assertEquals(2, cluster.getColumnNames().length);
-        assertEquals("c1", cluster.getColumnNames()[0]);
-        assertEquals("c2", cluster.getColumnNames()[1]);
+        assertEquals("condition1", cluster.getColumnNames()[0]);
+        assertEquals("condition2", cluster.getColumnNames()[1]);
     }
 
     @Test public void testMatrix() {
-        String json = "{\"gaggle-data\": {" +
-            "\"name\": \"matrix-name\"," +
-            "\"metadata\": {" +
-            "  \"species\": \"Halo world\"" +
+        String json = "{" +
+            "\"name\":\"Expression RNA polymerase genes under 3 conditions\"," +
+            "\"version\":\"0.1\"," +
+            "\"type\":\"matrix\"," +
+            "\"metadata\":{" +
+            "\"species\":\"Halobacterium salinarum NRC-1\"" +
             "}," +
-            "\"matrix\": {" +
-            "  \"row-names\":  [\"r1\", \"r2\"]," +
-            "  \"columns\": [" +
-            "      { \"name\": \"col1\", \"values\": [1.2, 3.4] }," +
-            "      { \"name\": \"col2\", \"values\": [2.3, 4.5] }" +
-            "  ]}" +
-            "}}";
+            "\"gaggle-data\":{" +
+            "\"row names\":[\"VNG2662G\", \"VNG2664G\"]," +
+            "\"columns\":[{\"name\":\"condition1\",\"values\":[1.2, 3.4]}," +
+            "{\"name\":\"condition2\",\"values\":[2.3, 4.5]},]}}";
+
         DataMatrix matrix =
             (DataMatrix) (new JSONReader().createFromJSONString(json));
-        assertEquals("matrix-name", matrix.getName());
-        assertEquals("Halo world", matrix.getSpecies());
+        assertEquals("Expression RNA polymerase genes under 3 conditions", matrix.getName());
+        assertEquals("Halobacterium salinarum NRC-1", matrix.getSpecies());
         assertEquals(2, matrix.getRowTitles().length);
-        assertEquals("r1", matrix.getRowTitles()[0]);
-        assertEquals("r2", matrix.getRowTitles()[1]);
+        assertEquals("VNG2662G", matrix.getRowTitles()[0]);
+        assertEquals("VNG2664G", matrix.getRowTitles()[1]);
         assertEquals(2, matrix.getColumnTitles().length);
-        assertEquals("col1", matrix.getColumnTitles()[0]);
-        assertEquals("col2", matrix.getColumnTitles()[1]);
+        assertEquals("condition1", matrix.getColumnTitles()[0]);
+        assertEquals("condition2", matrix.getColumnTitles()[1]);
         assertEquals(2, matrix.getRowCount());
         assertEquals(2, matrix.getColumnCount());
         assertEquals(1.2, matrix.get(0, 0), EPS);
@@ -126,19 +140,21 @@ public class JSONReaderTest {
     }
 
     @Test public void testTable() {
-        String json = "{\"gaggle-data\": {" +
-            "\"name\": \"table-name\"," +
-            "\"metadata\": {" +
+        String json = "{" +
+            "\"name\":\"table-name\"," +
+            "\"version\":\"0.1\"," +
+            "\"type\":\"table\"," +
+            "\"metadata\":{" +
             "  \"species\": \"Halo world\"" +
             "}," +
-            "\"table\": {" +
+            "\"gaggle-data\": {" +
             "  \"columns\": [" +
             "      { \"name\": \"col1\", \"type\": \"double\",  \"values\": [1.2, 3.4] }," +
             "      { \"name\": \"col2\", \"type\": \"int\",     \"values\": [2, 4] }," +
             "      { \"name\": \"col3\", \"type\": \"boolean\", \"values\": [true, false] }," +
             "      { \"name\": \"col4\", \"type\": \"string\",  \"values\": [\"foo\", \"bar\"] }" +
             "  ]}" +
-            "}}";
+            "}";
         
         Table table =
             (Table) (new JSONReader().createFromJSONString(json));
@@ -161,12 +177,14 @@ public class JSONReaderTest {
     }
 
     @Test public void testNetwork() {
-        String json = "{\"gaggle-data\": {" +
+        String json = "{" +
             "\"name\": \"network-name\"," +
+            "\"version\": \"0.1\"," +
+            "\"type\": \"network\"," +
             "\"metadata\": {" +
             "  \"species\": \"Halo world\"" +
             "}," +
-            "\"network\": {" +
+            "\"gaggle-data\": {" +
             "  \"nodes\": [" +
             "      { \"node\": \"n1\", \"attributes\": {\"foo\":\"bar1\", \"dval1\": 2.5} }," +
             "      { \"node\": \"n2\", \"attributes\": {\"foo\":\"bar2\", \"dval2\": 3.5} }," +
@@ -179,7 +197,7 @@ public class JSONReaderTest {
             "        \"attributes\": { \"a2\": \"blu\" } }" +
             "  ]" +
             "}" +
-            "}}";
+            "}";
         
         Network network =
             (Network) (new JSONReader().createFromJSONString(json));
@@ -214,6 +232,7 @@ public class JSONReaderTest {
         for (String elem : arr) if (str.equals(elem)) return true;
         return false;
     }
+
     private Single getNamedSingle(Tuple tuple, String name) {
         for (Single single : tuple.getSingleList()) {
             if (name.equals(single.getName())) return single;

@@ -13,15 +13,15 @@ public interface JSONConstants {
     String KEY_SPECIES      = "species";
 
     // data types
-    String KEY_MATRIX       = "matrix";
-    String KEY_NAMELIST     = "namelist";
-    String KEY_NETWORK      = "network";
-    String KEY_TABLE        = "table";
-    String KEY_TUPLE        = "tuple";
     String KEY_TYPE         = "type";
+    String KEY_SUBTYPE      = "subtype";
+
+    // bicluster specific
+    String KEY_GENES        = "genes";
+    String KEY_CONDITIONS   = "conditions";
 
     // table/matrix specific
-    String KEY_ROW_NAMES    = "row-names";
+    String KEY_ROW_NAMES    = "row names";
     String KEY_COLUMNS      = "columns";
     String KEY_COLUMN_NAMES = "column-names";
     String KEY_VALUES       = "values";
@@ -37,4 +37,9 @@ public interface JSONConstants {
     String KEY_TARGET       = "target";
 
     String TYPE_BICLUSTER   = "bicluster";
+    String TYPE_MATRIX       = "matrix";
+    String TYPE_NAMELIST     = "namelist";
+    String TYPE_NETWORK      = "network";
+    String TYPE_TABLE        = "table";
+    String TYPE_TUPLE        = "tuple";
 }

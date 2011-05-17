@@ -70,11 +70,17 @@ public class JSONWriterTest {
         StringWriter stringWriter = new StringWriter();
         JSONWriter writer = new JSONWriter(stringWriter);
         writer.write(cluster);
-        System.out.println("CLUSTER SERIALIZED (TODO): " + stringWriter.toString());
-        /*
+
         Cluster cluster2 = (Cluster)
             new JSONReader().createFromJSONString(stringWriter.toString());
-            assertEquals(cluster.getName(), cluster2.getName());*/
+        assertEquals(cluster.getName(), cluster2.getName());
+        assertEquals(cluster.getSpecies(), cluster2.getSpecies());
+        assertEquals(2, cluster2.getColumnNames().length);
+        assertEquals("c1", cluster2.getColumnNames()[0]);
+        assertEquals("c2", cluster2.getColumnNames()[1]);
+        assertEquals(2, cluster2.getRowNames().length);
+        assertEquals("r1", cluster2.getRowNames()[0]);
+        assertEquals("r2", cluster2.getRowNames()[1]);
     }
 
     @Test public void testWriteDataMatrix() {
@@ -114,7 +120,7 @@ public class JSONWriterTest {
         network.setName("network");
         network.setSpecies("species");
         Interaction i1 = new Interaction("n1", "n2", "i1", false);
-        Interaction i2 = new Interaction("n1", "n3", "i2", false);
+        Interaction i2 = new Interaction("n1", "n3", "i2", true);
         network.add(i1);
         network.add(i2);
         network.addNodeAttribute("n1", "foo", 1);
@@ -123,9 +129,24 @@ public class JSONWriterTest {
         StringWriter stringWriter = new StringWriter();
         JSONWriter writer = new JSONWriter(stringWriter);
         writer.write(network);
-        System.out.println("NETWORK SERIALIZED: " + stringWriter.toString());
         Network network2 = (Network)
             new JSONReader().createFromJSONString(stringWriter.toString());
         assertEquals(network.getName(), network2.getName());
+        assertEquals(network.getSpecies(), network2.getSpecies());
+        assertEquals(2, network.getInteractions().length);
+        assertEquals(3, network.nodeCount());
+        assertEquals("n1", network2.getNodes()[0]);
+        assertEquals("n2", network2.getNodes()[2]);
+        assertEquals("n3", network2.getNodes()[1]);
+
+        assertEquals("n1", network2.getInteractions()[0].getSource());
+        assertEquals("n2", network2.getInteractions()[0].getTarget());
+        assertEquals("i1", network2.getInteractions()[0].getType());
+        assertEquals(false, network2.getInteractions()[0].isDirected());
+
+        assertEquals("n1", network2.getInteractions()[1].getSource());
+        assertEquals("n3", network2.getInteractions()[1].getTarget());
+        assertEquals("i2", network2.getInteractions()[1].getType());
+        assertEquals(true, network2.getInteractions()[1].isDirected());
     }
 }

@@ -14,38 +14,45 @@ public class JSONWriter {
 
     public JSONWriter(Writer writer) { this.writer = writer; }
     public void write(Namelist namelist) {
-        JSONObject jsonGaggleData = writeCommon(namelist);
+        JSONObject jsonGaggleData = writeCommon(namelist).element(KEY_TYPE, TYPE_NAMELIST);
         JSONArray names = new JSONArray();
         for (String name : namelist.getNames()) names.add(name);
-        writeToWriter(jsonGaggleData.element("namelist", names));
-        
+        writeToWriter(jsonGaggleData.element(KEY_GAGGLE_DATA, names));        
     }
     public void write(GaggleTuple gaggleTuple) {
-        JSONObject jsonGaggleData = writeCommon(gaggleTuple);
+        JSONObject jsonGaggleData =
+            writeCommon(gaggleTuple).element(KEY_TYPE, TYPE_TUPLE).element(KEY_SUBTYPE, TYPE_TUPLE);
         List<Single> singleList = gaggleTuple.getData().getSingleList();
         JSONObject jsonTuple = new JSONObject();
         for (Single single : singleList) {
             jsonTuple = jsonTuple.element(single.getName(),
                                           single.getValue());
         }
-        writeToWriter(jsonGaggleData.element(KEY_TUPLE, jsonTuple));
+        writeToWriter(jsonGaggleData.element(KEY_GAGGLE_DATA, jsonTuple));
     }
 
     public void write(Cluster cluster) {
-        JSONObject jsonGaggleData = writeCommon(cluster);
+        JSONObject jsonGaggleData =
+            writeCommon(cluster).element(KEY_TYPE, TYPE_TUPLE).element(KEY_SUBTYPE, TYPE_BICLUSTER);
+
         JSONArray rowNames = new JSONArray();
         JSONArray columnNames = new JSONArray();
         for (String name : cluster.getRowNames()) rowNames.add(name);
         for (String name : cluster.getColumnNames()) columnNames.add(name);
-        JSONObject jsonCluster = new JSONObject().element(KEY_TYPE,
-                                                          TYPE_BICLUSTER);
-        jsonCluster = jsonCluster.element(KEY_ROW_NAMES, rowNames);
-        jsonCluster = jsonCluster.element(KEY_COLUMN_NAMES, columnNames);
-        writeToWriter(jsonGaggleData.element(KEY_TUPLE, jsonCluster));
+        JSONObject genes = new JSONObject().element(KEY_NAME, "")
+            .element(KEY_TYPE, TYPE_NAMELIST).element(KEY_GAGGLE_DATA, rowNames);
+        JSONObject conditions = new JSONObject().element(KEY_NAME, "")
+            .element(KEY_TYPE, TYPE_NAMELIST).element(KEY_GAGGLE_DATA, columnNames);
+        JSONObject data = new JSONObject();
+        data = data.element(KEY_GENES, genes);
+        data = data.element(KEY_CONDITIONS, conditions);
+        writeToWriter(jsonGaggleData.element(KEY_GAGGLE_DATA, data));
     }
 
     public void write(DataMatrix matrix) {
-        JSONObject jsonGaggleData = writeCommon(matrix);
+        JSONObject jsonGaggleData =
+            writeCommon(matrix).element(KEY_TYPE, TYPE_MATRIX);
+
         JSONArray rowNames = new JSONArray();
         for (String name : matrix.getRowTitles()) rowNames.add(name);
         JSONArray columns  = new JSONArray();
@@ -59,11 +66,13 @@ public class JSONWriter {
         JSONObject jsonMatrix = new JSONObject()
             .element(KEY_ROW_NAMES, rowNames)
             .element(KEY_COLUMNS, columns);
-        writeToWriter(jsonGaggleData.element(KEY_MATRIX, jsonMatrix));
+        writeToWriter(jsonGaggleData.element(KEY_GAGGLE_DATA, jsonMatrix));
     }
 
     public void write(Table table) {
-        JSONObject jsonGaggleData = writeCommon(table);
+        JSONObject jsonGaggleData =
+            writeCommon(table).element(KEY_TYPE, TYPE_TABLE);
+
         JSONArray jsonColumns = new JSONArray();
         for (int col = 0; col < table.getColumnCount(); col++) {
             jsonColumns.add(new JSONObject()
@@ -72,7 +81,7 @@ public class JSONWriter {
                             .element(KEY_VALUES, columnValues(table, col)));
         }
         JSONObject jsonTable = new JSONObject().element(KEY_COLUMNS, jsonColumns);
-        writeToWriter(jsonGaggleData.element(KEY_TABLE, jsonTable));
+        writeToWriter(jsonGaggleData.element(KEY_GAGGLE_DATA, jsonTable));
     }
 
     private String typeLabel(Class aClass) {
@@ -103,9 +112,9 @@ public class JSONWriter {
     }
 
     public void write(Network network) {
-        JSONObject jsonGaggleData = writeCommon(network);
+        JSONObject jsonGaggleData = writeCommon(network).element(KEY_TYPE, TYPE_NETWORK);
         writeToWriter(jsonGaggleData
-                      .element(KEY_NETWORK, new JSONObject()
+                      .element(KEY_GAGGLE_DATA, new JSONObject()
                                .element(KEY_NODES, networkNodes2JSON(network))
                                .element(KEY_EDGES, networkEdges2JSON(network))));
     }
@@ -186,8 +195,6 @@ public class JSONWriter {
     }
 
     private void writeToWriter(JSONObject jsonGaggleData) {
-        new JSONObject()
-            .element(KEY_GAGGLE_DATA, jsonGaggleData)
-            .write(writer);
+        jsonGaggleData.write(writer);
     }
 }
