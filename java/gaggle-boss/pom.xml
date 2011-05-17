@@ -44,31 +44,55 @@
     </dependency>
   </dependencies>
   <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <configuration>
-            <source>1.5</source>
-            <target>1.5</target>
-          </configuration>
-        </plugin>
-        <plugin>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.2.1</version>
-          <configuration>
-            <descriptors>
-              <descriptor>src/main/assembly/src.xml</descriptor>
-            </descriptors>
-            <archive>
-              <manifest>
-                <mainClass>org.systemsbiology.gaggle.boss.GuiBoss</mainClass>
-              </manifest>
-            </archive>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <executions>
+            <execution>
+              <id>make-assembly</id>
+              <phase>package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+            </execution>
+          </executions>
+          <descriptors>
+            <descriptor>src/main/assembly/src.xml</descriptor>
+          </descriptors>
+          <archive>
+            <manifest>
+              <mainClass>org.systemsbiology.gaggle.boss.GuiBoss</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+<!--
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jarsigner-plugin</artifactId>
+        <version>1.2</version>
+        <executions>
+          <execution>
+            <id>sign</id>
+            <phase>package</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <jarPath>${project.build.directory}/${project.build.FinalName}-${project.packaging}-with-dependencies.${project.packaging}</jarPath>
+          <keystore>/Users/wwu/.jarkey</keystore>
+          <alias>gaggle</alias>
+          <storepass>honker</storepass>
+          <keypass>honker</keypass>
+          <signedjar>${project.build.directory}/signed/${project.build.finalName}.jar</signedjar>
+          <verify>true</verify>
+        </configuration>
+      </plugin>
+-->
+    </plugins>
   </build>
 
   <reporting>

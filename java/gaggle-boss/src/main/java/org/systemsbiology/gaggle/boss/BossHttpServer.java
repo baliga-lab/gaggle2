@@ -59,6 +59,8 @@ class BossHttpServer extends HttpServlet {
             if ("register".equals(command)) {
                 String finalGooseName = registerHttpGoose(gooseName);
                 setJSONResponse(response, jsonGooseName(finalGooseName));
+            } else if ("unregister".equals(command)) {
+                unregisterHttpGoose(gooseName);
             } else if ("waitBroadcast".equals(command)) {
                 HttpGoose httpGoose = getHttpGooseFor(gooseName);
                 if (httpGoose != null) {
@@ -102,5 +104,8 @@ class BossHttpServer extends HttpServlet {
 
     private String registerHttpGoose(String gooseName) throws RemoteException {
         return bossImpl.register(new HttpGoose(gooseName));
+    }
+    private void unregisterHttpGoose(String gooseName) throws RemoteException {
+        bossImpl.unregister(gooseName);
     }
 }
