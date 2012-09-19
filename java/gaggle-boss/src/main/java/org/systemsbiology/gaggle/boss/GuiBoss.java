@@ -9,6 +9,7 @@
 package org.systemsbiology.gaggle.boss;
 
 import javax.swing.*;
+import javax.swing.UIManager.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -458,6 +459,16 @@ public final class GuiBoss implements BossUI {
     }
 
     public static void main(String[] args) throws Exception {
+        try {
+            for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            // If Nimbus is not available, you can set the GUI to another look and feel.
+        }
         new GuiBoss(args);
     }
 }
