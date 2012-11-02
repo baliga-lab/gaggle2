@@ -11,15 +11,15 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-    <repositories>
-        <repository>
-            <id>isb.gaggle.release</id>
-            <url>http://como.systemsbiology.net/maven/repo-releases</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </repository>
-    </repositories>
+  <repositories>
+    <repository>
+      <id>isb.gaggle.release</id>
+      <url>http://como.systemsbiology.net/maven/repo-releases</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+  </repositories>
 
   <modules>
     <module>gaggle-core</module>
