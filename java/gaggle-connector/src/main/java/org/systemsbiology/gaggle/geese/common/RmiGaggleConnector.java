@@ -132,12 +132,13 @@ public class RmiGaggleConnector {
 
             } else {
                 Log.info("NO AUTOSTART, CONNECT TO EXIST");
-                boss = (Boss2) Naming.lookup(uri);                
+                boss = (Boss2) Naming.lookup(uri);
             }  
             registerGoose();
             fireConnectionEvent(true);
         } catch (NullPointerException npe) {
             Log.warning("Boss isn't quite ready yet, trying again...");
+            npe.printStackTrace();
         } catch (Exception e) {
             if (!autoStartBoss) {
                 Log.severe("failed to connect to gaggle at " + uri + ": " + e.getMessage());
@@ -262,7 +263,6 @@ public class RmiGaggleConnector {
         }
         fireConnectionEvent(false);
     }
-
 
     /**
      * listeners will be notified on connect and disconnect.

@@ -12,6 +12,8 @@ import org.systemsbiology.gaggle.core.*;
 public class GooseManager {
     private static Logger Log = Logger.getLogger("GooseManager");
     private Map<String, SuperGoose> gooseMap = new HashMap<String, SuperGoose>();
+    private Map<String, String> gooseWorkflow
+            = Collections.synchronizedMap(new HashMap<String, String>()); // This needs to be thread safe
     private BossUI ui;
 
     public GooseManager(BossUI ui) {
@@ -49,6 +51,9 @@ public class GooseManager {
         if (gooseMap.containsKey(gooseName)) {
             gooseMap.remove(gooseName);
         }
+
+        if (gooseWorkflow.containsKey(gooseName))
+            gooseWorkflow.remove(gooseName);
     }
 
     public void unregister(String gooseName) {
@@ -76,9 +81,31 @@ public class GooseManager {
             gooseMap.put(uniqueName, goose);
             goose.setName(uniqueName);
             unregisterIdleGeeseAndUpdate();
+
+            gooseWorkflow.remove(oldName);
+            MarkIfGooseNotBusy(uniqueName);
+
             return uniqueName;
         }
         return null;
+    }
+
+    public boolean MarkIfGooseNotBusy(String gooseName)
+    {
+        if (!gooseWorkflow.containsKey(gooseName))
+        {
+            gooseWorkflow.put(gooseName, gooseName);
+            return true;
+        }
+        return false;
+    }
+
+    public void MarkGooseAvailable(String gooseName)
+    {
+        if (gooseWorkflow.containsKey(gooseName))
+        {
+            gooseWorkflow.remove(gooseName);
+        }
     }
 
     private String uniqueNameBasedOn(String name) {

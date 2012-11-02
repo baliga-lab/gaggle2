@@ -7,10 +7,12 @@ package org.systemsbiology.gaggle.core.datatypes;
 public interface JSONConstants {
 
     // common
-    String KEY_GAGGLE_DATA  = "gaggle-data";
-    String KEY_METADATA     = "metadata";
-    String KEY_NAME         = "name";
-    String KEY_SPECIES      = "species";
+    String KEY_GAGGLE_DATA     = "gaggle-data";
+    String KEY_METADATA        = "metadata";
+    String KEY_NAME            = "name";
+    String KEY_SPECIES         = "species";
+    String KEY_WORKFLOW_EDGES  = "workflowedges";
+    String KEY_WORKFLOW_NODES  = "workflownodes";
 
     // data types
     String KEY_TYPE         = "type";
@@ -42,4 +44,5 @@ public interface JSONConstants {
     String TYPE_NETWORK      = "network";
     String TYPE_TABLE        = "table";
     String TYPE_TUPLE        = "tuple";
+    String TYPE_WORKFLOW     = "workflow";
 }

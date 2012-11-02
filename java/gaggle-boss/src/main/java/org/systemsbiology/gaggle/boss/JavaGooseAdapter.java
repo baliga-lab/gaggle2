@@ -3,6 +3,7 @@ package org.systemsbiology.gaggle.boss;
 import java.io.*;
 import java.rmi.*;
 
+import org.apache.commons.logging.Log;
 import org.systemsbiology.gaggle.core.*;
 import org.systemsbiology.gaggle.core.datatypes.*;
 
@@ -58,6 +59,23 @@ public class JavaGooseAdapter implements SuperGoose {
             ((Goose2) javaGoose).handleTable(source, table);
         }
     }
+
+    public void handleWorkflowAction(WorkflowAction action) throws RemoteException
+    {
+        if (javaGoose instanceof Goose3)
+        {
+            ((Goose3)javaGoose).handleWorkflowAction(action);
+        }
+    }
+
+    public void handleWorkflowInformation(String type, String info) throws RemoteException
+    {
+        if (javaGoose instanceof Goose3)
+        {
+            ((Goose3)javaGoose).handleWorkflowInformation(type, info);
+        }
+    }
+
     public void handleJSON(String source,
                            String json) throws RemoteException {
         GaggleData gaggleData = (new JSONReader()).createFromJSONString(json);
@@ -68,4 +86,7 @@ public class JavaGooseAdapter implements SuperGoose {
         else if (gaggleData instanceof Namelist) handleNameList(source, (Namelist) gaggleData);
         else if (gaggleData instanceof Table) handleTable(source, (Table) gaggleData);
     }
+
+
 }
+

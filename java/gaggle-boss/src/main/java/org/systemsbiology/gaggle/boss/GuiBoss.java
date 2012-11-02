@@ -81,6 +81,7 @@ public final class GuiBoss implements BossUI {
             httpServer.startListen();
         } catch (Exception e) {
             displayErrorMessage("Gaggle Port already in use.  Exiting....");
+            displayErrorMessage(e.getMessage());
             System.exit(0);
         }
 

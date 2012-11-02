@@ -74,4 +74,13 @@ public class JSONGooseAdapter implements SuperGoose {
                            String json) throws RemoteException {
         jsonGoose.handleJSON(source, json);
     }
+
+    public void handleWorkflowAction(WorkflowAction action) throws RemoteException
+    {
+    }
+
+    public void handleWorkflowInformation(String type, String info) throws RemoteException
+    {
+    }
+
 }

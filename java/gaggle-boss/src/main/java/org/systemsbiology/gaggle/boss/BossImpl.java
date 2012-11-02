@@ -1,5 +1,8 @@
 package org.systemsbiology.gaggle.boss;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.ConnectException;
 import java.util.*;
 
 import java.rmi.server.*;
@@ -7,6 +10,7 @@ import java.rmi.registry.*;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 
+import net.sf.json.JSONObject;
 import org.systemsbiology.gaggle.core.*;
 import org.systemsbiology.gaggle.geese.DeafGoose;
 import org.systemsbiology.gaggle.core.datatypes.*;
@@ -14,11 +18,13 @@ import org.systemsbiology.gaggle.util.*;
 
 import java.util.logging.*;
 
-public class BossImpl extends UnicastRemoteObject implements Boss2 {
+public class BossImpl extends UnicastRemoteObject implements Boss3 {
     public static final String SERVICE_NAME = "gaggle";
     private NewNameHelper nameHelper;
     private BossUI ui;
     private GooseManager gooseManager;
+
+    private WorkflowManager workflowManager;
 
     private static Logger Log = Logger.getLogger("Boss");
 
@@ -26,6 +32,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
         throws Exception {
         this.ui = ui;
         this.gooseManager = new GooseManager(ui);
+        this.workflowManager = new WorkflowManager(this, this.gooseManager);
+
         if (nameHelperURI != null && nameHelperURI.length() > 0) {
             nameHelper = new NewNameHelper(nameHelperURI);
         }
@@ -33,18 +41,23 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
     public NewNameHelper getNameHelper() { return nameHelper; }
 
     public void bind() throws Exception {
+        //if (System.getSecurityManager() == null) {
+        //    System.setSecurityManager(new SecurityManager());
+        //}
+
         LocateRegistry.createRegistry(1099);
         Naming.rebind(SERVICE_NAME, this);
         Log.info("Boss Service bound");
     }
     public void unbind() throws Exception {
         Naming.unbind(SERVICE_NAME);
-        Log.info("Boss Service unbound");
+        Log.info("Boss Service unboudnd");
     }
 
     // ***** Goose Management *****
     public Goose getGoose(String name) { return gooseManager.getGoose(name); }
     public String[] getGooseNames() { return gooseManager.getGooseNames(); }
+    public String[] getListeningGooseNames() { return ui.getListeningGeese(); }
     public String renameGoose(String oldName, String proposedName) {
         return gooseManager.renameGoose(oldName, proposedName);
     }
@@ -197,6 +210,36 @@ public class BossImpl extends UnicastRemoteObject implements Boss2 {
                 ex0.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Accepts a workflow (usually from a Proxy Applet, but we do not assume so)
+     * @param goose: A goose that communicates workflow related info with the boss.
+     *               Typically it is the ProxyApplet goose.
+     * @param jsonWorkflow: a workflow in JSON format submitted by goose
+     */
+    public void submitWorkflow(Goose3 proxyGoose, String jsonWorkflow)
+    {
+        if (jsonWorkflow != null && jsonWorkflow.length() > 0)
+        {
+            Log.info("JSON workflow string: " + jsonWorkflow);
+            JSONReader jsonReader = new JSONReader();
+            Workflow w = (Workflow)jsonReader.createFromJSONString(jsonWorkflow);
+
+            // Now we hand over to the manager, which will spawn a thread to process the workflow
+            workflowManager.SubmitWorkflow(proxyGoose, w);
+        }
+    }
+
+
+    /**
+     * Handles workflow action received from components
+     * @param action A workflow action needs to be carried out.
+     */
+    public void handleWorkflowAction(WorkflowAction action)
+    {
+        System.out.println("Processing workflow action: " + action.getSource().getName());
+        this.workflowManager.HandleWorkflowAction(action);
     }
 
     public void hide(String targetGoose) {

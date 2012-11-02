@@ -11,15 +11,15 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-  <repositories>
-    <repository>
-      <id>isb.gaggle.release</id>
-      <url>http://gaggle.systemsbiology.org/maven/repo-releases</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-  </repositories>
+    <repositories>
+        <repository>
+            <id>isb.gaggle.release</id>
+            <url>http://como.systemsbiology.net/maven/repo-releases</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+    </repositories>
 
   <modules>
     <module>gaggle-core</module>
@@ -32,7 +32,7 @@
     <repository>
       <id>bragi</id>
       <name>Gaggle Web Server</name>
-      <url>scp://wwu@bragi//local/apache2/htdocs/maven/repo-releases</url>
+      <url>scp://njiang@bragi//local/apache2/htdocs/maven/repo-releases</url>
     </repository>
   </distributionManagement>
 

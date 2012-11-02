@@ -40,6 +40,8 @@ public class JSONReader {
             return extractTable(jsonGaggleData);
         } else if (TYPE_NETWORK.equals(dataType)) {
             return extractNetwork(jsonGaggleData);
+        } else if (TYPE_WORKFLOW.equals(dataType)) {
+            return new Workflow(jsonGaggleData);
         } else {
             throw new UnsupportedOperationException("unsupported type: " + dataType);
         }
@@ -51,8 +53,7 @@ public class JSONReader {
         namelist.setName(extractName(jsonGaggleData));
         namelist.setSpecies(extractSpecies(jsonGaggleData));
         namelist.setMetadata(extractMetadata(jsonGaggleData));
-        JSONArray nameArray = jsonGaggleData.getJSONArray(KEY_GAGGLE_DATA);
-        for (int i = 0; i < nameArray.size(); i++) {
+f        for (int i = 0; i < nameArray.size(); i++) {
             names.add(nameArray.getString(i));
         }
         namelist.setNames(names.toArray(new String[0]));
