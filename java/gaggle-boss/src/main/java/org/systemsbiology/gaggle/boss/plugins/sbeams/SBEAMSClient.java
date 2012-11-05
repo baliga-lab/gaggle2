@@ -43,7 +43,7 @@ public class SBEAMSClient {
 
     public String getCookie() { return cookie; }
     public void setCookie(String cookie) { this.cookie = cookie; }
-
+    /*
     public boolean goodCookie() {
         if (cookie == null) return false;
         // Hash for translating month to number
@@ -102,7 +102,7 @@ public class SBEAMSClient {
         else if (calendar.get(Calendar.SECOND) > cookieSecond) return false;
 
         return false;
-    }
+        }*/
 
     private Response postRequest(String urlString, String params) throws Exception {
         URL url = new URL(urlString);
@@ -135,7 +135,7 @@ public class SBEAMSClient {
     }
 
     public String fetchSbeamsPage(String urlString, String params) throws Exception {
-        if (cookie == null) fetchCookie();
+        //if (cookie == null) fetchCookie();
         String paramsInUrl = "";
         String unparameterizedUrl = urlString;
         Pattern potentialParams = Pattern.compile("(.*)\\?(.*)");
@@ -146,7 +146,7 @@ public class SBEAMSClient {
             if (params == null) params = paramsInUrl;
             else params += paramsInUrl;
         }
-
+        params += "&SBEAMSentrycode=DF45jasj23jh";
         return postRequest(unparameterizedUrl, params).getContent();
     }
 
@@ -202,7 +202,7 @@ public class SBEAMSClient {
             if (stdin != null) try { stdin.close(); } catch (Exception ignore) { }
         }
     }
-
+    /*
     private void fetchCookie() throws Exception{
         while (passwordAttempts > 0) {
             if (userName == null || password== null)
@@ -230,7 +230,7 @@ public class SBEAMSClient {
                 break;
             }
         }
-    }
+        }
 
     public static void main (String [] args) {
         System.out.println ("test SBEAMS Table Retrieval");
@@ -243,5 +243,5 @@ public class SBEAMSClient {
             t.printStackTrace();
         }
         System.exit(0);
-    }
+        }*/
 }
