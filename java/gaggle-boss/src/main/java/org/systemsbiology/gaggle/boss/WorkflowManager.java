@@ -207,12 +207,14 @@ public class WorkflowManager {
             //this.stepsize = stepsize;
 
             // add start nodes into the processingQueue
-            String[] startnodes = w.getStartNodeIDs();
-            for (int i = 0; i < startnodes.length; i++)
+            ArrayList<String> startnodes = w.getStartNodeIDs();
+            for (int i = 0; i < startnodes.size(); i++)
             {
-                Log.info("Adding start node " + startnodes[i]);
+                Log.info("Adding start node " + startnodes.get(i));
                 try{
-                    ArrayList parallelcomponents = this.workflowMap.get(startnodes[i]).get(0);
+                    ArrayList parallelcomponents = this.workflowMap.get(startnodes.get(i)).get(0);
+                    // Push the start node to the processing queue
+                    System.out.println("Pushing start node " + startnodes.get(i));
                     WorkflowComponent c = (WorkflowComponent)parallelcomponents.get(0);
                     WorkflowNode node = new WorkflowNode(c);
                     this.processingQueue.add(node);

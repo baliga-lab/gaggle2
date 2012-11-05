@@ -11,8 +11,9 @@ public interface JSONConstants {
     String KEY_METADATA        = "metadata";
     String KEY_NAME            = "name";
     String KEY_SPECIES         = "species";
-    String KEY_WORKFLOW_EDGES  = "workflowedges";
     String KEY_WORKFLOW_NODES  = "workflownodes";
+    String KEY_WORKFLOW_EDGES  = "workflowedges";
+
 
     // data types
     String KEY_TYPE         = "type";
@@ -45,4 +46,5 @@ public interface JSONConstants {
     String TYPE_TABLE        = "table";
     String TYPE_TUPLE        = "tuple";
     String TYPE_WORKFLOW     = "workflow";
+    String TYPE_ANY          = "Any Data";
 }

@@ -51,12 +51,20 @@ public class WorkflowComponent implements Serializable {
     {
         if (source != null)
         {
-            this.componentID = source.getComponentID();
-            this.commandUri = source.getCommandUri();
-            this.name = source.getName();
-            this.version = source.getVersion();
-            this.params = new HashMap<String, Object>(source.getParams());
-            this.convertParamsToJSON();
+            try
+            {
+                System.out.println("Clone a component " + source.getComponentID());
+                this.componentID = source.getComponentID();
+                this.commandUri = source.getCommandUri();
+                this.name = source.getName();
+                this.version = source.getVersion();
+                this.params = new HashMap<String, Object>(source.getParams());
+                this.convertParamsToJSON();
+            }
+            catch (Exception e)
+            {
+                System.out.println("Failed to clone a component: " + e.getMessage());
+            }
         }
     }
 

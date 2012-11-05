@@ -53,7 +53,8 @@ public class JSONReader {
         namelist.setName(extractName(jsonGaggleData));
         namelist.setSpecies(extractSpecies(jsonGaggleData));
         namelist.setMetadata(extractMetadata(jsonGaggleData));
-f        for (int i = 0; i < nameArray.size(); i++) {
+        JSONArray nameArray = jsonGaggleData.getJSONArray(KEY_GAGGLE_DATA);
+        for (int i = 0; i < nameArray.size(); i++) {
             names.add(nameArray.getString(i));
         }
         namelist.setNames(names.toArray(new String[0]));
@@ -86,7 +87,7 @@ f        for (int i = 0; i < nameArray.size(); i++) {
     }
 
     private boolean isGaggleData(JSONObject jsonObj) {
-        return jsonObj.containsKey(KEY_GAGGLE_DATA);
+        return (jsonObj.containsKey(KEY_GAGGLE_DATA) || jsonObj.containsKey(KEY_WORKFLOW_NODES));
     }
 
     private Tuple createTuple(JSONObject jsonTuple) { return createTuple(jsonTuple, null); }
