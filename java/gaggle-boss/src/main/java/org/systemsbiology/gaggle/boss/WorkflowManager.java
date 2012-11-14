@@ -6,6 +6,8 @@ import org.systemsbiology.gaggle.core.Goose3;
 import org.systemsbiology.gaggle.core.datatypes.*;
 
 import java.io.IOException;
+import java.net.ConnectException;
+import java.rmi.RemoteException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -66,6 +68,7 @@ public class WorkflowManager {
             {
                 t.cancel = true;
                 threadMap.remove(key);
+                Log.info("Removed thread for workflow " + key);
             }
         }
     }
@@ -77,7 +80,7 @@ public class WorkflowManager {
         this.threadMap = Collections.synchronizedMap(new HashMap<UUID, WorkflowThread>());
         this.shutdownHook = new ShutdownHookThread();
         Runtime.getRuntime().addShutdownHook(this.shutdownHook);
-        this.resourceManagementThread = new Thread();
+        this.resourceManagementThread = new ResourceManagementThread();
         this.resourceManagementThread.start();
     }
 
@@ -306,7 +309,7 @@ public class WorkflowManager {
                     boolean hasPendingNodes = false;
                     if (processingQueue.size() > 0)
                     {
-                        Log.info("New round of processing nodes");
+                        //Log.info("New round of processing nodes");
                         for (int i = 0; i < processingQueue.size(); i++)
                         {
                             WorkflowNode c = processingQueue.get(i);
@@ -418,13 +421,28 @@ public class WorkflowManager {
                     {
                         this.Report("Error", "Failed to process parallel action for node "
                                 + c.component.getComponentID() + " " + e0.getMessage(), true);
-                        c.state = ProcessingState.Error;
+
+                        if (e0 instanceof ConnectException)
+                        {
+                            // We failed to connect to the goose, remove the goose from Boss and try again
+                            try {
+                                bossImpl.unregister(sourceGoose.getName());
+                                c.state = ProcessingState.Initial;
+                            }
+                            catch (RemoteException re)
+                            {
+                                Log.info("RMI failed to unregister goose" + re.getMessage());
+                                c.state = ProcessingState.Error;
+                            }
+                        }
+                        else
+                            c.state = ProcessingState.Error;
                     }
                 }
             }
             else if (c.state == ProcessingState.ParallelProcessed)
             {
-                Log.info("Handling workflow node " + source.getComponentID() + " state: ParallelProcessed");
+                //Log.info("Handling workflow node " + source.getComponentID() + " state: ParallelProcessed");
                 if (this.acknowledgedParallelNodes.containsKey(source.getComponentID()))
                 {
                     // Add all the parallel components to processingQueue
