@@ -5,7 +5,7 @@ import org.systemsbiology.gaggle.core.Goose;
 import org.systemsbiology.gaggle.core.Goose3;
 import org.systemsbiology.gaggle.core.datatypes.*;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.ConnectException;
 import java.rmi.RemoteException;
 import java.util.*;
@@ -155,6 +155,8 @@ public class WorkflowManager {
         // The number of sequential children that has acknowledged
         // to this node
         public int acknowledgedSequentials = 0;
+        public int errorRetries = 0;
+        public String gooseName;
 
         public WorkflowNode(WorkflowComponent c)
         {
@@ -191,6 +193,8 @@ public class WorkflowManager {
         Goose3 proxyGoose = null;
         String messageType;
         String message;
+        int MAX_ERROR_RETRIES = 3;
+
         //Object threadSyncObj = new Object();
         //int stepsize = 1;
 
@@ -313,7 +317,7 @@ public class WorkflowManager {
                         for (int i = 0; i < processingQueue.size(); i++)
                         {
                             WorkflowNode c = processingQueue.get(i);
-                            if (c.state != ProcessingState.Error && c.state != ProcessingState.Finished)
+                            if (c.state != ProcessingState.Finished)
                             {
                                 ProcessWorkflowNode(c);
                                 hasPendingNodes = true;
@@ -360,15 +364,24 @@ public class WorkflowManager {
             WorkflowComponent source = c.component;
             if (c.state == ProcessingState.Initial)
             {
+                c.errorRetries++;
                 Log.info("Handling workflow node " + source.getComponentID() + " state: initial");
                 boolean sourceStarted = false;
 
                 // Find or create the goose corresponding to the source component
                 if ((sourceGoose = PrepareGoose(source)) != null)
                 {
-                    Log.info("Goose " + source.getName() + " started.");
+                    Log.info("Goose " + source.getGooseName() + " started.");
                     sourceStarted = true;
                     c.goose = sourceGoose;
+                    try {
+                        c.gooseName = sourceGoose.getName();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.severe("Failed to get goose name...");
+                        c.state = ProcessingState.Error;
+                    }
                 }
                 else
                 {
@@ -422,21 +435,9 @@ public class WorkflowManager {
                         this.Report("Error", "Failed to process parallel action for node "
                                 + c.component.getComponentID() + " " + e0.getMessage(), true);
 
-                        if (e0 instanceof ConnectException)
-                        {
-                            // We failed to connect to the goose, remove the goose from Boss and try again
-                            try {
-                                bossImpl.unregister(sourceGoose.getName());
-                                c.state = ProcessingState.Initial;
-                            }
-                            catch (RemoteException re)
-                            {
-                                Log.info("RMI failed to unregister goose" + re.getMessage());
-                                c.state = ProcessingState.Error;
-                            }
-                        }
-                        else
-                            c.state = ProcessingState.Error;
+
+                        Log.info(c.component.getComponentID() + " failed");
+                        c.state = ProcessingState.Error;
                     }
                 }
             }
@@ -492,7 +493,7 @@ public class WorkflowManager {
                     {
                         this.Report("Error", "Failed to process sequential action for node "
                                 + c.component.getComponentID() + " " + e1.getMessage(), true);
-                        //c.state = ProcessingState.Error;
+                        c.state = ProcessingState.Error;
                     }
                 }
                 else {
@@ -514,6 +515,7 @@ public class WorkflowManager {
                         Log.info("Adding ack data for sequential child " + dataForChild.getName());
                         sc.addParam(WorkflowComponent.ParamNames.Data.getValue(), dataForChild);
                     }
+                    // Now we add the child sequential node to the processing queue
                     this.processingQueue.add(new WorkflowNode(sc));
                     c.acknowledgedSequentials++;
 
@@ -550,7 +552,7 @@ public class WorkflowManager {
                         {
                             this.Report("Error", "Failed to process sequential action for node "
                                     + source.getComponentID() + " " + e1.getMessage(), true);
-                            //c.state = ProcessingState.Error;
+                            c.state = ProcessingState.Error;
                         }
                     }
                 }
@@ -561,6 +563,29 @@ public class WorkflowManager {
 
                 // All parallel and sequential nodes are processed, we can remove c from processingQueue
                 c.state = ProcessingState.Finished;
+            }
+            else if (c.state == ProcessingState.Error)
+            {
+                if (c.errorRetries <= MAX_ERROR_RETRIES)
+                {
+                    // We failed to connect to the goose, remove the goose from Boss and try again
+                    try {
+                        Thread.sleep(2000);
+                        Log.warning("Trying to unregister the goose...");
+                        bossImpl.unregister(c.gooseName);
+                        c.state = ProcessingState.Initial;
+                    }
+                    catch (Exception e)
+                    {
+                        Log.info("RMI failed to unregister goose" + e.getMessage());
+                        c.state = ProcessingState.Initial;
+                    }
+                }
+                else
+                {
+                    Log.severe("All retries failed. Terminate the processing of node " + c.component.getGooseName());
+                    c.state = ProcessingState.Finished;
+                }
             }
         }
 
@@ -590,7 +615,7 @@ public class WorkflowManager {
             {
                 for (int i = 0; i < geeseNames.length; i++)
                 {
-                    if (geeseNames[i].trim().toLowerCase().contains(source.getName().toLowerCase()))
+                    if (geeseNames[i].trim().toLowerCase().contains(source.getGooseName().toLowerCase()))
                     {
                         goose = bossImpl.getGoose(geeseNames[i]);
                         if (goose instanceof Goose3)
@@ -608,7 +633,7 @@ public class WorkflowManager {
                 if (goose != null && goose instanceof Goose3)
                     return (Goose3)goose;
             }
-            Log.info("No goose found for " + source.getName());
+            Log.info("No goose found for " + source.getGooseName());
             return null;
         }
 
@@ -633,10 +658,12 @@ public class WorkflowManager {
                 }
 
                 try {
-                    String[] gooseNames = gooseManager.getGooseNames();
+                    // we get the listening geese, non-listening geese could be "phantom"
+                    // (e.g. Close Firefox and firegoose might still lingering there
+                    String[] gooseNames = bossImpl.getListeningGooseNames();
                     for (int i = 0; i < gooseNames.length; i++) {
                         String currentGooseName = gooseNames[i];
-                        Log.info("Retrieve a goose: " + currentGooseName + " " + this.gooseName);
+                        //Log.info("Retrieve a goose: " + currentGooseName + " " + this.gooseName);
                         if (currentGooseName.toLowerCase().contains(this.gooseName.toLowerCase())
                                 && !InSnapshot(currentGooseName))
                         {
@@ -667,25 +694,86 @@ public class WorkflowManager {
                 //String command = System.getProperty("java.home");
                 //command += File.separator +  "bin" + File.separator + "javaws " + GaggleConstants.BOSS_URL;
                 try {
-                    System.out.println("Starting goose " + goose.getName());
+                    System.out.println("Starting goose " + goose.getGooseName());
                     syncObj = new Object();
-                    Runtime.getRuntime().exec(goose.getCommandUri()); // Goose will register itself with boss once it starts
-                    Timer timer = new Timer();
-                    WaitForGooseStart wfg = new WaitForGooseStart(goose.getName());
-                    timer.schedule(wfg, 0, timerInterval);
-                    synchronized (syncObj) {
-                        syncObj.wait();
+
+                    String cmdToRun = goose.getCommandUri();
+                    if (goose.getArguments() != null && goose.getArguments().length() > 0)
+                        Log.info("Arguments: " + goose.getArguments());
+                    if (cmdToRun != null && cmdToRun.trim().length() > 0)
+                    {
+                        cmdToRun = cmdToRun.trim().toLowerCase();
+                        // Somehow JSON Stringify wrapped the command uri with "".
+                        if (cmdToRun.endsWith(".bat\"") || cmdToRun.endsWith("bat"))
+                        {
+                            Log.info("Command line is a batch file... " + cmdToRun);
+                            // if it is a batch file, we need to do something more...
+                            // Remove the quotations
+                            if (cmdToRun.endsWith(".bat\""))
+                                cmdToRun = cmdToRun.substring(1, cmdToRun.length() - 1);
+
+                            File f = new File(cmdToRun);
+                            String path = f.getParent();
+
+                            String[] cmdsToRun = new String[5];
+                            cmdsToRun[0] = "cmd.exe";
+                            cmdsToRun[1] = "/C";
+                            cmdsToRun[2] = "start";
+                            cmdsToRun[3] = cmdToRun;
+                            cmdsToRun[4] = goose.getArguments();
+                            Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+                        }
+                        else if (cmdToRun.endsWith(".sh"))
+                        {
+                            Log.info("Shell script: " + cmdToRun);
+
+                            File f = new File(cmdToRun);
+                            String path = f.getParent();
+
+                            String[] cmdsToRun = new String[3];
+                            cmdsToRun[0] = "sh";
+                            cmdsToRun[1] = cmdToRun;
+                            cmdsToRun[2] = goose.getArguments();
+                            Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+                        }
+                        else
+                        {
+                            Log.info("Goose command line: " + cmdToRun);
+                            String[] cmdsToRun = null;
+                            if (goose.getArguments() == null || goose.getArguments() == "")
+                            {
+                                cmdsToRun = new String[1];
+                                cmdsToRun[0] = cmdToRun;
+                            }
+                            else
+                            {
+                                cmdsToRun = new String[2];
+                                cmdsToRun[0] = cmdToRun;
+                                cmdsToRun[1] = goose.getArguments();
+                            }
+                            File f = new File(cmdToRun);
+                            String path = f.getParent();
+                            Runtime.getRuntime().exec(cmdsToRun, null, new File(path)); // Goose will register itself with boss once it starts
+                        }
+                        Timer timer = new Timer();
+                        WaitForGooseStart wfg = new WaitForGooseStart(goose.getGooseName()); //.getName());
+                        timer.schedule(wfg, 0, timerInterval);
+                        synchronized (syncObj) {
+                            syncObj.wait();
+                        }
+                        if (wfg.IsGooseStarted())
+                            return gooseManager.getGoose(wfg.gooseName);
                     }
-                    if (wfg.IsGooseStarted())
-                        return gooseManager.getGoose(wfg.gooseName);
+                    else
+                        Log.warning("Empty command line for " + goose.getGooseName() + "encountered!");
                 } catch (IOException e) {
-                    message = "Failed to start goose: " + goose.getName() + " " + e.getMessage();
+                    message = "Failed to start goose: " + goose.getGooseName() + " " + e.getMessage();
                     messageType = "Error";
                     Log.severe(message);
                     e.printStackTrace();
                 }
                 catch (InterruptedException e1) {
-                    message = "Failed to wait for goose: " + goose.getName() + " " + e1.getMessage();
+                    message = "Failed to wait for goose: " + goose.getGooseName() + " " + e1.getMessage();
                     messageType = "Error";
                     Log.severe(message);
                     e1.printStackTrace();

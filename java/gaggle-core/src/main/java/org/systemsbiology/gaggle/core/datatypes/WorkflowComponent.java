@@ -14,9 +14,11 @@ import java.util.*;
  */
 public class WorkflowComponent implements Serializable {
     private String componentID;
-    private String name;  // corresponds to the name of a goose
+    private String name;  // corresponds to the short name of a goose
+    private String gooseName; // The name registered to the Boss
     private String version;
     private String commandUri;
+    private String arguments;
     private HashMap<String, Object> params;
     private String jsonParams;
 
@@ -33,12 +35,14 @@ public class WorkflowComponent implements Serializable {
         public String getValue() { return id; }
     }
 
-    public WorkflowComponent(String id, String name, String version, String cmduri, HashMap params)
+    public WorkflowComponent(String id, String name, String gooseName, String version, String cmduri, String arguments, HashMap params)
     {
         this.componentID = id;
         this.name = name;
+        this.gooseName = gooseName;
         this.version = version;
         this.commandUri = cmduri;
+        this.arguments = arguments;
         if (params != null)
             this.params = new HashMap(params);
         else
@@ -56,7 +60,9 @@ public class WorkflowComponent implements Serializable {
                 System.out.println("Clone a component " + source.getComponentID());
                 this.componentID = source.getComponentID();
                 this.commandUri = source.getCommandUri();
+                this.arguments = source.getArguments();
                 this.name = source.getName();
+                this.gooseName = source.getGooseName();
                 this.version = source.getVersion();
                 this.params = new HashMap<String, Object>(source.getParams());
                 this.convertParamsToJSON();
@@ -70,8 +76,10 @@ public class WorkflowComponent implements Serializable {
 
     public String getComponentID() { return componentID; }
     public String getName() { return name; }
+    public String getGooseName() { return gooseName; }
     public String getVersion() { return version; }
     public String getCommandUri() { return commandUri; }
+    public String getArguments() { return arguments; }
     //public ProcessingState getState() { return state; }
     //public void setState(ProcessingState s) { this.state = s; }
     public HashMap getParams() { return params; }
