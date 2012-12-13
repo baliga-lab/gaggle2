@@ -2,6 +2,7 @@ package org.systemsbiology.gaggle.core.datatypes;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -97,6 +98,8 @@ public class WorkflowGaggleData
                             this.handleMatrix(workflowAction.getSource().getName(), (DataMatrix)data);
                         else if (data instanceof Namelist)
                             this.handleNameList(workflowAction.getSource().getName(), (Namelist)data);
+                        else if (data instanceof GaggleTuple)
+                            this.handleTuple(workflowAction.getSource().getName(), (GaggleTuple)data);
                         else if (data instanceof String) // this is a uri
                         {
                             this.type = "WorkflowData";
@@ -159,6 +162,10 @@ public class WorkflowGaggleData
         }
     }
 
+    public int dataSubmitted()
+    {
+        return this.targets.size();
+    }
 
     protected void handleNameList(String sourceGooseName, Namelist namelist) throws RemoteException {
         this.species = namelist.getSpecies();
@@ -169,14 +176,34 @@ public class WorkflowGaggleData
     }
 
     protected void handleMatrix(String sourceGooseName, DataMatrix simpleDataMatrix) throws RemoteException {
-        //TODO
         System.out.println("incoming broadcast: DataMatrix");
+        this.type = "DataMatrix";
+        this.species = simpleDataMatrix.getSpecies();
+        this.nameList = simpleDataMatrix.getRowTitles();    //TODO: is this correct?
+        this.size = String.valueOf(simpleDataMatrix.getRowCount());
     }
 
 
     protected void handleTuple(String string, GaggleTuple gaggleTuple) throws RemoteException {
-        //TODO
         System.out.println("incoming broadcast: gaggleTuple");
+        this.type = "Map";    // TODO: is this correct?
+        this.species = gaggleTuple.getSpecies();
+        Tuple data = gaggleTuple.getData();
+        if (data != null)
+        {
+            List<Single> singlelist = data.getSingleList();
+            if (singlelist != null && singlelist.size() > 0)
+            {
+                this.nameList = new String[singlelist.size()];
+                int i = 0;
+                for (Single s : singlelist)
+                {
+                    this.nameList[i] = s.getName();
+                    i++;
+                }
+            }
+        }
+        this.size = String.valueOf(gaggleTuple.getData().getSingleList().size());
     }
 
     protected void handleCluster(String sourceGooseName, Cluster cluster) throws RemoteException {

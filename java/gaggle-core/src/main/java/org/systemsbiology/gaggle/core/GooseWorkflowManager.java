@@ -141,6 +141,19 @@ public class GooseWorkflowManager
         return false;
     }
 
+    public int dataSubmittedForSession(String requestID)
+    {
+        if (this.processingQueue.containsKey(requestID))
+        {
+            WorkflowGaggleData stagingData = this.processingQueue.get(requestID);
+            System.out.println("Data submitted for " + requestID + ": " + stagingData.dataSubmitted());
+            return stagingData.dataSubmitted();
+        }
+        else
+            System.out.println("No data exists for " + requestID);
+        return 0;
+    }
+
     public WorkflowAction getSessionResponse(String requestID)
     {
         if (this.processingQueue.containsKey(requestID))

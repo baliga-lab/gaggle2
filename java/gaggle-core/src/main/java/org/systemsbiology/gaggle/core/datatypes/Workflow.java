@@ -23,8 +23,9 @@ import static org.systemsbiology.gaggle.core.datatypes.JSONConstants.KEY_WORKFLO
  * A workflow is a graph of workflow components and edges
  * Each key is the ID of a parent component
  * Each element has two lists of workflow components that are children of the parent component.
- * One list for parallel components, where data is passed from the source node to all of them at once.
- * No user intervention is required once the user triggers the "Next" operation from the source component.
+ * One list for parallel components, where different types of data (specified by the edge data type)
+ * is passed from the source node to all of them at once. No user intervention is required once
+ * the user triggers the "Next" operation from the source component.
  * The other list is for sequential components, where data is passed from the source node to each of the
  * component one by one. User intervention is required on the source node to trigger processing of each
  * component. This allows the user to make changes on the source node before passing data to following
@@ -135,6 +136,7 @@ public class Workflow implements Serializable, GaggleData {
                             nodeIndegree.put(targetid, new Integer(degree));
 
                             String datatype = edgeJSONObj.getString("datatype_" + splitted[1]);
+                            // Save edge data type to target
                             target.addParam(WorkflowComponent.ParamNames.EdgeType.getValue(), datatype.toLowerCase());
                             String isparallel = edgeJSONObj.getString("isparallel_" + splitted[1]);
                             System.out.println("Parallel: " + isparallel);
