@@ -4,6 +4,7 @@ import net.sf.json.JSONObject;
 import org.systemsbiology.gaggle.core.datatypes.WorkflowAction;
 
 import java.rmi.RemoteException;
+import java.util.UUID;
 
 /**
  * Created with IntelliJ IDEA.
@@ -16,7 +17,9 @@ public interface Boss3 extends Boss2 {
 
 
     /**
-     * Tell the boss to process a workflow.
+     * Submit a workflow to the boss. The boss will parse the workflow
+     * and generate the execution plan. A thread will be spawned for
+     * each workflow.
      * @param jsonWorkflow A workflow wrapped in JSON string.
      * @throws java.rmi.RemoteException if RMI communication fails
      */
@@ -32,4 +35,21 @@ public interface Boss3 extends Boss2 {
      * @throws java.rmi.RemoteException if RMI communication fails
      */
     public void handleWorkflowAction(WorkflowAction action) throws RemoteException;
+
+    /**
+     * Tell the boss to start recording a workflow
+     * @throws RemoteException
+     * Each boss can only process one recording session.
+     * Other requests will be rejected.
+     * returns a UUID if the recording is started successfully
+     * null if the request is rejected.
+     */
+    public UUID startRecordingWorkflow() throws RemoteException;
+
+    /**
+     * Tell the boss to stop recording a workflow
+     * @throws RemoteException
+     * return a JSON string of the recorded workflow
+     */
+    public String terminateRecordingWorkflow(UUID rid) throws RemoteException;
 }

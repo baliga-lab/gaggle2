@@ -47,7 +47,7 @@ public class WorkflowComponent implements Serializable {
             this.params = new HashMap(params);
         else
             this.params = new HashMap();
-        this.convertParamsToJSON();
+        //this.convertParamsToJSON();
         //this.state = ProcessingState.Initial;
     }
 
@@ -65,7 +65,7 @@ public class WorkflowComponent implements Serializable {
                 this.gooseName = source.getGooseName();
                 this.version = source.getVersion();
                 this.params = new HashMap<String, Object>(source.getParams());
-                this.convertParamsToJSON();
+                //this.convertParamsToJSON();
             }
             catch (Exception e)
             {
@@ -89,7 +89,7 @@ public class WorkflowComponent implements Serializable {
         if (para != null)
         {
             this.params = new HashMap(para);
-            this.convertParamsToJSON();
+            //this.convertParamsToJSON();
         }
     }
 
@@ -98,7 +98,7 @@ public class WorkflowComponent implements Serializable {
         if (key != null && key.length() > 0 && data != null)
         {
             this.params.put(key, data);
-            this.convertParamsToJSON();
+            //this.convertParamsToJSON();
         }
     }
 

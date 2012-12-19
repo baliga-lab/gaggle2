@@ -23,7 +23,13 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     private NewNameHelper nameHelper;
     private BossUI ui;
     private GooseManager gooseManager;
-
+    private boolean isRecording = false;
+    private HashMap<String, String> savedNodes = new HashMap<String, String>();
+    private HashMap<String, HashMap<String, String>> dictNodes = new HashMap<String, HashMap<String, String>>();
+    private HashMap<String, HashMap<String, String>> dictEdges = new HashMap<String, HashMap<String, String>>();
+    private String startNode = null;
+    private int edgeCount = 0;
+    private int nodeCount = 0;
     private WorkflowManager workflowManager;
 
     private static Logger Log = Logger.getLogger("Boss");
@@ -84,6 +90,9 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                                   Namelist nameList) {
         ui.broadcastToPlugins(nameList.getNames());
 
+        if (isRecording)
+            recordAction(sourceGoose, targetGoose, nameList);
+
         String[] gooseNames;
         if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
             targetGoose.equalsIgnoreCase("all")) {
@@ -112,6 +121,9 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                                 DataMatrix matrix) {
         ui.broadcastToPlugins(matrix.getRowTitles());
 
+        if (isRecording)
+            recordAction(sourceGoose, targetGoose, matrix);
+
         String[] gooseNames;
         if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
             targetGoose.equalsIgnoreCase("all")) {
@@ -137,6 +149,10 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
     public void broadcastTuple(String sourceGoose, String targetGoose,
                                GaggleTuple gaggleTuple) {
+
+        if (isRecording)
+            recordAction(sourceGoose, targetGoose, gaggleTuple);
+
         String[] gooseNames;
         if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
             targetGoose.equalsIgnoreCase("all")) {
@@ -164,6 +180,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                                  Cluster cluster) {
         ui.broadcastToPlugins(cluster.getRowNames());
 
+        if (isRecording)
+            recordAction(sourceGoose, targetGoose, cluster);
         String[] gooseNames;
         if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
             targetGoose.equalsIgnoreCase("all")) {
@@ -189,6 +207,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
     public void broadcastNetwork(String sourceGoose, String targetGoose,
                                  Network network) {
+        if (isRecording)
+        {
+            // Record the action
+            recordAction(sourceGoose, targetGoose, network);
+        }
+
         String[] gooseNames;
         if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
             targetGoose.equalsIgnoreCase("all")) {
@@ -240,6 +264,111 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     {
         System.out.println("Processing workflow action: " + action.getSource().getName());
         this.workflowManager.HandleWorkflowAction(action);
+    }
+
+    /**
+     * Start recording a workflow
+     * @return
+     */
+    public UUID startRecordingWorkflow()
+    {
+        if (isRecording)
+            return null;
+        // Get all the registered goose and
+        isRecording = true;
+
+        // Create an array for recording the actions
+        UUID rid = UUID.randomUUID();
+        this.dictNodes.clear();
+        this.dictEdges.clear();
+        this.savedNodes.clear();
+        this.edgeCount = 0;
+        this.nodeCount = 0;
+        return rid;
+    }
+
+    /**
+     * Stop recording workflow
+     * @return
+     */
+    public String terminateRecordingWorkflow(UUID rid)
+    {
+        isRecording = false;
+        JSONObject jsonObj = new JSONObject();
+
+        HashMap<String, Object> finalObj = new HashMap<String, Object>();
+        finalObj.put("nodes", this.dictNodes);
+        finalObj.put("edges", this.dictEdges);
+        finalObj.put("id", "");
+        finalObj.put("name", "");
+        finalObj.put("desc", "");
+        finalObj.put("startNode", this.startNode);
+        jsonObj.putAll(finalObj);
+        Log.info("Generated workflow json string: " + jsonObj.toString());
+        return jsonObj.toString();
+    }
+
+    private void recordAction(String sourceGoose, String targetGoose, GaggleData data)
+    {
+        if (sourceGoose != null && targetGoose != null && data != null)
+        {
+            Log.info("Recording source: " + sourceGoose + " target:" + targetGoose + " data: " + data.toString());
+            // Add nodes to the nodes dict
+            if (this.dictNodes.isEmpty())
+            {
+                // This is the starting node
+                this.startNode = sourceGoose;
+            }
+
+            String sourceid = "";
+            String targetid = "";
+            if (!this.savedNodes.containsKey(sourceGoose))
+            {
+                HashMap<String, String> node = new HashMap<String, String>();
+                node.put("id", String.valueOf(nodeCount));
+                node.put("name", sourceGoose);
+                this.dictNodes.put(String.valueOf(this.nodeCount), node);
+                this.savedNodes.put(sourceGoose, String.valueOf(nodeCount));
+                sourceid = String.valueOf(nodeCount);
+                nodeCount++;
+            }
+            else
+                sourceid = savedNodes.get(sourceGoose);
+
+            if (!this.savedNodes.containsKey(targetGoose))
+            {
+                HashMap<String, String> node = new HashMap<String, String>();
+                node.put("id", String.valueOf(nodeCount));
+                node.put("name", targetGoose);
+                this.dictNodes.put(String.valueOf(this.nodeCount), node);
+                this.savedNodes.put(targetGoose, String.valueOf(nodeCount));
+                targetid = String.valueOf(nodeCount);
+                nodeCount++;
+            }
+            else
+                targetid = savedNodes.get(targetGoose);
+
+            // Add to the edge dict
+            Log.info("Source node id: " + sourceid + " target node id: " + targetid);
+            HashMap<String, String> edge = new HashMap<String, String>();
+            edge.put("sourcenodeid", sourceid);
+            edge.put("targetnodeid", targetid);
+
+            String dataType = "Data";
+            if (data instanceof DataMatrix)
+                dataType = "Matrix";
+            else if (data instanceof GaggleTuple)
+                dataType = "Tuple";
+            else if (data instanceof Network)
+                dataType = "Network";
+            else if (data instanceof Cluster)
+                dataType = "Cluster";
+            edge.put("datatype", dataType);
+            Log.info("Data type: " + dataType);
+            edge.put("paralleltype", "true");
+            this.dictEdges.put(String.valueOf(this.edgeCount), edge);
+            this.edgeCount++;
+        }
     }
 
     public void hide(String targetGoose) {
