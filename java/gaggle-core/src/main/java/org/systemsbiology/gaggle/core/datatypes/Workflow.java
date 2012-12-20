@@ -164,13 +164,17 @@ public class Workflow implements Serializable, GaggleData {
             }
 
             // Now we need to decide the starting nodes
+            String startnodeKey = jsonWorkflow.getString("startNode");
+            startNodeIDs.add(startnodeKey);
+
             for (String key: nodeIndegree.keySet())
             {
                 Integer indegree = nodeIndegree.get(key);
                 if (indegree.intValue() == 0)
                 {
                     System.out.println("Found a starting node: " + key);
-                    startNodeIDs.add(key);
+                    if (!startNodeIDs.contains(key))
+                        startNodeIDs.add(key);
                 }
             }
         }

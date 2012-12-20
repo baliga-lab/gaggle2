@@ -184,7 +184,7 @@ public class WorkflowGaggleData
     }
 
 
-    protected void handleTuple(String string, GaggleTuple gaggleTuple) throws RemoteException {
+    protected void handleTuple(String sourceGooseName, GaggleTuple gaggleTuple) throws RemoteException {
         System.out.println("incoming broadcast: gaggleTuple");
         this.type = "Map";    // TODO: is this correct?
         this.species = gaggleTuple.getSpecies();
@@ -198,7 +198,8 @@ public class WorkflowGaggleData
                 int i = 0;
                 for (Single s : singlelist)
                 {
-                    this.nameList[i] = s.getName();
+                    System.out.println("Single name: " + s.getName());
+                    this.nameList[i] = new String(s.getName());
                     i++;
                 }
             }
@@ -209,7 +210,7 @@ public class WorkflowGaggleData
     protected void handleCluster(String sourceGooseName, Cluster cluster) throws RemoteException {
         // we handle clusters by translating them to namelists
         this.species = cluster.getSpecies();
-        this.nameList = cluster.getRowNames();
+        this.nameList = cluster.getColumnNames();
         this.type = "NameList";
         this.size = String.valueOf(nameList.length);
         System.out.println("Extracted cluster translated to " + type + "(" + size + ")");

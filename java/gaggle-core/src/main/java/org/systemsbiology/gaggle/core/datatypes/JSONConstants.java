@@ -47,4 +47,17 @@ public interface JSONConstants {
     String TYPE_TUPLE        = "tuple";
     String TYPE_WORKFLOW     = "workflow";
     String TYPE_ANY          = "Any Data";
+
+    String WORKFLOW_NAME = "name";
+    String WORKFLOW_COMPONENT_SERVICEURI = "serviceuri";
+    String WORKFLOW_COMPONENT_DATAURI = "datauri";
+    String WORKFLOW_COMPONENT_SUBACTION = "subaction";
+    String WORKFLOW_COMPONENT_ID = "componentid";
+    String WORKDLOW_COMPONENT_ARGUMENTS = "arguments";
+    String WORKFLOW_ID = "id";
+    String WORKFLOW_EDGE_DATATYPE = "datatype";
+    String WORKFLOW_EDGE_PARALLELTYPE = "paralleltype";
+    String WORKFLOW_EDGE_SOURCEID = "sourcenodeid";
+    String WORKFLOW_EDGE_TARGETID = "targetnodeid";
+    String WORKFLOW_EDGE_STARTNODE = "startnode";
 }

@@ -352,6 +352,7 @@ public class WorkflowManager {
             }
         }
 
+
         /**
          * Process a workflow. It's a state machine. Basically, for each component,
          * we first start its corresponding goose
@@ -461,6 +462,8 @@ public class WorkflowManager {
                         WorkflowNode pn = new WorkflowNode(pc);
                         this.processingQueue.add(pn);
                     }
+                    // remove acknowledge data
+                    this.acknowledgedParallelNodes.remove(source.getComponentID());
                     c.state = ProcessingState.ParallelAcknowledged;
                 }
             }
@@ -523,6 +526,7 @@ public class WorkflowManager {
                     {
                         // all sequential nodes are processed
                         c.state = ProcessingState.SequentialAcknowledged;
+                        this.acknowledgedSequentialNodes.remove(source.getComponentID());
                     }
                     else
                     {

@@ -1,9 +1,11 @@
 package org.systemsbiology.gaggle.core;
 
 import net.sf.json.JSONObject;
+import org.systemsbiology.gaggle.core.datatypes.GaggleData;
 import org.systemsbiology.gaggle.core.datatypes.WorkflowAction;
 
 import java.rmi.RemoteException;
+import java.util.HashMap;
 import java.util.UUID;
 
 /**
@@ -52,4 +54,37 @@ public interface Boss3 extends Boss2 {
      * return a JSON string of the recorded workflow
      */
     public String terminateRecordingWorkflow(UUID rid) throws RemoteException;
+
+    /**
+     * Pause recording a workflow
+     * @param rid
+     * @throws RemoteException
+     * Returns the currently recorded workflow
+     */
+    public String pauseRecordingWorkflow(UUID rid) throws RemoteException;
+
+    /**
+     * Resume recording a workflow
+     * @param rid
+     * @throws RemoteException
+     */
+    public void resumeRecordingWorkflow(UUID rid) throws RemoteException;
+
+    /**
+     * Record a broadcast action. The API can be used to update source goose and target goose parameters
+     * as well as edge parameters
+     * @param sourceGoose
+     * @param targetGoose
+     * @param data
+     * @param edgeIndex: The index of the edge to be updated, -1 if it's a new edge
+     * @param sourceParams
+     * @param targetParams
+     * @param edgeParams
+     */
+    public void recordAction(String sourceGoose, String targetGoose, Object data,
+                             int edgeIndex,
+                             HashMap<String, String> sourceParams,
+                             HashMap<String, String> targetParams,
+                             HashMap<String, String> edgeParams
+    ) throws RemoteException;
 }
