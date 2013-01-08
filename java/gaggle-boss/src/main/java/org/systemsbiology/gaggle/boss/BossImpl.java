@@ -377,13 +377,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     node = new HashMap<String, String>();
                     node.put(JSONConstants.WORKFLOW_ID, String.valueOf(nodeCount));
                     node.put(JSONConstants.WORKFLOW_NAME, sourceGooseName);
-                    if (sourceParams != null)
-                    {
-                        for (String key: sourceParams.keySet())
-                        {
-                            node.put(key, sourceParams.get(key));
-                        }
-                    }
                     this.dictNodes.put(String.valueOf(this.nodeCount), node);
                     this.savedNodes.put(sourceGooseName, String.valueOf(nodeCount));
                     sourceid = String.valueOf(nodeCount);
@@ -397,7 +390,21 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 {
                     for (String key: sourceParams.keySet())
                     {
-                        node.put(key, sourceParams.get(key));
+                        String value = sourceParams.get(key);
+                        if (value != null && value.length() > 0)
+                        {
+                            String nodevalue = "";
+                            if (node.containsKey(key))
+                                // If the parameter already exists, we concatenate it
+                                // with the new value. This is especially important for
+                                // some parameters such as subactions ( A node can accept multiple
+                                // subactions). For example, users might want to pass the data to
+                                // Firegoose and trigger multiple webhandlers. Concatenating
+                                // subactions achieve this purpose.
+                                nodevalue = (node.get(key) + ";");
+                            nodevalue += value;
+                            node.put(key, nodevalue);
+                        }
                     }
                 }
             }
@@ -477,6 +484,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             }
         }
     }
+
 
     public void hide(String targetGoose) {
         String[] gooseNames;

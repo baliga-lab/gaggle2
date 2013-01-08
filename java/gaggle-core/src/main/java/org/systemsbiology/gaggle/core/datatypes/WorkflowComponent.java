@@ -13,6 +13,7 @@ import java.util.*;
  * To change this template use File | Settings | File Templates.
  */
 public class WorkflowComponent implements Serializable {
+    private String componentWorkflowNodeID;
     private String componentID;
     private String name;  // corresponds to the short name of a goose
     private String gooseName; // The name registered to the Boss
@@ -35,8 +36,26 @@ public class WorkflowComponent implements Serializable {
         public String getValue() { return id; }
     }
 
+    public WorkflowComponent(String id, String workflownodeid, String name, String gooseName, String version, String cmduri, String arguments, HashMap params)
+    {
+        this.componentWorkflowNodeID = workflownodeid;
+        this.componentID = id;
+        this.name = name;
+        this.gooseName = gooseName;
+        this.version = version;
+        this.commandUri = cmduri;
+        this.arguments = arguments;
+        if (params != null)
+            this.params = new HashMap(params);
+        else
+            this.params = new HashMap();
+        //this.convertParamsToJSON();
+        //this.state = ProcessingState.Initial;
+    }
+
     public WorkflowComponent(String id, String name, String gooseName, String version, String cmduri, String arguments, HashMap params)
     {
+        this.componentWorkflowNodeID = "";
         this.componentID = id;
         this.name = name;
         this.gooseName = gooseName;
@@ -58,6 +77,7 @@ public class WorkflowComponent implements Serializable {
             try
             {
                 System.out.println("Clone a component " + source.getComponentID());
+                this.componentWorkflowNodeID = source.getComponentWorkflowNodeID();
                 this.componentID = source.getComponentID();
                 this.commandUri = source.getCommandUri();
                 this.arguments = source.getArguments();
@@ -74,6 +94,7 @@ public class WorkflowComponent implements Serializable {
         }
     }
 
+    public String getComponentWorkflowNodeID() { return componentWorkflowNodeID; }
     public String getComponentID() { return componentID; }
     public String getName() { return name; }
     public String getGooseName() { return gooseName; }
@@ -97,7 +118,16 @@ public class WorkflowComponent implements Serializable {
     {
         if (key != null && key.length() > 0 && data != null)
         {
-            this.params.put(key, data);
+            if (key.equals(ParamNames.Data.getValue()))
+            {
+                ArrayList<Object> datalist = (ArrayList)this.params.get(key);
+                if (datalist == null)
+                    datalist = new ArrayList<Object>();
+                datalist.add(data);
+                this.params.put(key, datalist);
+            }
+            else
+                this.params.put(key, data);
             //this.convertParamsToJSON();
         }
     }

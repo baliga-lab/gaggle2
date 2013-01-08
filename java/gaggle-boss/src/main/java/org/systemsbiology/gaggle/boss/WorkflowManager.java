@@ -4,9 +4,10 @@ import org.apache.commons.collections.iterators.ArrayListIterator;
 import org.systemsbiology.gaggle.core.Goose;
 import org.systemsbiology.gaggle.core.Goose3;
 import org.systemsbiology.gaggle.core.datatypes.*;
+import org.systemsbiology.gaggle.util.ClientHttpRequest;
 
 import java.io.*;
-import java.net.ConnectException;
+import java.net.*;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.logging.Level;
@@ -126,9 +127,135 @@ public class WorkflowManager {
                     }
                     break;
 
+                case Request:
+                    Log.info("Workflow Action Request received with option " + action.getOption());
+                    if ((action.getOption() & WorkflowAction.Options.WorkflowReportData.getValue()) > 0)
+                    {
+                        // This is report data, we need to send it to web server
+                        reportData(action);
+                    }
+                    break;
+
                 default:
                     Log.warning("Unexpected action type received by Workflow Manager.");
                     break;
+            }
+        }
+    }
+
+    /**
+     * Send the report data to server to generate report html page
+     * @param action
+     */
+    private void reportData(WorkflowAction action)
+    {
+        if (action.getData() != null)
+        {
+            Log.info("Handle report data for Workflow " + action.getWorkflowID() + " session " + action.getSessionID() + " component " + action.getComponentID());
+            GaggleData data = action.getData()[0];
+            if (data != null && data instanceof WorkflowData)
+            {
+                Tuple tpl = (Tuple)(((WorkflowData)data).getData());
+                Log.info("====> Processing " + tpl.getSingleList().size() + " report parameters");
+                String type = "";
+                Object value = null;
+                String componentname = "";
+                for (int i = 0; i < tpl.getSingleList().size(); i++)
+                {
+                    Single s = tpl.getSingleList().get(i);
+                    if (s != null)
+                    {
+                        if (s.getName().toLowerCase().equals("type"))
+                        {
+                            type = (String)s.getValue();
+                            Log.info("Type: " + type);
+                        }
+                        else if (s.getName().toLowerCase().equals("file"))
+                        {
+                            value = s.getValue();
+                            Log.info("Value: " + value);
+                        }
+                        else if (s.getName().toLowerCase().equals("component-name"))
+                        {
+                            componentname = (String)s.getValue();
+                            Log.info("Component name: " + componentname);
+                        }
+                        else {
+                            Log.warning("Encountered unknown property name: " + s.getName());
+                        }
+                    }
+                    else
+                        Log.warning("Encountered a null Single");
+                }
+
+                if (!type.isEmpty() && value != null)
+                {
+                    URL url = null;
+                    try {
+                        //url = new URL("http://networks.systemsbiology.net/workflow/savereport/" + action.getSessionID());
+                        url = new URL("http://localhost:8000/workflow/savereport/");
+                    } catch (MalformedURLException ex) {
+                        Log.warning("Malformed URL");
+                    }
+
+                    HttpURLConnection urlConn = null;
+                    try {
+                        // URL connection channel.
+                        urlConn = (HttpURLConnection) url.openConnection();
+
+
+                        // Let the run-time system (RTS) know that we want input.
+                        urlConn.setDoInput (true);
+
+                        // Let the RTS know that we want to do output.
+                        urlConn.setDoOutput (true);
+
+                        // No caching, we want the real thing.
+                        urlConn.setUseCaches (false);
+                    }
+                    catch (IOException ex) {
+                        Log.severe("Failed to create url Connection " + ex.getMessage());
+                    }
+
+                    try
+                    {
+                        ClientHttpRequest httpRequest = new ClientHttpRequest(urlConn);
+                        InputStream responseStream = null;
+                        if (type.equals("file"))
+                        {
+                            Log.info("Upload file path: " + (String)value + " of Component " + componentname + " component workflow node id " + action.getSource().getComponentWorkflowNodeID() + " for Workflow " + action.getWorkflowID());
+                            // send the component name
+                            httpRequest.setParameter("sessionid", action.getSessionID());
+                            httpRequest.setParameter("component-name", componentname);
+                            httpRequest.setParameter("workflowid", action.getWorkflowID());
+                            httpRequest.setParameter("componentid", action.getComponentID());
+                            httpRequest.setParameter("componentworkflownodeid", action.getSource().getComponentWorkflowNodeID());
+                            File f = new File((String)value);
+                            //FileInputStream is = new FileInputStream((String)value);
+                            httpRequest.setParameter("file", f);
+                            responseStream = httpRequest.post();
+                        }
+                        else if (type.equals("url"))
+                        {
+                            Log.info("Upload url: " + (String)value + " of Component " + componentname + " component workflow node id " + action.getSource().getComponentWorkflowNodeID() + " for Workflow " + action.getWorkflowID());
+                            httpRequest.setParameter("sessionid", action.getSessionID());
+                            httpRequest.setParameter("component-name", componentname);
+                            httpRequest.setParameter("workflowid", action.getWorkflowID());
+                            httpRequest.setParameter("componentid", action.getComponentID());
+                            httpRequest.setParameter("componentworkflownodeid", action.getSource().getComponentWorkflowNodeID());
+
+                            //String content =
+                            //        "name=" + URLEncoder.encode((String)value, "utf-8");
+                            httpRequest.setParameter("url", (String)value);
+                            responseStream = httpRequest.post();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Log.severe("Failed to post workflow data to server: " + e.getMessage());
+                    }
+                }
+
             }
         }
     }
@@ -167,6 +294,7 @@ public class WorkflowManager {
 
     class WorkflowThread extends Thread
     {
+        String workflowID;
         UUID sessionID; // sessionID is needed for goose to communicate with the boss
         //int myIndex;
         //WorkflowSessionManager sessionManager;
@@ -203,6 +331,7 @@ public class WorkflowManager {
             Log.info("Initiating workflow thread " + sessionID.toString());
             //this.myIndex = indx;
             //this.sessionManager = sessionManager;
+            this.workflowID = w.getWorkflowID();
             this.sessionID = sessionID;
             this.proxyGoose = proxyGoose;
             this.myWorkflow = w;
@@ -415,12 +544,15 @@ public class WorkflowManager {
                         Log.info("Pass data to source for parallel children");
                         Log.info(source.getParams().get(WorkflowComponent.ParamNames.Data.getValue()).toString());
                         Log.info("SessionID: " + sessionID.toString());
+                        Log.info("ComponentID: " + source.getComponentID());
                         WorkflowAction action = new WorkflowAction(
+                                this.workflowID,
                                 sessionID.toString(),
+                                source.getComponentID(),
                                 WorkflowAction.ActionType.Request,
                                 source,
                                 targets,
-                                WorkflowAction.Options.Parallel.getValue(),
+                                    WorkflowAction.Options.Parallel.getValue(),
                                 //WorkflowAction.DataType.WorkflowData,
                                 null  // Data is contained in the source node's params property
                         );
@@ -481,7 +613,9 @@ public class WorkflowManager {
                         targets = new WorkflowComponent[1];
                         targets[1] = sequentialcomponents.get(0);
                         WorkflowAction action = new WorkflowAction(
+                                this.workflowID,
                                 sessionID.toString(),
+                                targets[1].getComponentID(),
                                 WorkflowAction.ActionType.Request,
                                 source,
                                 targets,
@@ -537,7 +671,9 @@ public class WorkflowManager {
                             targets[0] = sequentialcomponents.get(c.acknowledgedSequentials);
                             Log.info("Prepare for sequential node " + targets[0].getComponentID());
                             WorkflowAction action = new WorkflowAction(
+                                    this.workflowID,
                                     sessionID.toString(),
+                                    targets[0].getComponentID(),
                                     WorkflowAction.ActionType.Request,
                                     source,
                                     targets,
@@ -619,13 +755,25 @@ public class WorkflowManager {
             {
                 for (int i = 0; i < geeseNames.length; i++)
                 {
-                    if (geeseNames[i].trim().toLowerCase().contains(source.getGooseName().toLowerCase()))
+                    String currentGooseName = geeseNames[i];
+                    Log.info("Current goose name: " + currentGooseName);
+                    String[] gooseNameSplitted = currentGooseName.split(";");
+                    Log.info("Splitted goose name: " + gooseNameSplitted.length);
+                    if (gooseNameSplitted.length > 1)
+                        Log.info("Splitted goose name: " + gooseNameSplitted[0] + " " + gooseNameSplitted[1]);
+                    if ((gooseNameSplitted.length > 1 && gooseNameSplitted[0].equals(gooseNameSplitted[1]))
+                            || gooseNameSplitted.length == 1)
                     {
-                        goose = bossImpl.getGoose(geeseNames[i]);
-                        if (goose instanceof Goose3)
+                        // We always append the name of the application for Cytoscape, we want to broadcast
+                        // to the original goose with the name similar to Cytoscape v2.8.3;Cytoscape v2.8.3
+                        if (currentGooseName.trim().toLowerCase().contains(source.getGooseName().toLowerCase()))
                         {
-                            Log.info("Found existing goose " + geeseNames[i]);
-                            return (Goose3)goose;
+                            goose = bossImpl.getGoose(geeseNames[i]);
+                            if (goose instanceof Goose3)
+                            {
+                                Log.info("Found existing goose " + geeseNames[i]);
+                                return (Goose3)goose;
+                            }
                         }
                     }
                 }
@@ -668,17 +816,24 @@ public class WorkflowManager {
                     for (int i = 0; i < gooseNames.length; i++) {
                         String currentGooseName = gooseNames[i];
                         //Log.info("Retrieve a goose: " + currentGooseName + " " + this.gooseName);
-                        if (currentGooseName.toLowerCase().contains(this.gooseName.toLowerCase())
-                                && !InSnapshot(currentGooseName))
+                        String[] gooseNameSplitted = currentGooseName.split(";");
+                        if ((gooseNameSplitted.length > 1 && gooseNameSplitted[0].equals(gooseNameSplitted[1]))
+                            || gooseNameSplitted.length == 1)
                         {
-                            // The goose has been started correctly!
-                            Log.info("Our goose is started!");
-                            gooseStarted = true;
-                            this.gooseName = currentGooseName;
-                            synchronized (syncObj) {
-                                syncObj.notify();
+                            // We always append the name of the application for Cytoscape, we want to broadcast
+                            // to the original goose
+                            if (currentGooseName.toLowerCase().contains(this.gooseName.toLowerCase())
+                                    && !InSnapshot(currentGooseName))
+                            {
+                                // The goose has been started correctly!
+                                Log.info("Our goose is started!");
+                                gooseStarted = true;
+                                this.gooseName = currentGooseName;
+                                synchronized (syncObj) {
+                                    syncObj.notify();
+                                }
+                                this.cancel();
                             }
-                            this.cancel();
                         }
                     }
                 } catch (Exception ex) {

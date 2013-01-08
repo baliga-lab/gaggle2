@@ -42,6 +42,9 @@ public class Workflow implements Serializable, GaggleData {
     protected HashMap<String, ArrayList<ArrayList<WorkflowComponent>>> workflowMap = null;
     // There can be multiple starting nodes (nodes with 0 in-degree, assuming there is no cycle!)
     protected ArrayList<String> startNodeIDs = new ArrayList<String>();
+    protected String workflowID;
+
+    public String getWorkflowID() { return workflowID; }
 
     public Workflow(JSONObject jsonWorkflow)
     {
@@ -54,6 +57,8 @@ public class Workflow implements Serializable, GaggleData {
         try
         {
             System.out.println("Populating nodes...");
+
+            workflowID = jsonWorkflow.getString(JSONConstants.WORKFLOW_ID);
             HashMap<String, WorkflowComponent> nodeMap = new HashMap<String, WorkflowComponent>();
 
             // Calculate the indegree of nodes. Nodes with 0 indgrees are the starting nodes
@@ -69,8 +74,11 @@ public class Workflow implements Serializable, GaggleData {
 
                 HashMap<String, Object> params = new HashMap<String, Object>();
                 params.put(WorkflowComponent.ParamNames.SubTarget.getValue(), jsonnode.getString("subaction"));
-                params.put(WorkflowComponent.ParamNames.Data.getValue(), jsonnode.getString("datauri"));
+                ArrayList<Object> datalist = new ArrayList<Object>();
+                datalist.add(jsonnode.getString("datauri"));
+                params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
                 WorkflowComponent node = new WorkflowComponent(jsonnode.getString("id"),
+                                                        jsonnode.getString("wfnodeid"),
                                                         jsonnode.getString("name"),
                                                         jsonnode.getString("goosename"),
                                                         "", // TODO add version info

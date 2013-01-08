@@ -76,7 +76,7 @@ public interface Boss3 extends Boss2 {
      * @param sourceGoose
      * @param targetGoose
      * @param data
-     * @param edgeIndex: The index of the edge to be updated, -1 if it's a new edge
+     * @param edgeIndex The index of the edge to be updated, -1 if it's a new edge
      * @param sourceParams
      * @param targetParams
      * @param edgeParams

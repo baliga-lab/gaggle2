@@ -13,7 +13,9 @@ import java.util.UUID;
  * to the target. It also contains information of how to invoke source and target components.
  */
 public class WorkflowAction implements Serializable {
+    private String workflowID;
     private String sessionID;
+    private String componentID;
     private ActionType actionType; // This is the type of the action (i.e., request, response, etc)
     private WorkflowComponent source;
     private WorkflowComponent[] targets;
@@ -39,24 +41,29 @@ public class WorkflowAction implements Serializable {
 
     public enum Options
     {
-        Parallel(0x0001),
-        Sequential(0x0010),
-        SuccessMessage(0x0100),
-        ErrorMessage(0x1000);
+        Parallel(0x00001),
+        Sequential(0x00010),
+        SuccessMessage(0x00100),
+        ErrorMessage(0x01000),
+        WorkflowReportData(0x10000);
 
         private final int id;
         Options(int id) { this.id = id; }
         public int getValue() { return id; }
     }
 
-    public WorkflowAction(String sessionID,
+    public WorkflowAction(String workflowID,
+                          String sessionID,
+                          String componentID,
                           ActionType actionType,
                           WorkflowComponent source,
                           WorkflowComponent[] targets,
                           int option,
                           GaggleData[] data)
     {
+        this.workflowID = workflowID;
         this.sessionID = sessionID;
+        this.componentID = componentID;
         this.source = source;
         this.targets = targets;
         this.actionType = actionType;
@@ -65,7 +72,9 @@ public class WorkflowAction implements Serializable {
         this.data = data;
     }
 
+    public String getWorkflowID() { return workflowID; }
     public String getSessionID() { return sessionID; }
+    public String getComponentID() { return componentID; }
     public ActionType getActionType() { return actionType; }
     public WorkflowComponent getSource() { return source; }
     public WorkflowComponent[] getTargets() { return targets; }

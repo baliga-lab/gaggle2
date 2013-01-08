@@ -54,7 +54,7 @@ public interface JSONConstants {
     String WORKFLOW_COMPONENT_SUBACTION = "subaction";
     String WORKFLOW_COMPONENT_ID = "componentid";
     String WORKDLOW_COMPONENT_ARGUMENTS = "arguments";
-    String WORKFLOW_ID = "id";
+    String WORKFLOW_ID = "workflowid";
     String WORKFLOW_EDGE_DATATYPE = "datatype";
     String WORKFLOW_EDGE_PARALLELTYPE = "paralleltype";
     String WORKFLOW_EDGE_SOURCEID = "sourcenodeid";

@@ -43,7 +43,9 @@ public class WorkflowGaggleData
     {
         this.requestID = requestID;
         this.request = workflowAction;
-        this.response = new WorkflowAction(request.getSessionID(),
+        this.response = new WorkflowAction(request.getWorkflowID(),
+                request.getSessionID(),
+                request.getComponentID(),
                 WorkflowAction.ActionType.Response,
                 request.getSource(),
                 null,
@@ -60,57 +62,63 @@ public class WorkflowGaggleData
             {
                 if (workflowAction.getSource().getParams().containsKey(WorkflowComponent.ParamNames.Data.getValue()))
                 {
-                    Object data = workflowAction.getSource().getParams().get(WorkflowComponent.ParamNames.Data.getValue());
-                    if (data instanceof GaggleData)
-                        System.out.println(((GaggleData)data).getName());
-                    else if (data instanceof  String)
-                        System.out.println((String)data);
-                    System.out.println("JSON param: " + workflowAction.getSource().getJSONParams());
-
-                    this.subAction = "";
-                    if (workflowAction.getSource().getParams().containsKey(WorkflowComponent.ParamNames.SubTarget.getValue()))
+                    ArrayList<Object> datalist = (ArrayList<Object>)workflowAction.getSource().getParams().get(WorkflowComponent.ParamNames.Data.getValue());
+                    if (datalist != null && datalist.size() > 0)
                     {
-                        this.subAction = (String)workflowAction.getSource().getParams().get(WorkflowComponent.ParamNames.SubTarget.getValue());
-                        System.out.println("Subaction: " + this.subAction);
-                    }
+                        // We only handle one data for Firegoose
+                        // TODO extend to multiple data later
+                        Object data = datalist.get(0);
+                        if (data instanceof GaggleData)
+                            System.out.println(((GaggleData)data).getName());
+                        else if (data instanceof  String)
+                            System.out.println((String)data);
+                        System.out.println("JSON param: " + workflowAction.getSource().getJSONParams());
 
-                    //this.actionType = "WorkflowAction";
-                    //this.sessionID = workflowAction.getSessionID().toString();
-                    //this.workflowAction = workflowAction;
-
-                    // This has to be done the latest because hasNewDataSignal.increment() is called
-                    // in all the handle[GaggleData] functions
-                    //boolean dataProcessed = true;
-                    if (data != null)
-                    {
-                        if (data instanceof WorkflowData)
+                        this.subAction = "";
+                        if (workflowAction.getSource().getParams().containsKey(WorkflowComponent.ParamNames.SubTarget.getValue()))
                         {
-                            this.type = "WorkflowData";
-                            this.nameList = new String[1];
-                            this.nameList[0] = (String)(((WorkflowData)data).getData());
-                            System.out.println("Workflow data: " + this.nameList[0]);
-                        }
-                        else if (data instanceof Network)
-                            this.handleNetwork(workflowAction.getSource().getName(), (Network) data);
-                        else if (data instanceof Cluster)
-                            this.handleCluster(workflowAction.getSource().getName(), (Cluster) data);
-                        else if (data instanceof DataMatrix)
-                            this.handleMatrix(workflowAction.getSource().getName(), (DataMatrix)data);
-                        else if (data instanceof Namelist)
-                            this.handleNameList(workflowAction.getSource().getName(), (Namelist)data);
-                        else if (data instanceof GaggleTuple)
-                            this.handleTuple(workflowAction.getSource().getName(), (GaggleTuple)data);
-                        else if (data instanceof String) // this is a uri
-                        {
-                            this.type = "WorkflowData";
-                            this.nameList = new String[1];
-                            this.nameList[0] = (String)data;
-                            System.out.println("URI data: " + this.nameList[0]);
+                            this.subAction = (String)workflowAction.getSource().getParams().get(WorkflowComponent.ParamNames.SubTarget.getValue());
+                            System.out.println("Subaction: " + this.subAction);
                         }
 
-                        // TODO support other data types
-                        //else
-                        //    dataProcessed = false;
+                        //this.actionType = "WorkflowAction";
+                        //this.sessionID = workflowAction.getSessionID().toString();
+                        //this.workflowAction = workflowAction;
+
+                        // This has to be done the latest because hasNewDataSignal.increment() is called
+                        // in all the handle[GaggleData] functions
+                        //boolean dataProcessed = true;
+                        if (data != null)
+                        {
+                            if (data instanceof WorkflowData)
+                            {
+                                this.type = "WorkflowData";
+                                this.nameList = new String[1];
+                                this.nameList[0] = (String)(((WorkflowData)data).getData());
+                                System.out.println("Workflow data: " + this.nameList[0]);
+                            }
+                            else if (data instanceof Network)
+                                this.handleNetwork(workflowAction.getSource().getName(), (Network) data);
+                            else if (data instanceof Cluster)
+                                this.handleCluster(workflowAction.getSource().getName(), (Cluster) data);
+                            else if (data instanceof DataMatrix)
+                                this.handleMatrix(workflowAction.getSource().getName(), (DataMatrix)data);
+                            else if (data instanceof Namelist)
+                                this.handleNameList(workflowAction.getSource().getName(), (Namelist)data);
+                            else if (data instanceof GaggleTuple)
+                                this.handleTuple(workflowAction.getSource().getName(), (GaggleTuple)data);
+                            else if (data instanceof String) // this is a uri
+                            {
+                                this.type = "WorkflowData";
+                                this.nameList = new String[1];
+                                this.nameList[0] = (String)data;
+                                System.out.println("URI data: " + this.nameList[0]);
+                            }
+
+                            // TODO support other data types
+                            //else
+                            //    dataProcessed = false;
+                        }
                     }
                 }
             }
