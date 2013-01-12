@@ -170,7 +170,7 @@ public class WorkflowManager {
                             type = (String)s.getValue();
                             Log.info("Type: " + type);
                         }
-                        else if (s.getName().toLowerCase().equals("file"))
+                        else if (s.getName().toLowerCase().equals("file") || s.getName().toLowerCase().equals("url"))
                         {
                             value = s.getValue();
                             Log.info("Value: " + value);
@@ -192,8 +192,8 @@ public class WorkflowManager {
                 {
                     URL url = null;
                     try {
-                        //url = new URL("http://networks.systemsbiology.net/workflow/savereport/" + action.getSessionID());
-                        url = new URL("http://localhost:8000/workflow/savereport/");
+                        url = new URL("http://networks.systemsbiology.net/workflow/savereport/");
+                        //url = new URL("http://localhost:8000/workflow/savereport/");
                     } catch (MalformedURLException ex) {
                         Log.warning("Malformed URL");
                     }

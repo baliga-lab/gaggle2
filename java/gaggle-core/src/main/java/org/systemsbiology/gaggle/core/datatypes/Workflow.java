@@ -75,7 +75,9 @@ public class Workflow implements Serializable, GaggleData {
                 HashMap<String, Object> params = new HashMap<String, Object>();
                 params.put(WorkflowComponent.ParamNames.SubTarget.getValue(), jsonnode.getString("subaction"));
                 ArrayList<Object> datalist = new ArrayList<Object>();
-                datalist.add(jsonnode.getString("datauri"));
+                String datauri = jsonnode.getString("datauri");
+                if (datauri != null && datauri.length() > 0)
+                    datalist.add(datauri);
                 params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
                 WorkflowComponent node = new WorkflowComponent(jsonnode.getString("id"),
                                                         jsonnode.getString("wfnodeid"),
