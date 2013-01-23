@@ -43,8 +43,10 @@ public class Workflow implements Serializable, GaggleData {
     // There can be multiple starting nodes (nodes with 0 in-degree, assuming there is no cycle!)
     protected ArrayList<String> startNodeIDs = new ArrayList<String>();
     protected String workflowID;
+    protected HashMap<String, String> nodeInfoMap = new HashMap<String, String>();
 
     public String getWorkflowID() { return workflowID; }
+    public HashMap<String, String> getNodeInfoMap() { return nodeInfoMap; }
 
     public Workflow(JSONObject jsonWorkflow)
     {
@@ -89,6 +91,7 @@ public class Workflow implements Serializable, GaggleData {
                                                         params);
                 System.out.println("Added a node " + jsonnode.getString("id"));
                 nodeMap.put(jsonnode.getString("id"), node);
+                nodeInfoMap.put(jsonnode.getString("id"), jsonnode.getString("name"));
 
                 ArrayList<ArrayList<WorkflowComponent>> componentarrays = new ArrayList<ArrayList<WorkflowComponent>>();
                 ArrayList<WorkflowComponent> parallelarray = new ArrayList<WorkflowComponent>();

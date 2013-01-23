@@ -224,16 +224,22 @@ public class WorkflowManager {
                         if (type.equals("file"))
                         {
                             Log.info("Upload file path: " + (String)value + " of Component " + componentname + " component workflow node id " + action.getSource().getComponentWorkflowNodeID() + " for Workflow " + action.getWorkflowID());
-                            // send the component name
-                            httpRequest.setParameter("sessionid", action.getSessionID());
-                            httpRequest.setParameter("component-name", componentname);
-                            httpRequest.setParameter("workflowid", action.getWorkflowID());
-                            httpRequest.setParameter("componentid", action.getComponentID());
-                            httpRequest.setParameter("componentworkflownodeid", action.getSource().getComponentWorkflowNodeID());
-                            File f = new File((String)value);
-                            //FileInputStream is = new FileInputStream((String)value);
-                            httpRequest.setParameter("file", f);
-                            responseStream = httpRequest.post();
+                            if (value != null && !((String)value).isEmpty())
+                            {
+                                // send the component name
+                                httpRequest.setParameter("sessionid", action.getSessionID());
+                                httpRequest.setParameter("component-name", componentname);
+                                httpRequest.setParameter("workflowid", action.getWorkflowID());
+                                httpRequest.setParameter("componentid", action.getComponentID());
+                                httpRequest.setParameter("componentworkflownodeid", action.getSource().getComponentWorkflowNodeID());
+                                File f = new File((String)value);
+                                //FileInputStream is = new FileInputStream((String)value);
+                                httpRequest.setParameter("file", f);
+                                responseStream = httpRequest.post();
+
+                                // remove the temp file after uploading to the server
+                                f.delete();
+                            }
                         }
                         else if (type.equals("url"))
                         {
@@ -495,7 +501,7 @@ public class WorkflowManager {
             if (c.state == ProcessingState.Initial)
             {
                 c.errorRetries++;
-                Log.info("Handling workflow node " + source.getComponentID() + " state: initial");
+                Log.info("Handling workflow node " + source.getComponentID() + " state: initial" + " Cmd uri: " + source.getCommandUri());
                 boolean sourceStarted = false;
 
                 // Find or create the goose corresponding to the source component
@@ -852,90 +858,98 @@ public class WorkflowManager {
             {
                 //String command = System.getProperty("java.home");
                 //command += File.separator +  "bin" + File.separator + "javaws " + GaggleConstants.BOSS_URL;
-                try {
-                    System.out.println("Starting goose " + goose.getGooseName());
-                    syncObj = new Object();
+                syncObj = new Object();
+                String[] gooseCmds = new String[2];
+                gooseCmds[0] = bossImpl.getAppInfo(goose.getName());
+                gooseCmds[1] = goose.getCommandUri();
+                for (int i = 0; i < 2; i++)
+                {
+                    try {
+                        String cmdToRun = gooseCmds[i];
+                        System.out.println("Starting goose " + goose.getGooseName() + " using " + cmdToRun);
+                        if (cmdToRun == null || cmdToRun.isEmpty())
+                            continue;
 
-                    String cmdToRun = goose.getCommandUri();
-                    if (goose.getArguments() != null && goose.getArguments().length() > 0)
-                        Log.info("Arguments: " + goose.getArguments());
-                    if (cmdToRun != null && cmdToRun.trim().length() > 0)
-                    {
-                        cmdToRun = cmdToRun.trim().toLowerCase();
-                        // Somehow JSON Stringify wrapped the command uri with "".
-                        if (cmdToRun.endsWith(".bat\"") || cmdToRun.endsWith("bat"))
+                        if (goose.getArguments() != null && goose.getArguments().length() > 0)
+                            Log.info("Arguments: " + goose.getArguments());
+                        if (cmdToRun != null && cmdToRun.trim().length() > 0)
                         {
-                            Log.info("Command line is a batch file... " + cmdToRun);
-                            // if it is a batch file, we need to do something more...
-                            // Remove the quotations
-                            if (cmdToRun.endsWith(".bat\""))
-                                cmdToRun = cmdToRun.substring(1, cmdToRun.length() - 1);
-
-                            File f = new File(cmdToRun);
-                            String path = f.getParent();
-
-                            String[] cmdsToRun = new String[5];
-                            cmdsToRun[0] = "cmd.exe";
-                            cmdsToRun[1] = "/C";
-                            cmdsToRun[2] = "start";
-                            cmdsToRun[3] = cmdToRun;
-                            cmdsToRun[4] = goose.getArguments();
-                            Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
-                        }
-                        else if (cmdToRun.endsWith(".sh"))
-                        {
-                            Log.info("Shell script: " + cmdToRun);
-
-                            File f = new File(cmdToRun);
-                            String path = f.getParent();
-
-                            String[] cmdsToRun = new String[3];
-                            cmdsToRun[0] = "sh";
-                            cmdsToRun[1] = cmdToRun;
-                            cmdsToRun[2] = goose.getArguments();
-                            Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
-                        }
-                        else
-                        {
-                            Log.info("Goose command line: " + cmdToRun);
-                            String[] cmdsToRun = null;
-                            if (goose.getArguments() == null || goose.getArguments() == "")
+                            String cmdToRunTarget = cmdToRun.trim().toLowerCase();
+                            // Somehow JSON Stringify wrapped the command uri with "".
+                            if (cmdToRunTarget.toLowerCase().endsWith(".bat\"") || cmdToRunTarget.toLowerCase().endsWith("bat"))
                             {
-                                cmdsToRun = new String[1];
-                                cmdsToRun[0] = cmdToRun;
+                                Log.info("Command line is a batch file... " + cmdToRun);
+                                // if it is a batch file, we need to do something more...
+                                // Remove the quotations
+                                if (cmdToRunTarget.endsWith(".bat\""))
+                                    cmdToRunTarget = cmdToRunTarget.substring(1, cmdToRun.length() - 1);
+
+                                File f = new File(cmdToRunTarget);
+                                String path = f.getParent();
+
+                                String[] cmdsToRun = new String[5];
+                                cmdsToRun[0] = "cmd.exe";
+                                cmdsToRun[1] = "/C";
+                                cmdsToRun[2] = "start";
+                                cmdsToRun[3] = cmdToRunTarget;
+                                cmdsToRun[4] = goose.getArguments();
+                                Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+                            }
+                            else if (cmdToRunTarget.endsWith(".sh"))
+                            {
+                                Log.info("Shell script: " + cmdToRun);
+
+                                File f = new File(cmdToRun.trim());
+                                String path = f.getParent();
+
+                                String[] cmdsToRun = new String[3];
+                                cmdsToRun[0] = "sh";
+                                cmdsToRun[1] = cmdToRun.trim();
+                                cmdsToRun[2] = goose.getArguments();
+                                Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
                             }
                             else
                             {
-                                cmdsToRun = new String[2];
-                                cmdsToRun[0] = cmdToRun;
-                                cmdsToRun[1] = goose.getArguments();
+                                Log.info("Goose command line: " + cmdToRun.trim());
+                                String[] cmdsToRun = null;
+                                if (goose.getArguments() == null || goose.getArguments() == "")
+                                {
+                                    cmdsToRun = new String[1];
+                                    cmdsToRun[0] = cmdToRun.trim();
+                                }
+                                else
+                                {
+                                    cmdsToRun = new String[2];
+                                    cmdsToRun[0] = cmdToRun.trim();
+                                    cmdsToRun[1] = goose.getArguments();
+                                }
+                                File f = new File(cmdToRun.trim());
+                                String path = f.getParent();
+                                Runtime.getRuntime().exec(cmdsToRun, null, new File(path)); // Goose will register itself with boss once it starts
                             }
-                            File f = new File(cmdToRun);
-                            String path = f.getParent();
-                            Runtime.getRuntime().exec(cmdsToRun, null, new File(path)); // Goose will register itself with boss once it starts
+                            Timer timer = new Timer();
+                            WaitForGooseStart wfg = new WaitForGooseStart(goose.getGooseName()); //.getName());
+                            timer.schedule(wfg, 0, timerInterval);
+                            synchronized (syncObj) {
+                                syncObj.wait();
+                            }
+                            if (wfg.IsGooseStarted())
+                                return gooseManager.getGoose(wfg.gooseName);
                         }
-                        Timer timer = new Timer();
-                        WaitForGooseStart wfg = new WaitForGooseStart(goose.getGooseName()); //.getName());
-                        timer.schedule(wfg, 0, timerInterval);
-                        synchronized (syncObj) {
-                            syncObj.wait();
-                        }
-                        if (wfg.IsGooseStarted())
-                            return gooseManager.getGoose(wfg.gooseName);
+                        else
+                            Log.warning("Empty command line for " + goose.getGooseName() + "encountered!");
+                    } catch (IOException e) {
+                        message = "Failed to start goose: " + goose.getGooseName() + " " + e.getMessage();
+                        messageType = "Error";
+                        Log.severe(message);
+                        e.printStackTrace();
                     }
-                    else
-                        Log.warning("Empty command line for " + goose.getGooseName() + "encountered!");
-                } catch (IOException e) {
-                    message = "Failed to start goose: " + goose.getGooseName() + " " + e.getMessage();
-                    messageType = "Error";
-                    Log.severe(message);
-                    e.printStackTrace();
-                }
-                catch (InterruptedException e1) {
-                    message = "Failed to wait for goose: " + goose.getGooseName() + " " + e1.getMessage();
-                    messageType = "Error";
-                    Log.severe(message);
-                    e1.printStackTrace();
+                    catch (InterruptedException e1) {
+                        message = "Failed to wait for goose: " + goose.getGooseName() + " " + e1.getMessage();
+                        messageType = "Error";
+                        Log.severe(message);
+                        e1.printStackTrace();
+                    }
                 }
             }
             return null;

@@ -24,8 +24,9 @@ public interface Boss3 extends Boss2 {
      * each workflow.
      * @param jsonWorkflow A workflow wrapped in JSON string.
      * @throws java.rmi.RemoteException if RMI communication fails
+     * @return a JSON string that includes goose information (e.g. full execution path etc)
      */
-    public void submitWorkflow(Goose3 proxyGoose, String jsonWorkflow) throws RemoteException;
+    public String submitWorkflow(Goose3 proxyGoose, String jsonWorkflow) throws RemoteException;
 
     /**
      * Tell the boss to handle a workflow action.

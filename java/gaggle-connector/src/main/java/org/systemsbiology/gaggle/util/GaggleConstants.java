@@ -23,5 +23,7 @@ public interface GaggleConstants {
     /**
      * the url for the self-starting boss; this must change with API version
      */
-    public static final String BOSS_URL = "http://gaggle.systemsbiology.net/2007-04/minimizedBoss.jnlp";
+    //public static final String BOSS_URL = "http://gaggle.systemsbiology.net/2007-04/minimizedBoss.jnlp";
+
+    public static final String BOSS_URL = "http://networks.systemsbiology.net/static/jnlp/boss.jnlp";
 }

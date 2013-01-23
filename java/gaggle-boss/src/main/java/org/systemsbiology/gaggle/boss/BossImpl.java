@@ -1,8 +1,9 @@
 package org.systemsbiology.gaggle.boss;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.lang.reflect.Field;
 import java.net.ConnectException;
+import java.net.URL;
 import java.util.*;
 
 import java.rmi.server.*;
@@ -11,10 +12,13 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 
 import net.sf.json.JSONObject;
+import org.hyperic.sigar.Sigar;
+import org.hyperic.sigar.ptql.ProcessFinder;
 import org.systemsbiology.gaggle.core.*;
 import org.systemsbiology.gaggle.geese.DeafGoose;
 import org.systemsbiology.gaggle.core.datatypes.*;
 import org.systemsbiology.gaggle.util.*;
+import org.hyperic.sigar.ProcExe;
 
 import java.util.logging.*;
 
@@ -31,6 +35,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     private int edgeCount = 0;
     private int nodeCount = 0;
     private WorkflowManager workflowManager;
+    private HashMap<String, String> applicationInfo = new HashMap<String, String>();
+    private Sigar sigar;
 
     private static Logger Log = Logger.getLogger("Boss");
 
@@ -43,8 +49,173 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         if (nameHelperURI != null && nameHelperURI.length() > 0) {
             nameHelper = new NewNameHelper(nameHelperURI);
         }
+
+        String os = System.getProperty("os.name");
+        String arch = System.getProperty("os.arch");
+        String javalibpath = System.getProperty("java.library.path");
+        Log.info("SSIIGGAARRRRRRR ===== loading " + os + " " + arch + " " + javalibpath + " SSIIGGAARRRRR...");
+
+        boolean libloaded = false;
+        //System.setProperty( "java.library.path", "." );
+        if(os.startsWith("Windows"))
+        {
+            Log.info("Windows OS detected...");
+            if (arch.startsWith("amd64"))
+            {
+                Log.info("Loading windows sigar-amd64-winnt.dll");
+                libloaded = loadSigarLibrary("sigar-amd64-winnt");
+            }
+            else
+            {
+                Log.info("Loading windows sigar-x86-winnt.dll");
+                libloaded = loadSigarLibrary("sigar-x86-winnt");
+            }
+        }
+        if (os.startsWith("Mac"))
+        {
+            Log.info("Mac OS detected");
+            if (arch.equals("x86_64"))
+            {
+                Log.info("Loading Mac libsigar-universal64-macosx.dylib");
+                libloaded = loadSigarLibrary("libsigar-universal64-macosx.dylib");
+            }
+            else if (arch.startsWith("i386") || arch.startsWith("x86"))
+            {
+                Log.info("Loading Mac libsigar-universal-macosx.dylib");
+                libloaded = loadSigarLibrary("libsigar-universal-macosx.dylib");
+            }
+        }
+        else if (os.startsWith("Linux"))
+        {
+            Log.info("Linux OS detected");
+            if (arch.startsWith("x86"))
+            {
+                Log.info("Loading linux libsigar-x86-linux.so");
+                libloaded = loadSigarLibrary("libsigar-x86-linux");
+            }
+            else if (arch.startsWith("amd64"))
+            {
+                Log.info("Loading linux libsigar-x64-linux.so");
+                libloaded = loadSigarLibrary("libsigar-x64-linux");
+            }
+        }
+        if (libloaded) {
+            try
+            {
+                Log.info("Now loading SIGAR...");
+                System.setProperty("org.hyperic.sigar.path", "-");
+                //System.setProperty( "java.library.path", "." );
+                Field fieldSysPath = ClassLoader.class.getDeclaredField( "sys_paths" );
+                fieldSysPath.setAccessible( true );
+                fieldSysPath.set( null, null );
+                sigar = new Sigar();
+            }
+            catch (Exception e)
+            {
+                Log.severe("Failed to load SIGAR class: " + e.getMessage());
+            }
+        }
     }
+
+    private void loadJarLib(InputStream in, String libName) throws IOException {
+        //InputStream in = MyClass.class.getResourceAsStream(name);
+        Log.info("Load " + libName + " from inputstream");
+        if (in != null && libName != null)
+        {
+            byte[] buffer = new byte[1024];
+            int read = -1;
+            File temp = File.createTempFile(libName, "");
+            Log.info("Created temp file: " + temp.getAbsolutePath());
+
+            FileOutputStream fos = new FileOutputStream(temp);
+            while((read = in.read(buffer)) != -1) {
+                fos.write(buffer, 0, read);
+            }
+            fos.close();
+            in.close();
+
+            Log.info("Loading library...");
+            System.load(temp.getAbsolutePath());
+        }
+    }
+
+    private boolean loadSigarLibrary(String libName)
+    {
+        if (libName != null)
+        {
+            try
+            {
+                System.loadLibrary(libName);
+                return true;
+            }
+            catch (UnsatisfiedLinkError ule)
+            {
+                Log.severe("Cannot find library: " + ule.getMessage());
+                try
+                {
+                    Log.info("Trying to load " + libName + "using getContextClassLoader().loadClass");
+                    Thread.currentThread().getContextClassLoader().loadClass(libName);
+                    return true;
+                }
+                catch (Exception e0)
+                {
+                    Log.severe("Failed to load " + libName + " using getContextClassLoader().loadClass " + e0.getMessage());
+                }
+
+                try
+                {
+                    Log.info("Trying to load " + libName + "using getClass().getClassLoader.getResourceAsStream");
+                    InputStream ins0 = this.getClass().getClassLoader().getResourceAsStream(libName);
+                    if (ins0 != null)
+                    {
+                        Log.info("Successfully loaded " + libName);
+                        loadJarLib(ins0, libName);
+                        return true;
+                    }
+                    else
+                    {
+                        Log.info("Trying to load " + libName + "using getClass().getResourceAsStream");
+                        InputStream ins1 = this.getClass().getResourceAsStream(libName);
+                        if (ins1 != null)
+                        {
+                            Log.info("Successfully loaded " + libName);
+
+                            return true;
+                        }
+                        else
+                            Log.warning("Failed to load " + libName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.severe("Failed to load " + libName + " using getResourceAsStream " + ex.getMessage());
+                }
+            }
+            catch (Exception e)
+            {
+                Log.severe("Failed to load " + e.getMessage());
+            }
+        }
+        return false;
+    }
+
     public NewNameHelper getNameHelper() { return nameHelper; }
+
+    public String getAppInfo(String appName)
+    {
+        for (String key : applicationInfo.keySet())
+        {
+            if (key.toLowerCase().equals(appName.toLowerCase()))
+                return applicationInfo.get(key);
+        }
+
+        for (String key : applicationInfo.keySet())
+        {
+            if (key.toLowerCase().indexOf(appName.toLowerCase()) >= 0)
+                return applicationInfo.get(key);
+        }
+        return null;
+    }
 
     public void bind() throws Exception {
         //if (System.getSecurityManager() == null) {
@@ -241,7 +412,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
      *               Typically it is the ProxyApplet goose.
      * @param jsonWorkflow: a workflow in JSON format submitted by goose
      */
-    public void submitWorkflow(Goose3 proxyGoose, String jsonWorkflow)
+    public String submitWorkflow(Goose3 proxyGoose, String jsonWorkflow)
     {
         if (jsonWorkflow != null && jsonWorkflow.length() > 0)
         {
@@ -251,7 +422,27 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
             // Now we hand over to the manager, which will spawn a thread to process the workflow
             workflowManager.SubmitWorkflow(proxyGoose, w);
+
+            HashMap<String, String> nodeInfoMap = w.getNodeInfoMap();
+            for (String key : nodeInfoMap.keySet())
+            {
+                // Key is the ID of the component
+                String goosename = nodeInfoMap.get(key);
+                String exepath = this.getAppInfo(key);
+                Log.info("Path for " + goosename + ": " + exepath);
+                if (exepath != null && !exepath.isEmpty())
+                {
+                    nodeInfoMap.put(key, exepath);
+                }
+                else
+                    nodeInfoMap.remove(key);
+            }
+            JSONObject json = new JSONObject();
+            json.putAll(nodeInfoMap);
+            Log.info("Workflow goose json string: " + json.toString());
+            return json.toString();
         }
+        return null;
     }
 
 
@@ -353,7 +544,33 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                              HashMap<String, String> edgeParams
                              )
     {
-        if (isRecording)
+        Log.info("***** Recording action from " + sourceGoose + "********");
+        if (sourceGoose != null && targetGoose == null && data != null)
+        {
+            // Application information report
+            try
+            {
+                Log.info("Goose " + sourceGoose + " query: " + (String)data);
+                ProcessFinder procFinder = new ProcessFinder(sigar);
+                long[] pids = procFinder.find((String)data);
+                if (pids != null && pids.length > 0)
+                {
+                    Log.info("Getting info for process " + pids[0]);
+                    ProcExe procExe = new ProcExe();
+                    procExe.gather(sigar, pids[0]);
+                    String workdir = procExe.getCwd();
+                    String exename = procExe.getName();
+                    Log.info("Work dir: " + workdir + " Executable: " + exename);
+                    this.applicationInfo.put(sourceGoose, exename);
+                }
+            }
+            catch (Exception e0)
+            {
+                Log.severe("Failed to get path of the process for " + sourceGoose + " " + e0.getMessage());
+            }
+
+        }
+        else if (isRecording)
         {
             Log.info("Recording source: " + sourceGoose + " target:" + targetGoose + " data: " + data.toString());
             String sourceGooseName = processGooseName(sourceGoose);
