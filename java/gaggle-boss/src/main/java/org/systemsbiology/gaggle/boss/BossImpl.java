@@ -203,6 +203,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
     public String getAppInfo(String appName)
     {
+        Log.info("???? Getting executable for " + appName);
         for (String key : applicationInfo.keySet())
         {
             if (key.toLowerCase().equals(appName.toLowerCase()))
@@ -424,23 +425,36 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             workflowManager.SubmitWorkflow(proxyGoose, w);
 
             HashMap<String, String> nodeInfoMap = w.getNodeInfoMap();
-            for (String key : nodeInfoMap.keySet())
+            Log.info("Key set size: " + nodeInfoMap.keySet().size());
+            try
             {
-                // Key is the ID of the component
-                String goosename = nodeInfoMap.get(key);
-                String exepath = this.getAppInfo(key);
-                Log.info("Path for " + goosename + ": " + exepath);
-                if (exepath != null && !exepath.isEmpty())
+                for (String key : nodeInfoMap.keySet())
                 {
-                    nodeInfoMap.put(key, exepath);
+                    // Key is the ID of the component
+                    String goosename = nodeInfoMap.get(key);
+                    String exepath = this.getAppInfo(goosename);
+                    Log.info("Path for " + goosename + ": " + exepath);
+                    if (exepath != null)
+                    {
+                        Log.info("Exec path for " + key + ": " + exepath);
+                        nodeInfoMap.put(key, exepath);
+                    }
+                    else {
+                        Log.info("Removing " + key);
+                        nodeInfoMap.put(key, "");
+                    }
                 }
-                else
-                    nodeInfoMap.remove(key);
+
+                Log.info("Generating goose json string...");
+                JSONObject json = new JSONObject();
+                json.putAll(nodeInfoMap);
+                Log.info("Workflow goose json string: " + json.toString());
+                return json.toString();
             }
-            JSONObject json = new JSONObject();
-            json.putAll(nodeInfoMap);
-            Log.info("Workflow goose json string: " + json.toString());
-            return json.toString();
+            catch (Exception e)
+            {
+                Log.severe("Failed to generate goose json string " + e.getMessage());
+            }
         }
         return null;
     }
@@ -563,6 +577,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     Log.info("Work dir: " + workdir + " Executable: " + exename);
                     this.applicationInfo.put(sourceGoose, exename);
                 }
+                else
+                    Log.warning("Couldn't find the process.");
             }
             catch (Exception e0)
             {

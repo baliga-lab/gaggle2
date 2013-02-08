@@ -26,7 +26,7 @@ public class WorkflowManager {
     protected GooseManager gooseManager = null;
     protected BossImpl bossImpl = null;
     private long timerInterval = 200L; //milliseconds
-    private long timerTimeout = 3000000L; // 15 seconds (for verifying if a goose is started correctly)
+    private long timerTimeout = 300000L; // 15 seconds (for verifying if a goose is started correctly)
     private static Logger Log = Logger.getLogger("Boss");
     private Thread resourceManagementThread;
     private Map<UUID, WorkflowThread> threadMap;
@@ -192,7 +192,11 @@ public class WorkflowManager {
                 {
                     URL url = null;
                     try {
-                        url = new URL("http://networks.systemsbiology.net/workflow/savereport/");
+                        String server = System.getProperty("server");
+                        Log.info("Web server: " + server);
+                        if (server == null || server.length() == 0)
+                            server = "http://networks.systemsbiology.net";
+                        url = new URL((server + "/workflow/savereport/"));
                         //url = new URL("http://localhost:8000/workflow/savereport/");
                     } catch (MalformedURLException ex) {
                         Log.warning("Malformed URL");
@@ -272,6 +276,7 @@ public class WorkflowManager {
     public enum ProcessingState
     {
         Initial,
+        Pending,
         ParallelProcessed,
         ParallelAcknowledged,
         SequentialProcessed,
@@ -487,45 +492,51 @@ public class WorkflowManager {
             }
         }
 
-
         /**
-         * Process a workflow. It's a state machine. Basically, for each component,
-         * we first start its corresponding goose
-         * and then process its parallel and sequential children in turn
-         * @param nodeID
+         *  Start a goose in a thread. If a goose takes long time to start, it won't block
+         *  other geese.
          */
-        private void ProcessWorkflowNode(WorkflowNode c)
+        class StartGooseThread extends Thread
         {
-            Goose3 sourceGoose = c.goose;
-            WorkflowComponent source = c.component;
-            if (c.state == ProcessingState.Initial)
+            private WorkflowNode workflowNode;
+
+            public StartGooseThread(WorkflowNode c)
             {
-                c.errorRetries++;
+                this.workflowNode = c;
+            }
+
+            public void run()
+            {
+                Goose3 sourceGoose = workflowNode.goose;
+                WorkflowComponent source = workflowNode.component;
+                workflowNode.errorRetries++;
                 Log.info("Handling workflow node " + source.getComponentID() + " state: initial" + " Cmd uri: " + source.getCommandUri());
                 boolean sourceStarted = false;
+                Object syncObj = new Object();
 
                 // Find or create the goose corresponding to the source component
-                if ((sourceGoose = PrepareGoose(source)) != null)
+                if ((sourceGoose = PrepareGoose(source, syncObj)) != null)
                 {
                     Log.info("Goose " + source.getGooseName() + " started.");
                     sourceStarted = true;
-                    c.goose = sourceGoose;
+                    workflowNode.goose = sourceGoose;
                     try {
-                        c.gooseName = sourceGoose.getName();
+                        workflowNode.gooseName = sourceGoose.getName();
                     }
                     catch (Exception e)
                     {
                         Log.severe("Failed to get goose name...");
-                        c.state = ProcessingState.Error;
+                        workflowNode.state = ProcessingState.Error;
                     }
                 }
                 else
                 {
-                    this.Report(this.messageType, this.message, true);
+                    Report(messageType, message, true);
 
                     // we cannot start the goose, so let's mark this node as error
                     // we allow other errors so that the workflow won't be broken by one single node
-                    c.state = ProcessingState.Error;
+                    Log.info("Node " + workflowNode.component.getComponentID() + " marked error state.");
+                    workflowNode.state = ProcessingState.Error;
                 }
 
                 if (sourceStarted)
@@ -552,13 +563,13 @@ public class WorkflowManager {
                         Log.info("SessionID: " + sessionID.toString());
                         Log.info("ComponentID: " + source.getComponentID());
                         WorkflowAction action = new WorkflowAction(
-                                this.workflowID,
+                                workflowID,
                                 sessionID.toString(),
                                 source.getComponentID(),
                                 WorkflowAction.ActionType.Request,
                                 source,
                                 targets,
-                                    WorkflowAction.Options.Parallel.getValue(),
+                                WorkflowAction.Options.Parallel.getValue(),
                                 //WorkflowAction.DataType.WorkflowData,
                                 null  // Data is contained in the source node's params property
                         );
@@ -566,19 +577,64 @@ public class WorkflowManager {
                         //threadSyncObj = new Object();
                         sourceGoose.handleWorkflowAction(action);
                         // if there is no parallel child, we skip to the ParallelAcknowledged state
-                        c.state = (parallelcomponents != null && parallelcomponents.size() > 1) ?
+                        workflowNode.state = (parallelcomponents != null && parallelcomponents.size() > 1) ?
                                 ProcessingState.ParallelProcessed : ProcessingState.ParallelAcknowledged;
                     }
                     catch (Exception e0)
                     {
-                        this.Report("Error", "Failed to process parallel action for node "
-                                + c.component.getComponentID() + " " + e0.getMessage(), true);
+                        Report("Error", "Failed to process parallel action for node "
+                                + workflowNode.component.getComponentID() + " " + e0.getMessage(), true);
 
 
-                        Log.info(c.component.getComponentID() + " failed");
-                        c.state = ProcessingState.Error;
+                        Log.info(workflowNode.component.getComponentID() + " failed");
+                        workflowNode.state = ProcessingState.Error;
                     }
                 }
+                else if (workflowNode.component.getCommandUri().toLowerCase().endsWith(".pl"))
+                {
+                    // TODO: this is hard coded now for KBase, we need to remove this once the Kgoose is done
+                    workflowNode.state = ProcessingState.Finished;
+                }
+            }
+        }
+
+        /**
+         * Check if another goose is pending starting
+         * @param c
+         * @return
+         */
+        private Boolean isPending(WorkflowNode c)
+        {
+            if (c != null && c.component != null && c.component.getGooseName() != null)
+            {
+                for (int i = 0; i < processingQueue.size(); i++)
+                {
+                    WorkflowNode n = processingQueue.get(i);
+                    if (n.state == ProcessingState.Pending &&  n.component.getGooseName().equalsIgnoreCase(c.component.getGooseName()))
+                    {
+                       return true;
+                    }
+
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Process a workflow. It's a state machine. Basically, for each component,
+         * we first start its corresponding goose
+         * and then process its parallel and sequential children in turn
+         * @param nodeID
+         */
+        private void ProcessWorkflowNode(WorkflowNode c)
+        {
+            Goose3 sourceGoose = c.goose;
+            WorkflowComponent source = c.component;
+            if (c.state == ProcessingState.Initial && !isPending(c))
+            {
+                StartGooseThread startGooseThread = new StartGooseThread(c);
+                c.state = ProcessingState.Pending;
+                startGooseThread.start();
             }
             else if (c.state == ProcessingState.ParallelProcessed)
             {
@@ -752,7 +808,7 @@ public class WorkflowManager {
             return false;
         }
 
-        private Goose3 PrepareGoose(WorkflowComponent source)
+        private Goose3 PrepareGoose(WorkflowComponent source, Object syncObj)
         {
             String[] geeseNames = bossImpl.getListeningGooseNames();
             boolean foundGoose = false;
@@ -787,7 +843,7 @@ public class WorkflowManager {
 
             if (goose == null)
             {
-                goose = tryToStartGoose(source);
+                goose = tryToStartGoose(source, syncObj);
                 if (goose != null && goose instanceof Goose3)
                     return (Goose3)goose;
             }
@@ -795,22 +851,54 @@ public class WorkflowManager {
             return null;
         }
 
+        /**
+         * Grab the inputstream of a process started by Runtime.exec
+         */
+        class StreamGobbler extends Thread
+        {
+            InputStream is;
+            String type;
+
+            StreamGobbler(InputStream is, String type)
+            {
+                this.is = is;
+                this.type = type;
+            }
+
+            public void run()
+            {
+                try
+                {
+                    InputStreamReader isr = new InputStreamReader(is);
+                    BufferedReader br = new BufferedReader(isr);
+                    String line=null;
+                    while ( (line = br.readLine()) != null)
+                        System.out.println(type + ">" + line);
+                } catch (IOException ioe)
+                {
+                    ioe.printStackTrace();
+                }
+            }
+        }
+
         class WaitForGooseStart extends TimerTask {
             long startTime = System.currentTimeMillis();
             String gooseName;
             boolean gooseStarted = false;
+            Object syncObj;
 
-            public WaitForGooseStart(String gooseName)
+            public WaitForGooseStart(String gooseName, Object syncObj)
             {
                 super();
                 this.gooseName = gooseName;
+                this.syncObj = syncObj;
             }
 
             public boolean IsGooseStarted() { return gooseStarted; }
 
             public void run() {
                 long elapsed = System.currentTimeMillis() - startTime;
-                if (elapsed > timerTimeout) {
+                if (elapsed > timerTimeout || this.syncObj == null) {
                     Log.info("Didn't hear from the goose for 15 seconds, timing out.");
                     this.cancel();
                 }
@@ -852,14 +940,15 @@ public class WorkflowManager {
             }
         }
 
-        private Object syncObj = null;
-        public Goose tryToStartGoose(WorkflowComponent goose) {
-            if (goose != null)
+
+        public Goose tryToStartGoose(WorkflowComponent goose, Object syncObj) {
+            if (goose != null && syncObj != null)
             {
                 //String command = System.getProperty("java.home");
                 //command += File.separator +  "bin" + File.separator + "javaws " + GaggleConstants.BOSS_URL;
-                syncObj = new Object();
+                Boolean gooseStarted = false;
                 String[] gooseCmds = new String[2];
+                String os = System.getProperty("os.name");
                 gooseCmds[0] = bossImpl.getAppInfo(goose.getName());
                 gooseCmds[1] = goose.getCommandUri();
                 for (int i = 0; i < 2; i++)
@@ -908,6 +997,37 @@ public class WorkflowManager {
                                 cmdsToRun[2] = goose.getArguments();
                                 Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
                             }
+                            else if (cmdToRunTarget.endsWith(".pl"))
+                            {
+                                Log.info("Perl script: " + cmdToRun);
+                                File f = new File(cmdToRunTarget);
+                                String path = f.getParent();
+                                if (os.toLowerCase().indexOf("win") >= 0)
+                                {
+                                    Log.info("Starting windows console... " + path);
+                                    String cmd = "cmd.exe /C start cmd.exe /K \"perl " + cmdToRun + "\"";
+                                    Runtime.getRuntime().exec(cmd);
+                                    //String[] cmdsToRun = new String[3];
+                                    //cmdsToRun[0] = "cmd.exe";
+                                    //cmdsToRun[1] = "/C";
+                                    //cmdsToRun[2] = "cmd.exe /K \"perl " + cmdToRunTarget + "\"";
+                                    //C:\\\\github\\\\baligalab\\\\projects\\\\gnome.pl\"";
+                                    //Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+                                    // This is a perl script (e.g., KBase), we consider the goose is started
+                                    gooseStarted = true;
+                                }
+                                else
+                                {
+                                    Log.info("Starting shell... " + path);
+                                    String[] cmdsToRun = new String[3];
+                                    cmdsToRun[0] = "sh";
+                                    cmdsToRun[1] = "perl";
+                                    cmdsToRun[2] = cmdToRun.trim();
+                                    //cmdsToRun[3] = goose.getArguments();
+                                    Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+                                    gooseStarted = true;
+                                }
+                            }
                             else
                             {
                                 Log.info("Goose command line: " + cmdToRun.trim());
@@ -927,14 +1047,23 @@ public class WorkflowManager {
                                 String path = f.getParent();
                                 Runtime.getRuntime().exec(cmdsToRun, null, new File(path)); // Goose will register itself with boss once it starts
                             }
-                            Timer timer = new Timer();
-                            WaitForGooseStart wfg = new WaitForGooseStart(goose.getGooseName()); //.getName());
-                            timer.schedule(wfg, 0, timerInterval);
-                            synchronized (syncObj) {
-                                syncObj.wait();
+
+                            if (!gooseStarted)
+                            {
+                                Timer timer = new Timer();
+                                Log.info("Starting the WaitForGooseStart thread...");
+                                WaitForGooseStart wfg = new WaitForGooseStart(goose.getGooseName(), syncObj); //.getName());
+                                timer.schedule(wfg, 0, timerInterval);
+                                synchronized (syncObj) {
+                                    syncObj.wait();
+                                }
+                                if (wfg.IsGooseStarted())
+                                    return gooseManager.getGoose(wfg.gooseName);
                             }
-                            if (wfg.IsGooseStarted())
-                                return gooseManager.getGoose(wfg.gooseName);
+                            else
+                            {
+                                return null;
+                            }
                         }
                         else
                             Log.warning("Empty command line for " + goose.getGooseName() + "encountered!");

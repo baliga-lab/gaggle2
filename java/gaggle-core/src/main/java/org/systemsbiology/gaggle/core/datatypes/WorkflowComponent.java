@@ -6,11 +6,9 @@ import java.io.*;
 import java.util.*;
 
 /**
- * Created with IntelliJ IDEA.
- * User: Ning Jiang
- * Date: 10/8/12
- * Time: 3:57 PM
- * To change this template use File | Settings | File Templates.
+ * <p>Each WorkflowComponent corresponds to a goose.
+ * The class stores all the information of a WorkflowComponent including the execution path, command line arguments,
+ * subactions, arguments, parameters etc.<p/>
  */
 public class WorkflowComponent implements Serializable {
     private String componentWorkflowNodeID;
@@ -25,6 +23,13 @@ public class WorkflowComponent implements Serializable {
 
     //private ProcessingState state;
 
+    /**
+     *  Parameter names
+     *  SubTarget is for goose that have subactions. For example, Firegoose can broadcast data to web handlers
+     *  such as KEGG, DAVID, EMBL String, etc.
+     *  EdgeType indidates the data type of an edge in the workflow.  Data type can be Namelist, Matrix, Cluster, etc.
+     *  Data is the actual data passed to a goose.
+     */
     public enum ParamNames
     {
         SubTarget("SubTarget"),
@@ -36,6 +41,17 @@ public class WorkflowComponent implements Serializable {
         public String getValue() { return id; }
     }
 
+    /**
+     *
+     * @param id ID of the goose in the workflow
+     * @param workflownodeid ID of the goose stored on the DB (this is used to generate the workflow report)
+     * @param name Short name of the goose (e.g. Cytoscape, Firegoose, MeV)
+     * @param gooseName Full name of the goose (e.g., Cytoscape, Firegoose, Multiple Array Viewer)
+     * @param version Version of the goose
+     * @param cmduri  Command uri to start a goose (e.g. C:\Program Files (x86)\Mozilla Firefox\firefox.exe)
+     * @param arguments Arguments passed to start the goose
+     * @param params Parameters passed to the goose (See the ParamNames enum)
+     */
     public WorkflowComponent(String id, String workflownodeid, String name, String gooseName, String version, String cmduri, String arguments, HashMap params)
     {
         this.componentWorkflowNodeID = workflownodeid;
@@ -53,6 +69,16 @@ public class WorkflowComponent implements Serializable {
         //this.state = ProcessingState.Initial;
     }
 
+    /**
+     *
+     * @param id ID of the goose in the workflow
+     * @param name Short name of the goose (e.g. Cytoscape, Firegoose, MeV)
+     * @param gooseName Full name of the goose (e.g., Cytoscape, Firegoose, Multiple Array Viewer)
+     * @param version Version of the goose
+     * @param cmduri  Command uri to start a goose (e.g. C:\Program Files (x86)\Mozilla Firefox\firefox.exe)
+     * @param arguments Arguments passed to start the goose
+     * @param params Parameters passed to the goose (See the ParamNames enum)
+     */
     public WorkflowComponent(String id, String name, String gooseName, String version, String cmduri, String arguments, HashMap params)
     {
         this.componentWorkflowNodeID = "";
@@ -70,6 +96,10 @@ public class WorkflowComponent implements Serializable {
         //this.state = ProcessingState.Initial;
     }
 
+    /**
+     * Copy constructor
+     * @param source
+     */
     public WorkflowComponent(WorkflowComponent source)
     {
         if (source != null)

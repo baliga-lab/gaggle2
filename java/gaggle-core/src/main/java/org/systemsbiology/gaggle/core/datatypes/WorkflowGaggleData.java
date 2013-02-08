@@ -5,11 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: Ning Jiang
- * Date: 11/13/12
- * Time: 5:31 PM
- * To change this template use File | Settings | File Templates.
+ * <p>A wrapper of the WorkflowAction to be processed. The class returns the information of data passed
+ * to the goose to be processed. It also includes helper functions to store data for the geese in the next steps
+ * of the workflow.</p>
  */
 public class WorkflowGaggleData
 {
