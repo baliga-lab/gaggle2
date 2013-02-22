@@ -18,6 +18,7 @@ public class WorkflowComponent implements Serializable {
     private String version;
     private String commandUri;
     private String arguments;
+    private String workflowIndex;
     private HashMap<String, Object> params;
     private String jsonParams;
 
@@ -52,9 +53,10 @@ public class WorkflowComponent implements Serializable {
      * @param arguments Arguments passed to start the goose
      * @param params Parameters passed to the goose (See the ParamNames enum)
      */
-    public WorkflowComponent(String id, String workflownodeid, String name, String gooseName, String version, String cmduri, String arguments, HashMap params)
+    public WorkflowComponent(String id, String workflownodeid, String workflowindex, String name, String gooseName, String version, String cmduri, String arguments, HashMap params)
     {
         this.componentWorkflowNodeID = workflownodeid;
+        this.workflowIndex = workflowindex;
         this.componentID = id;
         this.name = name;
         this.gooseName = gooseName;
@@ -109,6 +111,7 @@ public class WorkflowComponent implements Serializable {
                 System.out.println("Clone a component " + source.getComponentID());
                 this.componentWorkflowNodeID = source.getComponentWorkflowNodeID();
                 this.componentID = source.getComponentID();
+                this.workflowIndex = source.getWorkflowIndex();
                 this.commandUri = source.getCommandUri();
                 this.arguments = source.getArguments();
                 this.name = source.getName();
@@ -126,6 +129,7 @@ public class WorkflowComponent implements Serializable {
 
     public String getComponentWorkflowNodeID() { return componentWorkflowNodeID; }
     public String getComponentID() { return componentID; }
+    public String getWorkflowIndex() { return workflowIndex; }
     public String getName() { return name; }
     public String getGooseName() { return gooseName; }
     public String getVersion() { return version; }

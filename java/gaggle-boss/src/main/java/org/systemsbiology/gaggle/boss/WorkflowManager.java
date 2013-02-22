@@ -6,10 +6,12 @@ import org.systemsbiology.gaggle.core.Goose3;
 import org.systemsbiology.gaggle.core.datatypes.*;
 import org.systemsbiology.gaggle.util.ClientHttpRequest;
 
+import java.awt.*;
 import java.io.*;
 import java.net.*;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -551,6 +553,7 @@ public class WorkflowManager {
                         for (int i = 1; i < parallelcomponents.size(); i++)
                         {
                             targets[i - 1] = parallelcomponents.get(i);
+                            Log.info("Target component: " + targets[i-1].getGooseName());
                         }
                     }
 
@@ -951,6 +954,11 @@ public class WorkflowManager {
                 String os = System.getProperty("os.name");
                 gooseCmds[0] = bossImpl.getAppInfo(goose.getName());
                 gooseCmds[1] = goose.getCommandUri();
+                if (gooseCmds[1].toLowerCase().indexOf(".jnlp") >= 0)
+                {
+                    // JNLP overrides execution path
+                    gooseCmds[0] = gooseCmds[1];
+                }
                 for (int i = 0; i < 2; i++)
                 {
                     try {
@@ -996,6 +1004,19 @@ public class WorkflowManager {
                                 cmdsToRun[1] = cmdToRun.trim();
                                 cmdsToRun[2] = goose.getArguments();
                                 Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+                            }
+                            else if (cmdToRunTarget.endsWith(".jnlp"))
+                            {
+                                Log.info("jnlp " + cmdToRunTarget);
+                                String command = System.getProperty("java.home");
+                                command += File.separator +  "bin" + File.separator + "javaws " + cmdToRunTarget;
+                                //Desktop.getDesktop().browse(new URI(cmdToRunTarget));
+                                try {
+                                    Runtime.getRuntime().exec(command);
+                                } catch (Exception e) {
+                                    Log.severe("Failed to start " + command);
+                                    e.printStackTrace();
+                                }
                             }
                             else if (cmdToRunTarget.endsWith(".pl"))
                             {
@@ -1078,6 +1099,10 @@ public class WorkflowManager {
                         messageType = "Error";
                         Log.severe(message);
                         e1.printStackTrace();
+                    }
+                    catch (Exception e2)
+                    {
+                        Log.severe("Failed to start goose: " + e2.getMessage());
                     }
                 }
             }

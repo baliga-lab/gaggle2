@@ -83,6 +83,7 @@ public class Workflow implements Serializable, GaggleData {
                 params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
                 WorkflowComponent node = new WorkflowComponent(jsonnode.getString("id"),
                                                         jsonnode.getString("wfnodeid"),
+                                                        jsonnode.getString("workflowindex"),
                                                         jsonnode.getString("name"),
                                                         jsonnode.getString("goosename"),
                                                         "", // TODO add version info
