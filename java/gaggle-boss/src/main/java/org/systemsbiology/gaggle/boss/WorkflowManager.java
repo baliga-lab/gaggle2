@@ -33,6 +33,9 @@ public class WorkflowManager {
     private Thread resourceManagementThread;
     private Map<UUID, WorkflowThread> threadMap;
     private ShutdownHookThread shutdownHook;
+    private String tempFolderName = "WorkflowManager";
+    private File myTempFolder;
+    private String tempFileToken = UUID.randomUUID().toString();
 
     class ShutdownHookThread extends Thread
     {
@@ -85,6 +88,24 @@ public class WorkflowManager {
         Runtime.getRuntime().addShutdownHook(this.shutdownHook);
         this.resourceManagementThread = new ResourceManagementThread();
         this.resourceManagementThread.start();
+
+        // Create the temp directory
+        try
+        {
+            String tempDir = System.getProperty("java.io.tmpdir");
+            Log.info("Temp dir: " + tempDir);
+            tempDir += ("/" + tempFolderName);
+            myTempFolder = new File(tempDir);
+            if (!myTempFolder.exists())
+            {
+                Log.info("Make temp folder: " + myTempFolder.getAbsolutePath());
+                myTempFolder.mkdir();
+            }
+        }
+        catch (Exception e)
+        {
+            Log.severe("Failed to create temp dir for workflowManager: " + e.getMessage());
+        }
     }
 
     public void SubmitWorkflow(Goose3 goose, Workflow w)
@@ -487,10 +508,17 @@ public class WorkflowManager {
                     }
                     Thread.sleep(2000);
                 }
+
+                // Inform the proxy goose that the workflow has finished execution
+                proxyGoose.handleWorkflowInformation("Message", "Workflow Finished");
             }
             catch (Exception e)
             {
                 Log.severe("Error processing nodes for session " + this.sessionID.toString() + ": " + e.getMessage());
+            }
+            finally {
+
+
             }
         }
 
@@ -943,6 +971,79 @@ public class WorkflowManager {
             }
         }
 
+        private void downloadFileFromUrl(String filename, String urlString)
+        {
+            File f = new File(filename);
+            if (f.exists())
+                return;
+
+            BufferedInputStream in = null;
+            FileOutputStream fout = null;
+            try
+            {
+                in = new BufferedInputStream(new URL(urlString).openStream());
+                fout = new FileOutputStream(filename);
+
+                byte data[] = new byte[1024];
+                int count;
+                while ((count = in.read(data, 0, 1024)) != -1)
+                {
+                    fout.write(data, 0, count);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.severe("Failed to save file from url " + urlString + " " + e.getMessage());
+            }
+            finally
+            {
+                try {
+                    if (in != null)
+                        in.close();
+                    if (fout != null)
+                        fout.close();
+                }
+                catch (Exception e1)
+                {
+                    Log.severe("Failed to close io streams: " + e1.getMessage());
+                }
+            }
+        }
+
+        private String createJnlpForData(String jnlpFileName, String datauri)
+        {
+            String replacement = (datauri == null || datauri.length() == 0) ? JSONConstants.WORKFLOW_EMPTY_ARGUMENT : datauri;
+            try {
+                String oldjnlpfilename = myTempFolder.getName() + File.separator + jnlpFileName;
+                String newjnlpfilename = myTempFolder.getName() + File.separator + UUID.randomUUID().toString() + "_" + jnlpFileName;
+                Log.info("New output jnlp file: " + newjnlpfilename);
+                FileInputStream in = null;
+                FileOutputStream fout = null;
+
+                in = new FileInputStream(oldjnlpfilename);
+                fout = new FileOutputStream(newjnlpfilename);
+                String filecontent = "";
+                byte data[] = new byte[1024];
+                int count;
+                while ((count = in.read(data, 0, 1024)) != -1)
+                {
+                    filecontent += new String(data);
+                }
+                Log.info("Old jnlp file content: " + filecontent);
+
+                // Replace the %s in old jnlp with datauri
+                String replacedcontent = filecontent.replace("%s", replacement);
+                fout.write(replacedcontent.getBytes(), 0, replacedcontent.length());
+                in.close();
+                fout.close();
+                return newjnlpfilename;
+            }
+            catch (Exception e)
+            {
+                Log.severe("Failed to write to new jnlp file: " + e.getMessage());
+            }
+            return null;
+        }
 
         public Goose tryToStartGoose(WorkflowComponent goose, Object syncObj) {
             if (goose != null && syncObj != null)
@@ -1008,6 +1109,13 @@ public class WorkflowManager {
                             else if (cmdToRunTarget.endsWith(".jnlp"))
                             {
                                 Log.info("jnlp " + cmdToRunTarget);
+                                // Save the file in temp dir
+                                String jnlpFileName = cmdToRun.substring(cmdToRunTarget.lastIndexOf("/") + 1);
+                                String jnlpFullPath = myTempFolder.getAbsolutePath() + File.separator + tempFileToken + "_" + jnlpFileName;
+                                Log.info("Temp file name: " + jnlpFullPath);
+                                downloadFileFromUrl(jnlpFullPath, cmdToRunTarget);
+                                //cmdToRunTarget = createJnlpForData((tempFileToken + "_" + jnlpFileName), datauri);
+                                Log.info("JNLP to run: " + cmdToRunTarget);
                                 String command = System.getProperty("java.home");
                                 command += File.separator +  "bin" + File.separator + "javaws " + cmdToRunTarget;
                                 //Desktop.getDesktop().browse(new URI(cmdToRunTarget));

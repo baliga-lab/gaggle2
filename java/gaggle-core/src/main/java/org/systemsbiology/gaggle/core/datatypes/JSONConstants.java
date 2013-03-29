@@ -60,4 +60,5 @@ public interface JSONConstants {
     String WORKFLOW_EDGE_SOURCEID = "sourcenodeid";
     String WORKFLOW_EDGE_TARGETID = "targetnodeid";
     String WORKFLOW_EDGE_STARTNODE = "startnode";
+    String WORKFLOW_EMPTY_ARGUMENT = "NONE";
 }

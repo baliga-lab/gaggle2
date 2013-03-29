@@ -79,7 +79,25 @@ public class Workflow implements Serializable, GaggleData {
                 ArrayList<Object> datalist = new ArrayList<Object>();
                 String datauri = jsonnode.getString("datauri");
                 if (datauri != null && datauri.length() > 0)
-                    datalist.add(datauri);
+                {
+                    if (datauri.startsWith("Namelist:"))
+                    {
+                        // Convert it into a namelist
+                        datauri = datauri.substring(9);
+                        String[] names = datauri.split(";");
+                        Namelist namelist = new Namelist();
+                        namelist.setNames(names);
+                        datalist.add(namelist);
+                        System.out.println("Namelist generated " + names[0]);
+                        params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
+                    }
+                    else if (datauri.startsWith("URL:"))
+                    {
+                        datauri = datauri.substring(4);
+                        datalist.add(datauri);
+                        System.out.println("Data uri: " + datauri);
+                    }
+                }
                 params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
                 WorkflowComponent node = new WorkflowComponent(jsonnode.getString("id"),
                                                         jsonnode.getString("wfnodeid"),
