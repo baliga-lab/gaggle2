@@ -63,13 +63,17 @@ public class WorkflowGaggleData
                     ArrayList<Object> datalist = (ArrayList<Object>)workflowAction.getSource().getParams().get(WorkflowComponent.ParamNames.Data.getValue());
                     if (datalist != null && datalist.size() > 0)
                     {
-                        // We only handle one data for Firegoose
-                        // TODO extend to multiple data later
+                        String datauri = "";
                         Object data = datalist.get(0);
                         if (data instanceof GaggleData)
                             System.out.println(((GaggleData)data).getName());
                         else if (data instanceof  String)
-                            System.out.println((String)data);
+                        {
+                            for (int i = 0; i < datalist.size(); i++) {
+                                datauri += ((String)datalist.get(i) + ";");
+                                System.out.println((String)datalist.get(i));
+                            }
+                        }
                         System.out.println("JSON param: " + workflowAction.getSource().getJSONParams());
 
                         this.subAction = "";
@@ -109,7 +113,7 @@ public class WorkflowGaggleData
                             {
                                 this.type = "WorkflowData";
                                 this.nameList = new String[1];
-                                this.nameList[0] = (String)data;
+                                this.nameList[0] = (String)datauri;
                                 System.out.println("URI data: " + this.nameList[0]);
                             }
 

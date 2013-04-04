@@ -80,6 +80,9 @@ public class Workflow implements Serializable, GaggleData {
                 String datauri = jsonnode.getString("datauri");
                 if (datauri != null && datauri.length() > 0)
                 {
+                    //  Handle data uri with prefix.
+                    //  These are added by the group open feature
+                    //  See workflow.js in network portal
                     if (datauri.startsWith("Namelist:"))
                     {
                         // Convert it into a namelist
@@ -94,8 +97,15 @@ public class Workflow implements Serializable, GaggleData {
                     else if (datauri.startsWith("URL:"))
                     {
                         datauri = datauri.substring(4);
-                        datalist.add(datauri);
-                        System.out.println("Data uri: " + datauri);
+                        String[] dataurisplit = datauri.split(";");
+                        for (int i = 0; i < dataurisplit.length; i++)
+                        {
+                            if (dataurisplit[i] != null && dataurisplit[i].length() > 0)
+                            {
+                                datalist.add(dataurisplit[i]);
+                                System.out.println("Data uri: " + dataurisplit[i]);
+                            }
+                        }
                     }
                 }
                 params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
