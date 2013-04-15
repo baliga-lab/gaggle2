@@ -117,6 +117,10 @@ public class WorkflowManager {
             WorkflowThread t = new WorkflowThread(goose, sessionID, w);
             this.threadMap.put(sessionID, t);
             t.start();
+            // We start reccording as soon as the user submits a workflow, recording
+            // will be on forever!! At each step, we broadcast the source and target
+            // goose back to the Proxy Goose
+            this.bossImpl.setRecording(true);
         }
     }
 

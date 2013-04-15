@@ -87,6 +87,11 @@ public class JavaGooseAdapter implements SuperGoose {
         else if (gaggleData instanceof Table) handleTable(source, (Table) gaggleData);
     }
 
-
+    public GaggleGooseInfo getGooseInfo() throws RemoteException
+    {
+        if (javaGoose instanceof Goose3)
+            return ((Goose3)javaGoose).getGooseInfo();
+        return null;
+    }
 }
 

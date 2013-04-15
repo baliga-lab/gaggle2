@@ -1,5 +1,6 @@
 package org.systemsbiology.gaggle.core;
 
+import org.systemsbiology.gaggle.core.datatypes.GaggleGooseInfo;
 import org.systemsbiology.gaggle.core.datatypes.Table;
 import org.systemsbiology.gaggle.core.datatypes.WorkflowAction;
 
@@ -39,4 +40,7 @@ public interface Goose3 extends Goose2 {
      * @throws java.rmi.RemoteException on remote error
      */
     public void handleWorkflowInformation(String type, String info) throws RemoteException;
+
+
+    public GaggleGooseInfo getGooseInfo() throws RemoteException;
 }

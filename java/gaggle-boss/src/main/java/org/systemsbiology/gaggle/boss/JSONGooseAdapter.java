@@ -19,6 +19,7 @@ public class JSONGooseAdapter implements SuperGoose {
     public void doShow() { }
     public void doHide() { }
     public void doBroadcastList() { }
+    public GaggleGooseInfo getGooseInfo() { return null; }
     public void setName(String newName) throws RemoteException {
         jsonGoose.setName(newName);
     }

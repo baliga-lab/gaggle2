@@ -20,7 +20,11 @@ public class GooseManager {
         this.ui = ui;
     }
 
-    public SuperGoose getGoose(String name) { return gooseMap.get(name); }
+    public SuperGoose getGoose(String name) {
+        Log.info("Searching goose " + name);
+        return gooseMap.get(name);
+    }
+
     public String[] getGooseNames() {
         return gooseMap.keySet().toArray(new String[0]);
     }

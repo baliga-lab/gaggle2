@@ -32,6 +32,7 @@ public class GooseWorkflowManager
 {
     //HashMap<String, WorkflowStagingData> workflowStagingDataMap = new HashMap<String, WorkflowStagingData>();
     Map<String, WorkflowGaggleData> processingQueue = Collections.synchronizedMap(new HashMap<String, WorkflowGaggleData>());
+    GaggleGooseInfo gooseInfo;
 
     public GooseWorkflowManager()
     {
@@ -48,7 +49,8 @@ public class GooseWorkflowManager
     }
 
     public String[] getNameList(String requestID)
-    {                                                                                                  if (this.processingQueue.containsKey(requestID))
+    {
+        if (this.processingQueue.containsKey(requestID))
             return this.processingQueue.get(requestID).getNameList();
         return null;
     }
@@ -77,6 +79,12 @@ public class GooseWorkflowManager
         return null;
     }
 
+    public GaggleGooseInfo getGooseInfo()
+    {
+        System.out.println("Retrieving goose info " + this.gooseInfo);
+        return this.gooseInfo;
+    }
+
     /**
      * <p>When a Goose receives a workflowAction from the Boss,
      * it should call this function to save the workflowAction in the processing queue.</p>
@@ -91,6 +99,9 @@ public class GooseWorkflowManager
             UUID requestID = UUID.randomUUID();
             WorkflowGaggleData wfgd = new WorkflowGaggleData(requestID.toString(), request);
             this.processingQueue.put(requestID.toString(), wfgd);
+            System.out.println("Goose workflow component ID: " + request.getSource().getComponentID());
+            this.gooseInfo = new GaggleGooseInfo(request.getSource());
+            System.out.println("GooseInfo workflow component ID: " + this.gooseInfo.getWorkflowComponentID());
             return requestID.toString();
         }
         return null;

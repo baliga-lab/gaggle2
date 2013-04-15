@@ -22,6 +22,55 @@ import org.hyperic.sigar.ProcExe;
 
 import java.util.logging.*;
 
+
+/**
+ *  When we call a proxy goose, we need to spawn a thread to do so.
+ *  This is because when a goose calls the broadcast* interface of Boss, Boss in turn
+ *  calls the GetGooseInfo of the goose, which will hang the goose due to reentrance.
+ *  The problem is addressed by wrapping the calls in a thread
+ */
+class ProxyCallbackThread extends Thread
+{
+    Goose3 proxyGoose;
+    List<String> processingQueue = Collections.synchronizedList(new ArrayList<String>());
+    boolean cancel = false;
+    private static Logger Log = Logger.getLogger("Boss");
+
+    public ProxyCallbackThread(Goose3 pg)
+    {
+        this.proxyGoose = pg;
+    }
+
+    public void AddMessage(String msg)
+    {
+        this.processingQueue.add(msg);
+    }
+
+    public void run()
+    {
+        //int readahead = stepsize;
+        while (!cancel)
+        {
+           try {
+               if (!processingQueue.isEmpty())
+               {
+                   String msg = processingQueue.get(0);
+                   if (proxyGoose != null) {
+                       Log.info("Passing " + msg + " to ProxyGoose");
+                       proxyGoose.handleWorkflowInformation("Recording", msg);
+                   }
+                   processingQueue.remove(0);
+               }
+               Thread.sleep(3000);
+           }
+           catch (Exception e) {
+               Log.warning("Failed to process proxy goose callback: " + e.getMessage());
+               processingQueue.remove(0);
+           }
+        }
+    }
+}
+
 public class BossImpl extends UnicastRemoteObject implements Boss3 {
     public static final String SERVICE_NAME = "gaggle";
     private NewNameHelper nameHelper;
@@ -37,6 +86,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     private WorkflowManager workflowManager;
     private HashMap<String, String> applicationInfo = new HashMap<String, String>();
     private Sigar sigar;
+    private Goose3 proxyGoose;
+    private ProxyCallbackThread proxyCallbackThread;
 
     private static Logger Log = Logger.getLogger("Boss");
 
@@ -115,6 +166,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 Log.severe("Failed to load SIGAR class: " + e.getMessage());
             }
         }
+
+
     }
 
     private void loadJarLib(InputStream in, String libName) throws IOException {
@@ -256,6 +309,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     public void unregisterIdleGeeseAndUpdate() {
         gooseManager.unregisterIdleGeeseAndUpdate();
     }
+    public void setRecording(boolean recording) { isRecording = recording; }
 
     // ***** Broadcasting *****
     public void broadcastNamelist(String sourceGoose, String targetGoose,
@@ -397,6 +451,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 {
                     // Record the action
                     recordAction(sourceGoose, gooseName, network, -1, null, null, null);
+                    this.proxyGoose.handleWorkflowInformation("Recording", ("Network;" + sourceGoose + ";" + gooseName));
                 }
                 goose.handleNetwork(sourceGoose, network);
             } catch (Exception ex0) {
@@ -417,6 +472,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     {
         if (jsonWorkflow != null && jsonWorkflow.length() > 0)
         {
+            this.proxyGoose = proxyGoose;
+            if (this.proxyCallbackThread == null) {
+                proxyCallbackThread = new ProxyCallbackThread(proxyGoose);
+                proxyCallbackThread.start();
+            }
+
             Log.info("JSON workflow string: " + jsonWorkflow);
             JSONReader jsonReader = new JSONReader();
             Workflow w = (Workflow)jsonReader.createFromJSONString(jsonWorkflow);
@@ -540,6 +601,51 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         this.isRecording = true;
     }
 
+    private String getGooseWorkflowComponentID(Goose goose, String gooseName)
+    {
+        if (goose instanceof Goose3)
+        {
+            try {
+                String result = null;
+                GaggleGooseInfo gooseInfo = ((Goose3)goose).getGooseInfo();
+                Log.info("GooseInfo: " + gooseInfo);
+                if (gooseInfo != null){
+                    result = gooseInfo.getWorkflowComponentID();
+                    Log.info(gooseName + " component ID: " + result);
+                }
+                if (result == null || result.length() == 0)
+                {
+                    result = gooseName;
+                }
+                return result;
+            }
+            catch (Exception e) {
+                Log.warning("Failed to get goose info for " + gooseName + " " + e.getMessage());
+            }
+        }
+        return gooseName;
+    }
+
+    private void sendBroadcastToProxyGoose(Goose srcGoose, String sourceGoose, Goose trgtGoose, String targetGoose, String dataType)
+    {
+        if (this.proxyGoose != null)
+        {
+            String srcGooseComponentID = getGooseWorkflowComponentID(srcGoose, sourceGoose);
+            String trgtGooseComponentID = getGooseWorkflowComponentID(trgtGoose, targetGoose);
+            String msg = dataType + ";" + srcGooseComponentID + ";" + trgtGooseComponentID;
+            Log.info("Sending goose info back to proxy goose. " + msg);
+            try {
+                //this.proxyGoose.handleWorkflowInformation("Recording", msg);
+                this.proxyCallbackThread.AddMessage(msg);
+            }
+            catch (Exception e)
+            {
+                Log.severe("Failed to connect to proxy goose " + e.getMessage());
+            }
+        }
+    }
+
+
     /**
      * Record a broadcast action. The API can be used to update source goose and target goose parameters
      * as well as edge parameters
@@ -551,7 +657,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
      * @param targetParams
      * @param edgeParams
      */
-    public void recordAction(String sourceGoose, String targetGoose, Object data,
+    public void recordAction(String sourceGoose, String targetGoose,
+                             Object data,
                              int edgeIndex,
                              HashMap<String, String> sourceParams,
                              HashMap<String, String> targetParams,
@@ -589,8 +696,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         else if (isRecording)
         {
             Log.info("Recording source: " + sourceGoose + " target:" + targetGoose + " data: " + data.toString());
+
             String sourceGooseName = processGooseName(sourceGoose);
             String targetGooseName = processGooseName(targetGoose);
+
+            Goose srcGoose = getGoose(sourceGoose);
+            Goose trgtGoose = getGoose(targetGoose);
 
             // Add nodes to the nodes dict
             if (this.dictNodes.isEmpty())
@@ -713,6 +824,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         this.dictEdges.put(String.valueOf(this.edgeCount), edge);
                         this.edgeCount++;
                     }
+
+                    sendBroadcastToProxyGoose(srcGoose, sourceGoose, trgtGoose, targetGoose, dataType);
                 }
             }
         }
