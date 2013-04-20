@@ -143,4 +143,9 @@ public interface Boss3 extends Boss2 {
                              HashMap<String, String> targetParams,
                              HashMap<String, String> edgeParams
     ) throws RemoteException;
+
+
+    public void saveState(Goose3 proxyGoose, String userid, String name, String desc, String filePrefix) throws RemoteException;
+
+    public void loadState(String stateid) throws RemoteException;
 }

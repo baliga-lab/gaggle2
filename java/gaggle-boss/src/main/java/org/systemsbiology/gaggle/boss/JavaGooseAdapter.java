@@ -93,5 +93,17 @@ public class JavaGooseAdapter implements SuperGoose {
             return ((Goose3)javaGoose).getGooseInfo();
         return null;
     }
+
+    public void saveState(String directory, String filePrefix) throws RemoteException
+    {
+        if (javaGoose instanceof Goose3)
+            ((Goose3)javaGoose).saveState(directory, filePrefix);
+    }
+
+    public void loadState(String location) throws RemoteException
+    {
+        if (javaGoose instanceof Goose3)
+            ((Goose3)javaGoose).loadState(location);
+    }
 }
 

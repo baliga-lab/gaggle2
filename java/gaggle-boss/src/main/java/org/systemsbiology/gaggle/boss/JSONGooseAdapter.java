@@ -84,4 +84,20 @@ public class JSONGooseAdapter implements SuperGoose {
     {
     }
 
+    public void saveState(String directory, String filePrefix) throws RemoteException
+    {
+        if (jsonGoose instanceof Goose3)
+        {
+            ((Goose3)jsonGoose).saveState(directory, filePrefix);
+        }
+    }
+
+    public void loadState(String location) throws RemoteException
+    {
+        if (jsonGoose instanceof Goose3)
+        {
+            ((Goose3)jsonGoose).loadState(location);
+        }
+    }
+
 }

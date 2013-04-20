@@ -42,5 +42,16 @@ public interface Goose3 extends Goose2 {
     public void handleWorkflowInformation(String type, String info) throws RemoteException;
 
 
+    /**
+     * Get information about a goose.
+     * @return A (@link GaggleGooseInfo(GaggleGooseInfo)) structure. It contains information
+     * such as goose component ID, goose workflow ID etc.
+     * @throws RemoteException
+     */
     public GaggleGooseInfo getGooseInfo() throws RemoteException;
+
+
+    public void saveState(String directory, String filePrefix) throws RemoteException;
+
+    public void loadState(String location) throws RemoteException;
 }

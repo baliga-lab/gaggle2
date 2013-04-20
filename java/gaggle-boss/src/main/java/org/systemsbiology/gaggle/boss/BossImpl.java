@@ -3,7 +3,10 @@ package org.systemsbiology.gaggle.boss;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.net.ConnectException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import java.rmi.server.*;
@@ -19,9 +22,22 @@ import org.systemsbiology.gaggle.geese.DeafGoose;
 import org.systemsbiology.gaggle.core.datatypes.*;
 import org.systemsbiology.gaggle.util.*;
 import org.hyperic.sigar.ProcExe;
-
 import java.util.logging.*;
 
+class ProxyGooseMessage
+{
+    private String type;
+    private String message;
+
+    public String getType() { return type; }
+    public String getMessage() { return message; }
+
+    public ProxyGooseMessage(String type, String msg)
+    {
+        this.type = type;
+        this.message = msg;
+    }
+}
 
 /**
  *  When we call a proxy goose, we need to spawn a thread to do so.
@@ -31,17 +47,21 @@ import java.util.logging.*;
  */
 class ProxyCallbackThread extends Thread
 {
+    BossImpl bossimpl;
     Goose3 proxyGoose;
-    List<String> processingQueue = Collections.synchronizedList(new ArrayList<String>());
+    List<ProxyGooseMessage> processingQueue = Collections.synchronizedList(new ArrayList<ProxyGooseMessage>());
     boolean cancel = false;
     private static Logger Log = Logger.getLogger("Boss");
 
-    public ProxyCallbackThread(Goose3 pg)
+    public ProxyCallbackThread(BossImpl bossimpl, Goose3 pg)
     {
+        this.bossimpl = bossimpl;
         this.proxyGoose = pg;
     }
 
-    public void AddMessage(String msg)
+    public void setProxyGoose(Goose3 proxyGoose) { this.proxyGoose = proxyGoose; }
+
+    public void AddMessage(ProxyGooseMessage msg)
     {
         this.processingQueue.add(msg);
     }
@@ -54,19 +74,67 @@ class ProxyCallbackThread extends Thread
            try {
                if (!processingQueue.isEmpty())
                {
-                   String msg = processingQueue.get(0);
+                   // Handle msg for the proxy goose
+                   ProxyGooseMessage msg = processingQueue.get(0);
                    if (proxyGoose != null) {
-                       Log.info("Passing " + msg + " to ProxyGoose");
-                       proxyGoose.handleWorkflowInformation("Recording", msg);
+                       Log.info("Passing " + msg.getType() + " " + msg.getMessage() + " to ProxyGoose");
+                       proxyGoose.handleWorkflowInformation(msg.getType(), msg.getMessage());
                    }
                    processingQueue.remove(0);
                }
+
                Thread.sleep(3000);
            }
            catch (Exception e) {
                Log.warning("Failed to process proxy goose callback: " + e.getMessage());
                processingQueue.remove(0);
            }
+        }
+    }
+}
+
+class RestoreStateThread extends Thread
+{
+    private static Logger Log = Logger.getLogger("Boss");
+    private String goosename;
+    private String serviceurl;
+    private String fileurl;
+    private WorkflowManager workflowManager;
+
+    public RestoreStateThread(WorkflowManager wm, String goosename, String serviceurl, String fileurl)
+    {
+        this.workflowManager = wm;
+        this.goosename = goosename;
+        this.serviceurl = serviceurl;
+        this.fileurl = fileurl;
+    }
+
+    public void run()
+    {
+        if (workflowManager != null && serviceurl != null && serviceurl.length() > 0)
+        {
+            // download the state file to local temp dir
+            try
+            {
+                String restorefilename = UUID.randomUUID().toString() + ".gst";
+                restorefilename = workflowManager.getMyTempFolder().getAbsolutePath() + File.separator + restorefilename;
+                Log.info("Temp restore file name: " + restorefilename + " download from " + fileurl);
+                workflowManager.downloadFileFromUrl(restorefilename, fileurl);
+
+                // Start the goose and parse the restore file
+                Log.info("Starting goose " + goosename);
+                WorkflowComponent c = new WorkflowComponent("", "", "", goosename, goosename, "", serviceurl, "", null);
+                Object syncObj = new Object();
+                Goose3 goose = workflowManager.PrepareGoose(c, syncObj);
+                if (goose != null)
+                {
+                    goose.loadState(restorefilename);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.severe("Failed to process goose " + goosename + " " + e.getMessage());
+            }
         }
     }
 }
@@ -88,6 +156,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     private Sigar sigar;
     private Goose3 proxyGoose;
     private ProxyCallbackThread proxyCallbackThread;
+    private String stateTempFolderName = "StateFiles";
 
     private static Logger Log = Logger.getLogger("Boss");
 
@@ -167,7 +236,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             }
         }
 
-
+        proxyCallbackThread = new ProxyCallbackThread(this, null);
+        proxyCallbackThread.start();
     }
 
     private void loadJarLib(InputStream in, String libName) throws IOException {
@@ -417,6 +487,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             Goose goose = getGoose(gooseName);
             if (goose == null) continue;
             try {
+                Log.info("Check recording flag " + isRecording);
                 if (isRecording)
                 {
                     // Record the action
@@ -451,7 +522,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 {
                     // Record the action
                     recordAction(sourceGoose, gooseName, network, -1, null, null, null);
-                    this.proxyGoose.handleWorkflowInformation("Recording", ("Network;" + sourceGoose + ";" + gooseName));
+                    //this.proxyGoose.handleWorkflowInformation("Recording", ("Network;" + sourceGoose + ";" + gooseName));
                 }
                 goose.handleNetwork(sourceGoose, network);
             } catch (Exception ex0) {
@@ -473,9 +544,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         if (jsonWorkflow != null && jsonWorkflow.length() > 0)
         {
             this.proxyGoose = proxyGoose;
-            if (this.proxyCallbackThread == null) {
-                proxyCallbackThread = new ProxyCallbackThread(proxyGoose);
-                proxyCallbackThread.start();
+            if (this.proxyCallbackThread != null) {
+                this.proxyCallbackThread.setProxyGoose(proxyGoose);
             }
 
             Log.info("JSON workflow string: " + jsonWorkflow);
@@ -636,7 +706,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             Log.info("Sending goose info back to proxy goose. " + msg);
             try {
                 //this.proxyGoose.handleWorkflowInformation("Recording", msg);
-                this.proxyCallbackThread.AddMessage(msg);
+                ProxyGooseMessage m = new ProxyGooseMessage("Recording", msg);
+                this.proxyCallbackThread.AddMessage(m);
             }
             catch (Exception e)
             {
@@ -831,6 +902,208 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         }
     }
 
+    public void saveState(Goose3 proxyGoose, String userid, String name, String desc, String filePrefix)
+    {
+        Log.info("Saving state...");
+        String[] gooseNames = ui.getListeningGeese();
+        if (gooseNames != null && gooseNames.length > 0)
+        {
+            String tempDir = System.getProperty("java.io.tmpdir");
+            Log.info("Temp dir: " + tempDir);
+            tempDir += ("Gaggle" + File.separator + stateTempFolderName);
+            Log.info("Upload file path: " + tempDir);
+            File temp = new File(tempDir);
+            if (!temp.exists())
+            {
+                Log.info("Create temp dir: " + tempDir);
+                try
+                {
+                    temp.mkdirs();
+                }
+                catch (Exception fe)
+                {
+                    Log.warning("Failed to create temp directory " + fe.getMessage());
+                }
+            }
+
+            // if fileprefix is empty, we use current datetime
+            if (filePrefix == null || filePrefix.length() == 0)
+            {
+                SimpleDateFormat df = new SimpleDateFormat("MMddyyyy-HHmmss");
+                Date date = new Date();
+                filePrefix = df.format(date);
+            }
+
+            for (int i = 0; i < gooseNames.length; i++) {
+                String gooseName = gooseNames[i];
+                Log.info("Getting goose " + gooseName);
+                SuperGoose goose = gooseManager.getGoose(gooseName);
+                if (goose == null || gooseName.contains("ProxyAppletGoose"))
+                    continue;
+                try {
+                    Log.info("Call goose " + gooseName + " to save state with prefix " + filePrefix);
+
+                    goose.saveState(tempDir, filePrefix);
+                }
+                catch (Exception e) {
+                    Log.warning("Failed to save state for goose " + gooseName);
+                }
+            }
+
+            // Now we upload the goose state files to server
+            URL url = null;
+            try {
+                String server = System.getProperty("server");
+                Log.info("Web server: " + server);
+                if (server == null || server.length() == 0)
+                    server = "http://networks.systemsbiology.net";
+                url = new URL((server + "/workflow/savestate"));
+                //url = new URL("http://localhost:8000/workflow/savereport/");
+            } catch (MalformedURLException ex) {
+                Log.warning("Malformed URL " + ex.getMessage());
+            }
+
+            HttpURLConnection urlConn = null;
+            try {
+                // URL connection channel.
+                urlConn = (HttpURLConnection) url.openConnection();
+
+                // Let the run-time system (RTS) know that we want input.
+                urlConn.setDoInput (true);
+
+                // Let the RTS know that we want to do output.
+                urlConn.setDoOutput (true);
+
+                // No caching, we want the real thing.
+                urlConn.setUseCaches (false);
+            }
+            catch (IOException ex) {
+                Log.severe("Failed to create url Connection " + ex.getMessage());
+            }
+
+            try
+            {
+                ClientHttpRequest httpRequest = new ClientHttpRequest(urlConn);
+                InputStream responseStream = null;
+
+                if (temp.exists())
+                {
+                    // send the component name
+                    httpRequest.setParameter("userid", userid);
+                    httpRequest.setParameter("name", name);
+                    httpRequest.setParameter("desc", desc);
+                    Log.info("Searching for state files with prefix " + filePrefix);
+                    //final String fpre = filePrefix;
+
+                    Thread.sleep(3000); // wait for geese to save the state files
+                    String filenames[] = temp.list();
+                    /*(new FilenameFilter() {
+                        @Override
+                        public boolean accept(File dir, String name) {
+                            if (name.startsWith(fpre))
+                                return true;
+                            return false;  //To change body of implemented methods use File | Settings | File Templates.
+                        }
+                    }); */
+
+                    for (String fn : filenames) {
+                        Log.info("Processing " + fn);
+                        if (fn.startsWith(filePrefix)) {
+                            Log.info("Adding file " + fn + " to httprequest");
+                            File f = new File(tempDir + File.separator + fn);
+                            //FileInputStream is = new FileInputStream((String)value);
+                            httpRequest.setParameter(fn, f);
+                        }
+                    }
+                    responseStream = httpRequest.post();
+                    byte data[] = new byte[1024];
+                    int count;
+                    String jsonresponse = "";
+                    while ((count = responseStream.read(data, 0, 1024)) != -1)
+                    {
+                        String buffer = new String(data);
+                        jsonresponse += buffer;
+                    }
+
+                    Log.info("jsonresponse: " + jsonresponse);
+                    // Parse the JSON string
+                    if (proxyGoose != null)
+                    {
+                        Log.info("Save state return json: " + jsonresponse);
+                        ProxyGooseMessage m = new ProxyGooseMessage("SaveStateResponse", jsonresponse);
+                        this.proxyCallbackThread.setProxyGoose(proxyGoose);
+                        this.proxyCallbackThread.AddMessage(m);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.severe("Failed to upload state file to server " + e.getMessage());
+            }
+        }
+    }
+
+    public void loadState(String stateid) throws RemoteException
+    {
+        // Get the state information
+        URL url = null;
+        try {
+            String server = System.getProperty("server");
+            Log.info("Web server: " + server);
+            if (server == null || server.length() == 0)
+                server = "http://networks.systemsbiology.net";
+            url = new URL((server + "/workflow/getstateinfo/" + stateid + "/"));
+            //url = new URL("http://localhost:8000/workflow/savereport/");
+        } catch (MalformedURLException ex) {
+            Log.warning("Malformed URL " + ex.getMessage());
+        }
+
+        HttpURLConnection urlConn = null;
+        try {
+            // URL connection channel.
+            urlConn = (HttpURLConnection) url.openConnection();
+            ClientHttpRequest httpRequest = new ClientHttpRequest(urlConn);
+            InputStream responseStream = httpRequest.post();
+            byte data[] = new byte[1024];
+            int count;
+            String jsonresponse = "";
+            while ((count = responseStream.read(data, 0, 1024)) != -1)
+            {
+                String buffer = new String(data);
+                jsonresponse += buffer;
+            }
+
+            // Parse the JSON string
+            Log.info("Parsing JSON state info: " + jsonresponse);
+            JSONObject jsonobj = JSONObject.fromObject(jsonresponse);
+            int index = 0;
+            boolean done = false;
+            do {
+                JSONObject nodeJSONObj = jsonobj.getJSONObject(Integer.toString(index));
+                if (nodeJSONObj != null)
+                {
+                    String fileurl = nodeJSONObj.getString("fileurl");
+                    String goosename = nodeJSONObj.getString("goosename");
+                    String serviceurl = nodeJSONObj.getString("serviceurl");
+                    Log.info("Starting goose " + goosename + " to restore state " + fileurl + " service url: " + serviceurl);
+
+                    // Put goose restore in threads
+                    RestoreStateThread rst = new RestoreStateThread(workflowManager, goosename, serviceurl, fileurl);
+                    rst.start();
+                    index++;
+                }
+                else
+                    done = true;
+            }
+            while (!done);
+        }
+        catch (Exception e1)
+        {
+
+        }
+
+
+    }
 
     public void hide(String targetGoose) {
         String[] gooseNames;
@@ -909,4 +1182,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     public void broadcastTable(String source, String target, Table table) {
         throw new UnsupportedOperationException("TODO");
     }
+
+
+
 }
