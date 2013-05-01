@@ -98,28 +98,42 @@ class RestoreStateThread extends Thread
     private static Logger Log = Logger.getLogger("Boss");
     private String goosename;
     private String serviceurl;
-    private String fileurl;
+    private ArrayList<String> fileinfo;
     private WorkflowManager workflowManager;
 
-    public RestoreStateThread(WorkflowManager wm, String goosename, String serviceurl, String fileurl)
+    public RestoreStateThread(WorkflowManager wm, String goosename, String serviceurl, ArrayList<String> fileinfo)
     {
         this.workflowManager = wm;
         this.goosename = goosename;
         this.serviceurl = serviceurl;
-        this.fileurl = fileurl;
+        this.fileinfo = fileinfo;
     }
 
     public void run()
     {
         if (workflowManager != null && serviceurl != null && serviceurl.length() > 0)
         {
-            // download the state file to local temp dir
+            // download all state files to local temp dir
             try
             {
-                String restorefilename = UUID.randomUUID().toString() + ".gst";
-                restorefilename = workflowManager.getMyTempFolder().getAbsolutePath() + File.separator + restorefilename;
-                Log.info("Temp restore file name: " + restorefilename + " download from " + fileurl);
-                workflowManager.downloadFileFromUrl(restorefilename, fileurl);
+                String toplevelfn = "";
+                for (int i = 0; i < fileinfo.size(); i++)
+                {
+                    String fileurl = fileinfo.get(i);
+                    String restorefilename = fileurl.substring(fileurl.lastIndexOf("/") + 1);
+
+                    if (restorefilename != null && restorefilename.length() > 0)
+                    {
+                        restorefilename = workflowManager.getMyTempFolder().getAbsolutePath() + File.separator + restorefilename;
+                        if (restorefilename.indexOf(".dat") < 0)
+                            // this is a "top" level restore file. Lower level files are used to store serialized objects
+                            // and their file ext are ".dat"
+                            toplevelfn = restorefilename;
+
+                        Log.info("Temp restore file name: " + restorefilename + " download from " + fileurl);
+                        workflowManager.downloadFileFromUrl(restorefilename, fileurl);
+                    }
+                }
 
                 // Start the goose and parse the restore file
                 Log.info("Starting goose " + goosename);
@@ -128,7 +142,8 @@ class RestoreStateThread extends Thread
                 Goose3 goose = workflowManager.PrepareGoose(c, syncObj);
                 if (goose != null)
                 {
-                    goose.loadState(restorefilename);
+                    Log.info("Load state from " + toplevelfn);
+                    goose.loadState(toplevelfn);
                 }
             }
             catch (Exception e)
@@ -902,145 +917,185 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         }
     }
 
+
+    class SaveStateThread extends Thread
+    {
+        Goose3 proxyGoose;
+        String userid;
+        String name;
+        String desc;
+        String filePrefix;
+
+        public SaveStateThread(Goose3 proxyGoose, String userid, String name, String desc, String filePrefix)
+        {
+            this.proxyGoose = proxyGoose;
+            this.userid = userid;
+            this.name = name;
+            this.desc = desc;
+            this.filePrefix = filePrefix;
+        }
+
+        public void run()
+        {
+            String[] gooseNames = ui.getListeningGeese();
+            if (gooseNames != null && gooseNames.length > 0)
+            {
+                String tempDir = System.getProperty("java.io.tmpdir");
+                Log.info("Temp dir: " + tempDir);
+                tempDir += ("Gaggle" + File.separator + stateTempFolderName);
+                Log.info("Upload file path: " + tempDir);
+                File temp = new File(tempDir);
+                if (!temp.exists())
+                {
+                    Log.info("Create temp dir: " + tempDir);
+                    try
+                    {
+                        temp.mkdirs();
+                    }
+                    catch (Exception fe)
+                    {
+                        Log.warning("Failed to create temp directory " + fe.getMessage());
+                    }
+                }
+
+                // if fileprefix is empty, we use current datetime
+                if (filePrefix == null || filePrefix.length() == 0)
+                {
+                    SimpleDateFormat df = new SimpleDateFormat("MMddyyyy-HHmmss");
+                    Date date = new Date();
+                    filePrefix = df.format(date);
+                }
+
+                for (int i = 0; i < gooseNames.length; i++) {
+                    String gooseName = gooseNames[i];
+                    Log.info("Getting goose " + gooseName);
+                    SuperGoose goose = gooseManager.getGoose(gooseName);
+                    if (goose == null || gooseName.contains("ProxyAppletGoose"))
+                        continue;
+                    try {
+                        Log.info("Call goose " + gooseName + " to save state with prefix " + filePrefix);
+
+                        goose.saveState(tempDir, filePrefix);
+                    }
+                    catch (Exception e) {
+                        Log.warning("Failed to save state for goose " + gooseName + " " + e.getMessage());
+                    }
+                }
+
+                // Now we upload the goose state files to server
+                URL url = null;
+                try {
+                    String server = System.getProperty("server");
+                    Log.info("Web server: " + server);
+                    if (server == null || server.length() == 0)
+                        server = "http://networks.systemsbiology.net";
+                    url = new URL((server + "/workflow/savestate"));
+                    //url = new URL("http://localhost:8000/workflow/savereport/");
+                } catch (MalformedURLException ex) {
+                    Log.warning("Malformed URL " + ex.getMessage());
+                }
+
+                HttpURLConnection urlConn = null;
+                try {
+                    // URL connection channel.
+                    urlConn = (HttpURLConnection) url.openConnection();
+
+                    // Let the run-time system (RTS) know that we want input.
+                    urlConn.setDoInput (true);
+
+                    // Let the RTS know that we want to do output.
+                    urlConn.setDoOutput (true);
+
+                    // No caching, we want the real thing.
+                    urlConn.setUseCaches (false);
+                }
+                catch (IOException ex) {
+                    Log.severe("Failed to create url Connection " + ex.getMessage());
+                }
+
+                try
+                {
+                    ClientHttpRequest httpRequest = new ClientHttpRequest(urlConn);
+                    InputStream responseStream = null;
+
+                    if (temp.exists())
+                    {
+                        // send the component name
+                        httpRequest.setParameter("userid", userid);
+                        httpRequest.setParameter("name", name);
+                        httpRequest.setParameter("desc", desc);
+                        Log.info("Searching for state files with prefix " + filePrefix);
+                        //final String fpre = filePrefix;
+
+                        Thread.sleep(10000); // wait for geese to save the state files
+                        String filenames[] = temp.list();
+                        /*(new FilenameFilter() {
+                           @Override
+                           public boolean accept(File dir, String name) {
+                               if (name.startsWith(fpre))
+                                   return true;
+                               return false;  //To change body of implemented methods use File | Settings | File Templates.
+                           }
+                       }); */
+
+                        ArrayList<File> statefiles = new ArrayList<File>();
+                        for (String fn : filenames) {
+                            Log.info("Processing " + fn);
+                            if (fn.startsWith(filePrefix)) {
+                                Log.info("Adding file " + fn + " to httprequest");
+                                File f = new File(tempDir + File.separator + fn);
+                                statefiles.add(f);
+                                //FileInputStream is = new FileInputStream((String)value);
+                                httpRequest.setParameter(fn, f);
+                            }
+                        }
+                        responseStream = httpRequest.post();
+                        byte data[] = new byte[1024];
+                        int count;
+                        String jsonresponse = "";
+                        while ((count = responseStream.read(data, 0, 1024)) != -1)
+                        {
+                            String buffer = new String(data);
+                            jsonresponse += buffer;
+                        }
+                        Log.info("jsonresponse: " + jsonresponse);
+
+                        // Remove the temp state files
+                        for (int i = 0; i < statefiles.size(); i++)
+                        {
+                            File f = statefiles.get(i);
+                            try {
+                                if (f != null)
+                                    f.delete();
+                            }
+                            catch (Exception e2) {
+                                Log.warning("Failed to delete temp state file " + e2.getMessage());
+                            }
+                        }
+
+                        // Parse the JSON string
+                        if (proxyGoose != null)
+                        {
+                            Log.info("Save state return json: " + jsonresponse);
+                            ProxyGooseMessage m = new ProxyGooseMessage("SaveStateResponse", jsonresponse);
+                            proxyCallbackThread.setProxyGoose(proxyGoose);
+                            proxyCallbackThread.AddMessage(m);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Log.severe("Failed to upload state file to server " + e.getMessage());
+                }
+            }
+        }
+    }
+
     public void saveState(Goose3 proxyGoose, String userid, String name, String desc, String filePrefix)
     {
         Log.info("Saving state...");
-        String[] gooseNames = ui.getListeningGeese();
-        if (gooseNames != null && gooseNames.length > 0)
-        {
-            String tempDir = System.getProperty("java.io.tmpdir");
-            Log.info("Temp dir: " + tempDir);
-            tempDir += ("Gaggle" + File.separator + stateTempFolderName);
-            Log.info("Upload file path: " + tempDir);
-            File temp = new File(tempDir);
-            if (!temp.exists())
-            {
-                Log.info("Create temp dir: " + tempDir);
-                try
-                {
-                    temp.mkdirs();
-                }
-                catch (Exception fe)
-                {
-                    Log.warning("Failed to create temp directory " + fe.getMessage());
-                }
-            }
-
-            // if fileprefix is empty, we use current datetime
-            if (filePrefix == null || filePrefix.length() == 0)
-            {
-                SimpleDateFormat df = new SimpleDateFormat("MMddyyyy-HHmmss");
-                Date date = new Date();
-                filePrefix = df.format(date);
-            }
-
-            for (int i = 0; i < gooseNames.length; i++) {
-                String gooseName = gooseNames[i];
-                Log.info("Getting goose " + gooseName);
-                SuperGoose goose = gooseManager.getGoose(gooseName);
-                if (goose == null || gooseName.contains("ProxyAppletGoose"))
-                    continue;
-                try {
-                    Log.info("Call goose " + gooseName + " to save state with prefix " + filePrefix);
-
-                    goose.saveState(tempDir, filePrefix);
-                }
-                catch (Exception e) {
-                    Log.warning("Failed to save state for goose " + gooseName);
-                }
-            }
-
-            // Now we upload the goose state files to server
-            URL url = null;
-            try {
-                String server = System.getProperty("server");
-                Log.info("Web server: " + server);
-                if (server == null || server.length() == 0)
-                    server = "http://networks.systemsbiology.net";
-                url = new URL((server + "/workflow/savestate"));
-                //url = new URL("http://localhost:8000/workflow/savereport/");
-            } catch (MalformedURLException ex) {
-                Log.warning("Malformed URL " + ex.getMessage());
-            }
-
-            HttpURLConnection urlConn = null;
-            try {
-                // URL connection channel.
-                urlConn = (HttpURLConnection) url.openConnection();
-
-                // Let the run-time system (RTS) know that we want input.
-                urlConn.setDoInput (true);
-
-                // Let the RTS know that we want to do output.
-                urlConn.setDoOutput (true);
-
-                // No caching, we want the real thing.
-                urlConn.setUseCaches (false);
-            }
-            catch (IOException ex) {
-                Log.severe("Failed to create url Connection " + ex.getMessage());
-            }
-
-            try
-            {
-                ClientHttpRequest httpRequest = new ClientHttpRequest(urlConn);
-                InputStream responseStream = null;
-
-                if (temp.exists())
-                {
-                    // send the component name
-                    httpRequest.setParameter("userid", userid);
-                    httpRequest.setParameter("name", name);
-                    httpRequest.setParameter("desc", desc);
-                    Log.info("Searching for state files with prefix " + filePrefix);
-                    //final String fpre = filePrefix;
-
-                    Thread.sleep(3000); // wait for geese to save the state files
-                    String filenames[] = temp.list();
-                    /*(new FilenameFilter() {
-                        @Override
-                        public boolean accept(File dir, String name) {
-                            if (name.startsWith(fpre))
-                                return true;
-                            return false;  //To change body of implemented methods use File | Settings | File Templates.
-                        }
-                    }); */
-
-                    for (String fn : filenames) {
-                        Log.info("Processing " + fn);
-                        if (fn.startsWith(filePrefix)) {
-                            Log.info("Adding file " + fn + " to httprequest");
-                            File f = new File(tempDir + File.separator + fn);
-                            //FileInputStream is = new FileInputStream((String)value);
-                            httpRequest.setParameter(fn, f);
-                        }
-                    }
-                    responseStream = httpRequest.post();
-                    byte data[] = new byte[1024];
-                    int count;
-                    String jsonresponse = "";
-                    while ((count = responseStream.read(data, 0, 1024)) != -1)
-                    {
-                        String buffer = new String(data);
-                        jsonresponse += buffer;
-                    }
-
-                    Log.info("jsonresponse: " + jsonresponse);
-                    // Parse the JSON string
-                    if (proxyGoose != null)
-                    {
-                        Log.info("Save state return json: " + jsonresponse);
-                        ProxyGooseMessage m = new ProxyGooseMessage("SaveStateResponse", jsonresponse);
-                        this.proxyCallbackThread.setProxyGoose(proxyGoose);
-                        this.proxyCallbackThread.AddMessage(m);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Log.severe("Failed to upload state file to server " + e.getMessage());
-            }
-        }
+        SaveStateThread sst = new SaveStateThread(proxyGoose, userid, name, desc, filePrefix);
+        sst.start();
     }
 
     public void loadState(String stateid) throws RemoteException
@@ -1082,13 +1137,23 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 JSONObject nodeJSONObj = jsonobj.getJSONObject(Integer.toString(index));
                 if (nodeJSONObj != null)
                 {
-                    String fileurl = nodeJSONObj.getString("fileurl");
                     String goosename = nodeJSONObj.getString("goosename");
                     String serviceurl = nodeJSONObj.getString("serviceurl");
-                    Log.info("Starting goose " + goosename + " to restore state " + fileurl + " service url: " + serviceurl);
+                    int filecnt = Integer.parseInt(nodeJSONObj.getString("files"));
+                    Log.info("Starting goose " + goosename + " to restore state service url: " + serviceurl + " with " + filecnt + " files");
+
+                    ArrayList<String> fileinfo = new ArrayList<String>();
+                    JSONObject fileobj = nodeJSONObj.getJSONObject("fileobj");
+                    for (int i = 0; i < filecnt; i++)
+                    {
+                        JSONObject fobj = fileobj.getJSONObject(Integer.toString(i));
+                        String fileurl = fobj.getString("fileurl");
+                        fileinfo.add(fileurl);
+                        Log.info("Add " + fileurl + " for " + goosename);
+                    }
 
                     // Put goose restore in threads
-                    RestoreStateThread rst = new RestoreStateThread(workflowManager, goosename, serviceurl, fileurl);
+                    RestoreStateThread rst = new RestoreStateThread(workflowManager, goosename, serviceurl, fileinfo);
                     rst.start();
                     index++;
                 }

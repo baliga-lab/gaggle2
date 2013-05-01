@@ -42,6 +42,17 @@ public class GooseWorkflowManager
 
     }
 
+    public Object[] getWorkflowActionData(String requestID)
+    {
+        if (this.processingQueue.containsKey(requestID))
+        {
+            System.out.println("Retrieving workflow action data for " + requestID);
+            ArrayList<Object> datalist = (ArrayList<Object>)this.processingQueue.get(requestID).getWorkflowAction().getSource().getParams().get(WorkflowComponent.ParamNames.Data.getValue());
+            return datalist.toArray();
+        }
+        return null;
+    }
+
     public String getSpecies(String requestID)
     {
         if (this.processingQueue.containsKey(requestID))

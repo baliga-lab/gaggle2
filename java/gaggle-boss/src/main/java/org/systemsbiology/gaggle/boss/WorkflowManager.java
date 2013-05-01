@@ -28,7 +28,7 @@ public class WorkflowManager {
     protected GooseManager gooseManager = null;
     protected BossImpl bossImpl = null;
     private long timerInterval = 200L; //milliseconds
-    private long timerTimeout = 300000L; // 15 seconds (for verifying if a goose is started correctly)
+    private long timerTimeout = 600000L; // timer for verifying if a goose is started correctly
     private static Logger Log = Logger.getLogger("Boss");
     private Thread resourceManagementThread;
     private Map<UUID, WorkflowThread> threadMap;
@@ -524,7 +524,7 @@ public class WorkflowManager {
                         if (!gooseStarted)
                         {
                             Timer timer = new Timer();
-                            Log.info("Starting the WaitForGooseStart thread...");
+                            Log.info("Starting the WaitForGooseStart thread..." + goose.getGooseName());
                             WaitForGooseStart wfg = new WaitForGooseStart(goose.getGooseName(), syncObj); //.getName());
                             timer.schedule(wfg, 0, timerInterval);
                             synchronized (syncObj) {
@@ -609,13 +609,15 @@ public class WorkflowManager {
             downloadFileFromUrl(jnlpFullPath, cmdToRunTarget);
             //cmdToRunTarget = createJnlpForData((tempFileToken + "_" + jnlpFileName), datauri);
             Log.info("JNLP to run: " + cmdToRunTarget);
-            String command = System.getProperty("java.home");
-            command += File.separator +  "bin" + File.separator + "javaws " + cmdToRunTarget;
-            //Desktop.getDesktop().browse(new URI(cmdToRunTarget));
+            String jwsdir = System.getProperty("java.home");
+            jwsdir += File.separator + "bin";
+
             try {
-                Runtime.getRuntime().exec(command);
+                ProcessBuilder pb = new ProcessBuilder("javaws", cmdToRunTarget);
+                pb.directory(new File(jwsdir));
+                Process p = pb.start();
             } catch (Exception e) {
-                Log.severe("Failed to start " + command);
+                Log.severe("Failed to start " + cmdToRunTarget + " " + e.getMessage());
                 e.printStackTrace();
             }
         }

@@ -112,6 +112,7 @@ public class RmiGaggleConnector {
      */
     public synchronized void connectToGaggle() throws Exception {
         Log.info("connectToGaggle(%s)".format(uri));
+
         try {
             // if goose is not already a live RMI object, make it so
             if (!exported && goose != null) exportObject(goose);
@@ -133,7 +134,7 @@ public class RmiGaggleConnector {
             } else {
                 Log.info("NO AUTOSTART, CONNECT TO EXIST");
                 boss = (Boss2) Naming.lookup(uri);
-            }  
+            }
             registerGoose();
             fireConnectionEvent(true);
         } catch (NullPointerException npe) {
@@ -195,14 +196,20 @@ public class RmiGaggleConnector {
     }
 
     private void tryToStartBoss() {
-        String command = System.getProperty("java.home");
-        command += File.separator +  "bin" + File.separator + "javaws " + GaggleConstants.BOSS_URL;
+        //String command = System.getProperty("java.home");
+        //command += File.separator +  "bin" + File.separator + "javaws " + GaggleConstants.BOSS_URL;
+
+        String jwsdir = System.getProperty("java.home");
+        jwsdir += File.separator + "bin";
         try {
-            Runtime.getRuntime().exec(command);
+            ProcessBuilder pb = new ProcessBuilder("javaws", GaggleConstants.BOSS_URL);
+            pb.directory(new File(jwsdir));
+            //Runtime.getRuntime().exec(command);
+            Process p = pb.start();
             Timer timer = new Timer();
             timer.schedule(new WaitForBossStart(), 0, timerInterval);
-        } catch (IOException e) {
-            Log.severe("Failed to start boss process!");
+        } catch (Exception e) {
+            Log.severe("Failed to start boss process first time!");
             e.printStackTrace();
         }
     }
