@@ -1131,10 +1131,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             // Parse the JSON string
             Log.info("Parsing JSON state info: " + jsonresponse);
             JSONObject jsonobj = JSONObject.fromObject(jsonresponse);
-            int index = 0;
-            boolean done = false;
-            do {
-                JSONObject nodeJSONObj = jsonobj.getJSONObject(Integer.toString(index));
+            Iterator iter = jsonobj.keys();
+            while (iter.hasNext())
+            {
+                String key = (String)iter.next();
+                Log.info("Retrieving json key " + key);
+                JSONObject nodeJSONObj = jsonobj.getJSONObject(key);
                 if (nodeJSONObj != null)
                 {
                     String goosename = nodeJSONObj.getString("goosename");
@@ -1155,12 +1157,9 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     // Put goose restore in threads
                     RestoreStateThread rst = new RestoreStateThread(workflowManager, goosename, serviceurl, fileinfo);
                     rst.start();
-                    index++;
                 }
-                else
-                    done = true;
             }
-            while (!done);
+
         }
         catch (Exception e1)
         {
