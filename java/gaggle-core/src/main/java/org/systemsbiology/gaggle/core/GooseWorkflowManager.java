@@ -2,9 +2,9 @@ package org.systemsbiology.gaggle.core;
 
 import org.systemsbiology.gaggle.core.datatypes.*;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.rmi.RemoteException;
 import java.util.*;
 
@@ -286,6 +286,90 @@ public class GooseWorkflowManager
         return succeeded;
     }
 
+    public void downloadFileFromUrl(String filename, String urlString) throws Exception
+    {
+        System.out.println("Download file " + urlString + " to " + filename);
+        File f = new File(filename);
+        if (f.exists())
+            return;
 
+        BufferedInputStream in = null;
+        FileOutputStream fout = null;
+
+        in = new BufferedInputStream(new URL(urlString).openStream());
+        fout = new FileOutputStream(filename);
+
+        byte data[] = new byte[1024];
+        int count;
+        while ((count = in.read(data, 0, 1024)) != -1)
+        {
+            fout.write(data, 0, count);
+        }
+
+        if (in != null)
+            in.close();
+        if (fout != null)
+            fout.close();
+    }
+
+
+    /**
+     * Parse a text file and output a GaggleData object. For now we assume it's a NameList
+     * @param fileurl
+     * @return
+     */
+    public GaggleData ProcessTextFile(String fileurl)
+    {
+        BufferedInputStream in = null;
+        boolean  urlprocessed = false;
+        String localfilepath = fileurl;
+        try
+        {
+            URL url = new URL(fileurl);
+            String tempDir = System.getProperty("java.io.tmpdir");
+            System.out.println("Temp dir: " + tempDir);
+            tempDir += ("/Gaggle/Downloads");
+            File myTempFolder = new File(tempDir);
+            if (!myTempFolder.exists())
+            {
+                System.out.println("Make temp folder: " + myTempFolder.getAbsolutePath());
+                myTempFolder.mkdirs();
+            }
+            String downloadFile = tempDir + File.separator + UUID.randomUUID().toString() + ".txt";
+            downloadFileFromUrl(downloadFile, fileurl);
+            localfilepath = downloadFile;
+        }
+        catch (MalformedURLException me)
+        {
+            System.out.println("Failed to parse URL " + fileurl);
+        }
+        catch (Exception fe)
+        {
+            System.out.println("Failed to download remote file");
+        }
+
+        // Now we process the file
+        try
+        {
+            System.out.println("Paring " + localfilepath);
+
+            BufferedReader breader = new BufferedReader(new FileReader(localfilepath));
+            String line = null;
+            ArrayList<String> namelist = new ArrayList<String>();
+            while ((line = breader.readLine()) != null)
+            {
+                namelist.add(line);
+            }
+            System.out.println("Parsed " + namelist.size() + " names");
+            String[] names = new String[namelist.size()];
+            Namelist result = new Namelist("", "", namelist.toArray(names));
+            return result;
+        }
+        catch (Exception e)
+        {
+            System.out.println("Failed to parse the file " + e.getMessage());
+        }
+        return null;
+    }
 
 }
