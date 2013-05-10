@@ -1118,15 +1118,16 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             // URL connection channel.
             urlConn = (HttpURLConnection) url.openConnection();
             ClientHttpRequest httpRequest = new ClientHttpRequest(urlConn);
+
             InputStream responseStream = httpRequest.post();
             byte data[] = new byte[1024];
             int count;
-            String jsonresponse = "";
-            while ((count = responseStream.read(data, 0, 1024)) != -1)
-            {
-                String buffer = new String(data);
-                jsonresponse += buffer;
+            BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream, "UTF-8"));
+            StringBuilder builder = new StringBuilder();
+            for (String line = null; (line = reader.readLine()) != null;) {
+                builder.append(line).append("\n");
             }
+            String jsonresponse = builder.toString();
 
             // Parse the JSON string
             Log.info("Parsing JSON state info: " + jsonresponse);
@@ -1163,7 +1164,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         }
         catch (Exception e1)
         {
-
+            Log.severe("Failed to load state " + e1.getMessage());
         }
 
 
