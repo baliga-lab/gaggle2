@@ -55,10 +55,12 @@ public interface JSONConstants {
     String WORKFLOW_COMPONENT_ID = "componentid";
     String WORKDLOW_COMPONENT_ARGUMENTS = "arguments";
     String WORKFLOW_ID = "workflowid";
+    String WORKFLOW_RECORDING_FILE = "workflowrecordingfile";
     String WORKFLOW_EDGE_DATATYPE = "datatype";
     String WORKFLOW_EDGE_PARALLELTYPE = "paralleltype";
     String WORKFLOW_EDGE_SOURCEID = "sourcenodeid";
     String WORKFLOW_EDGE_TARGETID = "targetnodeid";
     String WORKFLOW_EDGE_STARTNODE = "startnode";
     String WORKFLOW_EMPTY_ARGUMENT = "NONE";
+    String WORKFLOW_RESET = "reset";
 }

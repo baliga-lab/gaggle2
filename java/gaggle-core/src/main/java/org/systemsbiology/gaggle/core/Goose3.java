@@ -50,6 +50,7 @@ public interface Goose3 extends Goose2 {
      */
     public GaggleGooseInfo getGooseInfo() throws RemoteException;
 
+    //public void setGooseInfo(GaggleGooseInfo gooseInfo) throws RemoteException;
 
     public void saveState(String directory, String filePrefix) throws RemoteException;
 

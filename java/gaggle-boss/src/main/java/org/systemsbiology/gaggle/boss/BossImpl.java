@@ -837,6 +837,9 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         }
                     }
                 }
+
+                // Pass it to workflow manager
+                //workflowManager.addNode(srcGoose);
             }
 
             if (targetGoose != null)
@@ -1122,10 +1125,13 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             InputStream responseStream = httpRequest.post();
             byte data[] = new byte[1024];
             int count;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream, "UTF-8"));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream));
             StringBuilder builder = new StringBuilder();
-            for (String line = null; (line = reader.readLine()) != null;) {
-                builder.append(line).append("\n");
+            String line;
+            while ((line = reader.readLine()) != null)
+            {
+                Log.info("Got line: " + line);
+                builder.append(line);
             }
             String jsonresponse = builder.toString();
 

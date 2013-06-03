@@ -36,6 +36,8 @@ public class WorkflowManager {
     private String tempFolderName = "WorkflowManager";
     private File myTempFolder;
     private String tempFileToken = UUID.randomUUID().toString();
+    private ArrayList<Workflow> submittedWorkflows = new ArrayList<Workflow>();
+    private Workflow topWorkflow = null;
 
     class ShutdownHookThread extends Thread
     {
@@ -94,12 +96,15 @@ public class WorkflowManager {
         {
             String tempDir = System.getProperty("java.io.tmpdir");
             Log.info("Temp dir: " + tempDir);
+            if (tempDir.startsWith("/var/folders"))
+                tempDir = "/tmp";
+            Log.info("New temp dir: " + tempDir);
             tempDir += ("/Gaggle/" + tempFolderName);
             myTempFolder = new File(tempDir);
             if (!myTempFolder.exists())
             {
                 Log.info("Make temp folder: " + myTempFolder.getAbsolutePath());
-                myTempFolder.mkdir();
+                myTempFolder.mkdirs();
             }
         }
         catch (Exception e)
@@ -110,19 +115,72 @@ public class WorkflowManager {
 
     public File getMyTempFolder() { return myTempFolder; }
 
+    /*public void addEdge(Goose source, Goose target, String data)
+    {
+        if (source != null && (source instanceof Goose3) && target != null && (target instanceof Goose3))
+        {
+            Log.info("Add edge from " + source + " " + target + " " + data);
+            WorkflowComponent src = createNode((Goose3)source, data);
+            WorkflowComponent trgt = (source != target) ? createNode((Goose3)target, null) : src;
+            Log.info("Adding edge for " + src.getComponentWorkflowNodeID() + " " + trgt.getComponentWorkflowNodeID());
+            topWorkflow.getWorkflow().get(src.getComponentWorkflowNodeID()).get(0).add(trgt);
+        }
+    }
+
+    private WorkflowComponent createNode(Goose3 goose, String data)
+    {
+        try
+        {
+            GaggleGooseInfo gooseInfo = goose.getGooseInfo();
+            String workflowNodeID = gooseInfo.getComponentWorkflowNodeID();
+            Log.info("Goose workflow node ID");
+            if (workflowNodeID == null || !topWorkflow.getWorkflow().containsKey(workflowNodeID))
+            {
+                String nodeID = "wfcid" + UUID.randomUUID().toString() + "_component_" + gooseInfo.getWorkflowComponentID();
+                goose.setGooseInfo();
+                HashMap<String, Object> params = new HashMap<String, Object>();
+                if (data != null)
+                {
+
+                }
+                WorkflowComponent c = new WorkflowComponent(nodeID, goose.getName(), goose.getName(), "", "", "", null);
+
+            }
+        }
+        catch (Exception e)
+        {
+            Log.severe("Failed to create node " + e.getMessage());
+        }
+
+    }  */
+
     public void SubmitWorkflow(Goose3 goose, Workflow w)
     {
         if (w != null)
         {
             Log.info("Workflow submitted");
-            UUID sessionID = UUID.randomUUID();
-            WorkflowThread t = new WorkflowThread(goose, sessionID, w);
-            this.threadMap.put(sessionID, t);
-            t.start();
-            // We start reccording as soon as the user submits a workflow, recording
-            // will be on forever!! At each step, we broadcast the source and target
-            // goose back to the Proxy Goose
-            this.bossImpl.setRecording(true);
+
+            submittedWorkflows.add(w);
+            // Add the workflow to the top level workflow.
+            if (topWorkflow == null || w.getIsReset())
+            {
+                topWorkflow = new Workflow();
+            }
+
+            if (!w.getIsReset())
+            {
+                Log.info("Adding workflow to top level workflow");
+                topWorkflow.addWorkflow(w);
+
+                UUID sessionID = UUID.randomUUID();
+                WorkflowThread t = new WorkflowThread(goose, sessionID, w);
+                this.threadMap.put(sessionID, t);
+                t.start();
+                // We start reccording as soon as the user submits a workflow, recording
+                // will be on forever!! At each step, we broadcast the source and target
+                // goose back to the Proxy Goose
+                this.bossImpl.setRecording(true);
+            }
         }
     }
 
@@ -702,7 +760,7 @@ public class WorkflowManager {
         Goose3 proxyGoose = null;
         String messageType;
         String message;
-        int MAX_ERROR_RETRIES = 3;
+        int MAX_ERROR_RETRIES = 1;
 
         //Object threadSyncObj = new Object();
         //int stepsize = 1;
@@ -963,8 +1021,8 @@ public class WorkflowManager {
                         Report("Error", "Failed to process parallel action for node "
                                 + workflowNode.component.getComponentID() + " " + e0.getMessage(), true);
 
-
-                        Log.info(workflowNode.component.getComponentID() + " failed");
+                        Log.severe("Failed to process parallel action for node " + workflowNode.component.getComponentID()
+                                    + " " + e0.getMessage());
                         workflowNode.state = ProcessingState.Error;
                     }
                 }
@@ -1150,7 +1208,7 @@ public class WorkflowManager {
                 {
                     // We failed to connect to the goose, remove the goose from Boss and try again
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(5000);
                         Log.warning("Trying to unregister the goose...");
                         bossImpl.unregister(c.gooseName);
                         c.state = ProcessingState.Initial;
