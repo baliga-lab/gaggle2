@@ -564,6 +564,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             }
 
             Log.info("JSON workflow string: " + jsonWorkflow);
+            WorkflowManager.Report(proxyGoose, WorkflowManager.InformationMessage, ("Boss received JSON workflow string " + jsonWorkflow));
             JSONReader jsonReader = new JSONReader();
             Workflow w = (Workflow)jsonReader.createFromJSONString(jsonWorkflow);
 

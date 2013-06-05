@@ -39,6 +39,10 @@ public class WorkflowManager {
     private ArrayList<Workflow> submittedWorkflows = new ArrayList<Workflow>();
     private Workflow topWorkflow = null;
 
+    public static String ErrorMessage = "Error";
+    public static String WarningMessage = "Warning";
+    public static String InformationMessage = "Information";
+
     class ShutdownHookThread extends Thread
     {
         public void run()
@@ -733,6 +737,21 @@ public class WorkflowManager {
     }
 
 
+    static public void Report(Goose3 proxyGoose, String type, String msg)
+    {
+        Log.info(type + " " + msg);
+        if (proxyGoose != null)
+        {
+            try{
+                proxyGoose.handleWorkflowInformation(type, msg);
+            }
+            catch(Exception e)
+            {
+                Log.severe("Failed to call handleWorkflowInformation on Proxy Goose");
+            }
+        }
+    }
+
     class WorkflowThread extends Thread
     {
         String workflowID;
@@ -799,6 +818,7 @@ public class WorkflowManager {
                     Log.severe(e.getMessage());
                 }
             }
+            Report(proxyGoose, InformationMessage, ("Workflow " + this.sessionID.toString() + " started"));
         }
 
         public void HandleError(WorkflowAction action)
@@ -827,6 +847,8 @@ public class WorkflowManager {
                 WorkflowComponent[] targets = action.getTargets();
 
                 Log.info("Storing parallel acknowledgement " + action.getSource().getComponentID() + " " + data.length);
+                Report(proxyGoose, InformationMessage, "Received parallel acknowledgement " + action.getSource().getGooseName());
+
                 this.acknowledgedParallelNodes.put(action.getSource().getComponentID(), action.getSource().getComponentID());
 
                 if (data != null && targets != null)
@@ -844,6 +866,7 @@ public class WorkflowManager {
                 GaggleData[] data = action.getData();
                 WorkflowComponent[] targets = action.getTargets();
                 Log.info("Storing sequential acknowledgement " + action.getSource().getComponentID() + " " + data.length);
+                Report(proxyGoose, InformationMessage, "Received sequential acknowledgement " + action.getSource().getGooseName());
 
                 if (data != null && targets != null)
                 {
@@ -851,23 +874,6 @@ public class WorkflowManager {
                     {
                         this.stagingSequentialData.put(targets[i].getComponentID(), data[i]);
                     }
-                }
-            }
-        }
-
-        private void Report(String type, String msg, boolean passToProxy)
-        {
-            Log.info(type + " " + msg);
-            this.messageType = type;
-            this.message = msg;
-            if (passToProxy)
-            {
-                try{
-                    this.proxyGoose.handleWorkflowInformation(type, msg);
-                }
-                catch(Exception e)
-                {
-                    Log.severe("Failed to call handleWorkflowInformation on Proxy Goose");
                 }
             }
         }
@@ -915,7 +921,7 @@ public class WorkflowManager {
                 }
 
                 // Inform the proxy goose that the workflow has finished execution
-                proxyGoose.handleWorkflowInformation("Message", "Workflow Finished");
+                Report(proxyGoose, InformationMessage, ("Workflow " + this.sessionID.toString() + " Finished"));
             }
             catch (Exception e)
             {
@@ -953,6 +959,8 @@ public class WorkflowManager {
                 if ((sourceGoose = PrepareGoose(source, syncObj)) != null)
                 {
                     Log.info("Goose " + source.getGooseName() + " started.");
+                    Report(proxyGoose, InformationMessage, "Goose " + source.getGooseName() + " started.");
+
                     sourceStarted = true;
                     workflowNode.goose = sourceGoose;
                     try {
@@ -966,7 +974,7 @@ public class WorkflowManager {
                 }
                 else
                 {
-                    Report(messageType, message, true);
+                    Report(proxyGoose, ErrorMessage, ("Failed to start goose " + workflowNode.component.getGooseName()));
 
                     // we cannot start the goose, so let's mark this node as error
                     // we allow other errors so that the workflow won't be broken by one single node
@@ -1018,8 +1026,8 @@ public class WorkflowManager {
                     }
                     catch (Exception e0)
                     {
-                        Report("Error", "Failed to process parallel action for node "
-                                + workflowNode.component.getComponentID() + " " + e0.getMessage(), true);
+                        Report(proxyGoose, ErrorMessage, "Failed to process parallel action for node "
+                                + workflowNode.component.getGooseName() + " " + e0.getMessage());
 
                         Log.severe("Failed to process parallel action for node " + workflowNode.component.getComponentID()
                                     + " " + e0.getMessage());
@@ -1126,8 +1134,8 @@ public class WorkflowManager {
                     }
                     catch (Exception e1)
                     {
-                        this.Report("Error", "Failed to process sequential action for node "
-                                + c.component.getComponentID() + " " + e1.getMessage(), true);
+                        Report(proxyGoose, ErrorMessage, "Failed to process sequential action for node "
+                                + c.component.getGooseName() + " " + e1.getMessage());
                         c.state = ProcessingState.Error;
                     }
                 }
@@ -1188,8 +1196,8 @@ public class WorkflowManager {
                         }
                         catch (Exception e1)
                         {
-                            this.Report("Error", "Failed to process sequential action for node "
-                                    + source.getComponentID() + " " + e1.getMessage(), true);
+                            Report(proxyGoose, ErrorMessage, "Failed to process sequential action for node "
+                                    + source.getGooseName() + " " + e1.getMessage());
                             c.state = ProcessingState.Error;
                         }
                     }
