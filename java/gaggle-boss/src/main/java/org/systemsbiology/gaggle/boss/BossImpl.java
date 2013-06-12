@@ -143,12 +143,14 @@ class RestoreStateThread extends Thread
                 if (goose != null)
                 {
                     Log.info("Load state from " + toplevelfn);
+                    workflowManager.Report(WorkflowManager.InformationMessage, ("Load state from " + toplevelfn));
                     goose.loadState(toplevelfn);
                 }
             }
             catch (Exception e)
             {
                 Log.severe("Failed to process goose " + goosename + " " + e.getMessage());
+                workflowManager.Report(WorkflowManager.ErrorMessage, ("Failed to load state for goose " + goosename + " " + e.getMessage()));
             }
         }
     }
@@ -335,6 +337,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             }
         }
         return false;
+    }
+
+    public void addMessage(String type, String message)
+    {
+        ProxyGooseMessage msg = new ProxyGooseMessage(type, message);
+        this.proxyCallbackThread.AddMessage(msg);
     }
 
     public NewNameHelper getNameHelper() { return nameHelper; }
@@ -564,17 +572,17 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             }
 
             Log.info("JSON workflow string: " + jsonWorkflow);
-            WorkflowManager.Report(proxyGoose, WorkflowManager.InformationMessage, ("Boss received JSON workflow string " + jsonWorkflow));
+            this.workflowManager.Report(WorkflowManager.InformationMessage, ("Boss received JSON workflow string " + jsonWorkflow));
             JSONReader jsonReader = new JSONReader();
-            Workflow w = (Workflow)jsonReader.createFromJSONString(jsonWorkflow);
+            try {
+                Workflow w = jsonReader.createWorkflowFromJSONString(jsonWorkflow);
 
-            // Now we hand over to the manager, which will spawn a thread to process the workflow
-            workflowManager.SubmitWorkflow(proxyGoose, w);
+                // Now we hand over to the manager, which will spawn a thread to process the workflow
+                workflowManager.SubmitWorkflow(proxyGoose, w);
 
-            HashMap<String, String> nodeInfoMap = w.getNodeInfoMap();
-            Log.info("Key set size: " + nodeInfoMap.keySet().size());
-            try
-            {
+                HashMap<String, String> nodeInfoMap = w.getNodeInfoMap();
+                Log.info("Key set size: " + nodeInfoMap.keySet().size());
+
                 for (String key : nodeInfoMap.keySet())
                 {
                     // Key is the ID of the component
@@ -601,6 +609,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             catch (Exception e)
             {
                 Log.severe("Failed to generate goose json string " + e.getMessage());
+                workflowManager.Report(WorkflowManager.ErrorMessage, "Failed to parse workflow json string " + e.getMessage());
             }
         }
         return null;
@@ -978,11 +987,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         continue;
                     try {
                         Log.info("Call goose " + gooseName + " to save state with prefix " + filePrefix);
-
+                        workflowManager.Report(WorkflowManager.InformationMessage, ("Call goose " + gooseName + " to save state with prefix " + filePrefix));
                         goose.saveState(tempDir, filePrefix);
                     }
                     catch (Exception e) {
-                        Log.warning("Failed to save state for goose " + gooseName + " " + e.getMessage());
+                        Log.severe("Failed to save state for goose " + gooseName + " " + e.getMessage());
+                        workflowManager.Report(WorkflowManager.ErrorMessage, ("Failed to save state for goose " + gooseName + " " + e.getMessage()));
                     }
                 }
 
@@ -1015,6 +1025,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 }
                 catch (IOException ex) {
                     Log.severe("Failed to create url Connection " + ex.getMessage());
+                    workflowManager.Report(WorkflowManager.ErrorMessage, ("Failed to create connection to " + url.toString()));
                 }
 
                 try
@@ -1112,6 +1123,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             if (server == null || server.length() == 0)
                 server = "http://networks.systemsbiology.net";
             url = new URL((server + "/workflow/getstateinfo/" + stateid + "/"));
+            workflowManager.Report(WorkflowManager.InformationMessage, ("Load state url " + url.toString()));
             //url = new URL("http://localhost:8000/workflow/savereport/");
         } catch (MalformedURLException ex) {
             Log.warning("Malformed URL " + ex.getMessage());
@@ -1135,6 +1147,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 builder.append(line);
             }
             String jsonresponse = builder.toString();
+            workflowManager.Report(WorkflowManager.InformationMessage, ("Received state json string: " + jsonresponse));
 
             // Parse the JSON string
             Log.info("Parsing JSON state info: " + jsonresponse);
@@ -1151,6 +1164,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     String serviceurl = nodeJSONObj.getString("serviceurl");
                     int filecnt = Integer.parseInt(nodeJSONObj.getString("files"));
                     Log.info("Starting goose " + goosename + " to restore state service url: " + serviceurl + " with " + filecnt + " files");
+                    workflowManager.Report(WorkflowManager.InformationMessage, ("Starting goose " + goosename + " to restore state service url: " + serviceurl + " with " + filecnt + " files"));
 
                     ArrayList<String> fileinfo = new ArrayList<String>();
                     JSONObject fileobj = nodeJSONObj.getJSONObject("fileobj");
@@ -1160,6 +1174,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         String fileurl = fobj.getString("fileurl");
                         fileinfo.add(fileurl);
                         Log.info("Add " + fileurl + " for " + goosename);
+                        workflowManager.Report(WorkflowManager.InformationMessage, ("Add " + fileurl + " for " + goosename));
                     }
 
                     // Put goose restore in threads

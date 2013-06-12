@@ -328,6 +328,8 @@ public class GooseWorkflowManager
             URL url = new URL(fileurl);
             String tempDir = System.getProperty("java.io.tmpdir");
             System.out.println("Temp dir: " + tempDir);
+            if (tempDir.startsWith("/var/folders"))
+                tempDir = "/tmp";
             tempDir += ("/Gaggle/Downloads");
             File myTempFolder = new File(tempDir);
             if (!myTempFolder.exists())

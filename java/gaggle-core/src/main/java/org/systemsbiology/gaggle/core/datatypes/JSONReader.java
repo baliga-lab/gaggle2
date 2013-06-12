@@ -17,6 +17,12 @@ public class JSONReader {
         return json2GaggleData(obj);
     }
 
+    public Workflow createWorkflowFromJSONString(String json) throws Exception
+    {
+        JSONObject jsonGaggleData = JSONObject.fromObject(json);
+        return new Workflow(jsonGaggleData);
+    }
+
     private GaggleData json2GaggleData(JSONObject jsonObj) {
         if (!isGaggleData(jsonObj)) {
             throw new IllegalArgumentException("JSON object does specify a Gaggle data structure");
@@ -40,8 +46,6 @@ public class JSONReader {
             return extractTable(jsonGaggleData);
         } else if (TYPE_NETWORK.equals(dataType)) {
             return extractNetwork(jsonGaggleData);
-        } else if (TYPE_WORKFLOW.equals(dataType)) {
-            return new Workflow(jsonGaggleData);
         } else {
             throw new UnsupportedOperationException("unsupported type: " + dataType);
         }

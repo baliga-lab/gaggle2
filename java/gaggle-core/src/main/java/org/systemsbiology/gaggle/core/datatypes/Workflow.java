@@ -59,7 +59,7 @@ public class Workflow implements Serializable, GaggleData {
         workflowID = UUID.randomUUID().toString();
     }
 
-    public Workflow(JSONObject jsonWorkflow)
+    public Workflow(JSONObject jsonWorkflow) throws Exception
     {
         System.out.println(jsonWorkflow.toString());
         System.out.println("Instantiating workflow object...");
@@ -67,190 +67,190 @@ public class Workflow implements Serializable, GaggleData {
 
         // Parse the json object into the hashmap
         // For now we hard code it
-        try
+
+        if (jsonWorkflow.containsKey(JSONConstants.WORKFLOW_RESET) && jsonWorkflow.getString(JSONConstants.WORKFLOW_RESET).toLowerCase() == "true")
         {
-            if (jsonWorkflow.containsKey(JSONConstants.WORKFLOW_RESET) && jsonWorkflow.getString(JSONConstants.WORKFLOW_RESET).toLowerCase() == "true")
+            // This is a reset top workflow command
+            this.isReset = true;
+        }
+        else
+        {
+            System.out.println("Populating nodes...");
+
+            workflowID = jsonWorkflow.getString(JSONConstants.WORKFLOW_ID);
+            HashMap<String, WorkflowComponent> nodeMap = new HashMap<String, WorkflowComponent>();
+
+            // Calculate the indegree of nodes. Nodes with 0 indgrees are the starting nodes
+            HashMap<String, Integer> nodeIndegree = new HashMap<String, Integer>();
+
+            JSONObject nodeJSONObj = jsonWorkflow.getJSONObject(KEY_WORKFLOW_NODES);
+            System.out.println("Node JSON string: " + nodeJSONObj.toString());
+            for (Object key: nodeJSONObj.keySet())
             {
-                // This is a reset top workflow command
-                this.isReset = true;
-            }
-            else
-            {
-                System.out.println("Populating nodes...");
+                System.out.println("Node ID: " + (String)key);
+                JSONObject jsonnode = nodeJSONObj.getJSONObject((String)key);
+                System.out.println("Node JSON string: " + jsonnode.toString());
 
-                workflowID = jsonWorkflow.getString(JSONConstants.WORKFLOW_ID);
-                HashMap<String, WorkflowComponent> nodeMap = new HashMap<String, WorkflowComponent>();
-
-                // Calculate the indegree of nodes. Nodes with 0 indgrees are the starting nodes
-                HashMap<String, Integer> nodeIndegree = new HashMap<String, Integer>();
-
-                JSONObject nodeJSONObj = jsonWorkflow.getJSONObject(KEY_WORKFLOW_NODES);
-                System.out.println("Node JSON string: " + nodeJSONObj.toString());
-                for (Object key: nodeJSONObj.keySet())
+                HashMap<String, Object> params = new HashMap<String, Object>();
+                params.put(WorkflowComponent.ParamNames.SubTarget.getValue(), jsonnode.getString("subaction"));
+                ArrayList<Object> datalist = new ArrayList<Object>();
+                String datauri = jsonnode.getString("datauri");
+                if (datauri != null && datauri.length() > 0)
                 {
-                    System.out.println("Node ID: " + (String)key);
-                    JSONObject jsonnode = nodeJSONObj.getJSONObject((String)key);
-                    System.out.println("Node JSON string: " + jsonnode.toString());
-
-                    HashMap<String, Object> params = new HashMap<String, Object>();
-                    params.put(WorkflowComponent.ParamNames.SubTarget.getValue(), jsonnode.getString("subaction"));
-                    ArrayList<Object> datalist = new ArrayList<Object>();
-                    String datauri = jsonnode.getString("datauri");
-                    if (datauri != null && datauri.length() > 0)
+                    //  Handle data uri with prefix.
+                    //  These are added by the group open feature
+                    //  See workflow.js in network portal
+                    if (datauri.startsWith("Namelist:"))
                     {
-                        //  Handle data uri with prefix.
-                        //  These are added by the group open feature
-                        //  See workflow.js in network portal
-                        if (datauri.startsWith("Namelist:"))
+                        // Convert it into a namelist
+                        datauri = datauri.substring(9);
+                        String[] names = datauri.split(";");
+                        Namelist namelist = new Namelist();
+                        namelist.setNames(names);
+                        datalist.add(namelist);
+                        System.out.println("Namelist generated " + names[0]);
+                        params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
+                    }
+                    else if (datauri.startsWith("URL:"))
+                    {
+                        datauri = datauri.substring(4);
+                        String[] dataurisplit = datauri.split(";");
+                        for (int i = 0; i < dataurisplit.length; i++)
                         {
-                            // Convert it into a namelist
-                            datauri = datauri.substring(9);
-                            String[] names = datauri.split(";");
-                            Namelist namelist = new Namelist();
-                            namelist.setNames(names);
-                            datalist.add(namelist);
-                            System.out.println("Namelist generated " + names[0]);
-                            params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
-                        }
-                        else if (datauri.startsWith("URL:"))
-                        {
-                            datauri = datauri.substring(4);
-                            String[] dataurisplit = datauri.split(";");
-                            for (int i = 0; i < dataurisplit.length; i++)
+                            if (dataurisplit[i] != null && dataurisplit[i].length() > 0)
                             {
-                                if (dataurisplit[i] != null && dataurisplit[i].length() > 0)
+                                if (dataurisplit[i].toLowerCase().endsWith(".gdat"))
                                 {
-                                    if (dataurisplit[i].toLowerCase().endsWith(".gdat"))
+                                    // This is a serialized gaggle data object
+                                    // Remove the http protocol part of the link
+                                    String tempdatauri = dataurisplit[i];
+                                    if (tempdatauri.startsWith("http://"))
                                     {
-                                        // This is a serialized gaggle data object
-                                        System.out.println("Deserializing data object " + dataurisplit[i]);
-                                        GaggleData gdata = loadGaggleData(dataurisplit[i]);
-                                        datalist.add(gdata);
+                                        tempdatauri = tempdatauri.substring(6);
                                     }
-                                    else {
-                                        datalist.add(dataurisplit[i]);
-                                        System.out.println("Data uri: " + dataurisplit[i]);
-                                    }
+                                    System.out.println("Deserializing data object " + tempdatauri);
+                                    GaggleData gdata = loadGaggleData(tempdatauri);
+                                    datalist.add(gdata);
+                                }
+                                else {
+                                    datalist.add(dataurisplit[i]);
+                                    System.out.println("Data uri: " + dataurisplit[i]);
                                 }
                             }
                         }
                     }
-                    params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
-                    WorkflowComponent node = new WorkflowComponent(jsonnode.getString("id"),
-                                                            jsonnode.getString("wfnodeid"),
-                                                            jsonnode.getString("workflowindex"),
-                                                            jsonnode.getString("name"),
-                                                            jsonnode.getString("goosename"),
-                                                            "", // TODO add version info
-                                                            jsonnode.getString("serviceuri"),
-                                                            jsonnode.getString("arguments"),
-                                                            params);
-                    System.out.println("Added a node " + jsonnode.getString("id"));
-                    nodeMap.put(jsonnode.getString("id"), node);
-                    nodeInfoMap.put(jsonnode.getString("id"), jsonnode.getString("name"));
-
-                    ArrayList<ArrayList<WorkflowComponent>> componentarrays = new ArrayList<ArrayList<WorkflowComponent>>();
-                    ArrayList<WorkflowComponent> parallelarray = new ArrayList<WorkflowComponent>();
-                    System.out.println("Adding node " + node.getComponentID() + " to parallel array");
-                    parallelarray.add(node);  // The first node of the parallelarray is always the source node itself
-                    ArrayList<WorkflowComponent> sequentialarray = new ArrayList<WorkflowComponent>();
-                    componentarrays.add(parallelarray);
-                    componentarrays.add(sequentialarray);
-                    workflowMap.put(jsonnode.getString("id"), componentarrays);
-                    //edgeMaps.put(jsonnode.getString("id"), componentarrays);
-
-                    nodeIndegree.put(jsonnode.getString("id"), new Integer(0));
                 }
+                params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
+                WorkflowComponent node = new WorkflowComponent(jsonnode.getString("id"),
+                                                        jsonnode.getString("wfnodeid"),
+                                                        jsonnode.getString("workflowindex"),
+                                                        jsonnode.getString("name"),
+                                                        jsonnode.getString("goosename"),
+                                                        "", // TODO add version info
+                                                        jsonnode.getString("serviceuri"),
+                                                        jsonnode.getString("arguments"),
+                                                        params);
+                System.out.println("Added a node " + jsonnode.getString("id"));
+                nodeMap.put(jsonnode.getString("id"), node);
+                nodeInfoMap.put(jsonnode.getString("id"), jsonnode.getString("name"));
 
-                for (String key : workflowMap.keySet())
+                ArrayList<ArrayList<WorkflowComponent>> componentarrays = new ArrayList<ArrayList<WorkflowComponent>>();
+                ArrayList<WorkflowComponent> parallelarray = new ArrayList<WorkflowComponent>();
+                System.out.println("Adding node " + node.getComponentID() + " to parallel array");
+                parallelarray.add(node);  // The first node of the parallelarray is always the source node itself
+                ArrayList<WorkflowComponent> sequentialarray = new ArrayList<WorkflowComponent>();
+                componentarrays.add(parallelarray);
+                componentarrays.add(sequentialarray);
+                workflowMap.put(jsonnode.getString("id"), componentarrays);
+                //edgeMaps.put(jsonnode.getString("id"), componentarrays);
+
+                nodeIndegree.put(jsonnode.getString("id"), new Integer(0));
+            }
+
+            for (String key : workflowMap.keySet())
+            {
+                ArrayList<ArrayList<WorkflowComponent>> componentlist = workflowMap.get(key);
+                ArrayList<WorkflowComponent> parallellist = componentlist.get(0);
+                ArrayList<WorkflowComponent> sequentiallist = componentlist.get(1);
+                System.out.println("WorkflowMap Node: " + key + " has "
+                        + parallellist.size() + " parallel nodes and "
+                        + sequentiallist.size() + sequentiallist.size() + " sequential nodes");
+
+                WorkflowComponent node = nodeMap.get(key);
+                System.out.println("NodeMap has node: " + node.getComponentID());
+            }
+
+            System.out.println("Populating edges...");
+            JSONObject edgeJSONObj = jsonWorkflow.getJSONObject(KEY_WORKFLOW_EDGES);
+            for (Object key: edgeJSONObj.keySet())
+            {
+                // Get all the edges for each node
+                String keyv = (String)key;
+                if (keyv.contains("sourceid"))
                 {
-                    ArrayList<ArrayList<WorkflowComponent>> componentlist = workflowMap.get(key);
-                    ArrayList<WorkflowComponent> parallellist = componentlist.get(0);
-                    ArrayList<WorkflowComponent> sequentiallist = componentlist.get(1);
-                    System.out.println("WorkflowMap Node: " + key + " has "
-                            + parallellist.size() + " parallel nodes and "
-                            + sequentiallist.size() + sequentiallist.size() + " sequential nodes");
-
-                    WorkflowComponent node = nodeMap.get(key);
-                    System.out.println("NodeMap has node: " + node.getComponentID());
-                }
-
-                System.out.println("Populating edges...");
-                JSONObject edgeJSONObj = jsonWorkflow.getJSONObject(KEY_WORKFLOW_EDGES);
-                for (Object key: edgeJSONObj.keySet())
-                {
-                    // Get all the edges for each node
-                    String keyv = (String)key;
-                    if (keyv.contains("sourceid"))
+                    String sourceid = edgeJSONObj.getString(keyv);
+                    System.out.println("===>Source node: " + sourceid);
+                    if (workflowMap.containsKey(sourceid))
                     {
-                        String sourceid = edgeJSONObj.getString(keyv);
-                        System.out.println("===>Source node: " + sourceid);
-                        if (workflowMap.containsKey(sourceid))
+                        ArrayList<WorkflowComponent> parallelarray = workflowMap.get(sourceid).get(0);
+                        ArrayList<WorkflowComponent> sequentialarray = workflowMap.get(sourceid).get(1);
+
+                        // Populate the target node
+                        String[] splitted = keyv.split("_");
+                        System.out.println("Node index: " + splitted[1]);
+                        String targetid = edgeJSONObj.getString("targetid_" + splitted[1]);
+                        System.out.println("===>Target node: " + targetid);
+                        WorkflowComponent target = new WorkflowComponent(nodeMap.get(targetid));
+                        if (target != null)
                         {
-                            ArrayList<WorkflowComponent> parallelarray = workflowMap.get(sourceid).get(0);
-                            ArrayList<WorkflowComponent> sequentialarray = workflowMap.get(sourceid).get(1);
+                            // Increment the indegree of target node
+                            Integer indgree = nodeIndegree.get(targetid);
+                            int degree = indgree.intValue() + 1;
+                            System.out.println("Indegree of target node " + degree);
+                            nodeIndegree.put(targetid, new Integer(degree));
 
-                            // Populate the target node
-                            String[] splitted = keyv.split("_");
-                            System.out.println("Node index: " + splitted[1]);
-                            String targetid = edgeJSONObj.getString("targetid_" + splitted[1]);
-                            System.out.println("===>Target node: " + targetid);
-                            WorkflowComponent target = new WorkflowComponent(nodeMap.get(targetid));
-                            if (target != null)
+                            String datatype = edgeJSONObj.getString("datatype_" + splitted[1]);
+                            // Save edge data type to target
+                            target.addParam(WorkflowComponent.ParamNames.EdgeType.getValue(), datatype.toLowerCase());
+                            String isparallel = edgeJSONObj.getString("isparallel_" + splitted[1]);
+                            System.out.println("Parallel: " + isparallel);
+                            if (isparallel.compareTo("1") == 0)
                             {
-                                // Increment the indegree of target node
-                                Integer indgree = nodeIndegree.get(targetid);
-                                int degree = indgree.intValue() + 1;
-                                System.out.println("Indegree of target node " + degree);
-                                nodeIndegree.put(targetid, new Integer(degree));
-
-                                String datatype = edgeJSONObj.getString("datatype_" + splitted[1]);
-                                // Save edge data type to target
-                                target.addParam(WorkflowComponent.ParamNames.EdgeType.getValue(), datatype.toLowerCase());
-                                String isparallel = edgeJSONObj.getString("isparallel_" + splitted[1]);
-                                System.out.println("Parallel: " + isparallel);
-                                if (isparallel.compareTo("1") == 0)
-                                {
-                                    System.out.println("Added a parallel node " + targetid + " for " + sourceid);
-                                    parallelarray.add(target);
-                                }
-                                else
-                                {
-                                    System.out.println("Added a sequential node " + targetid + " for " + sourceid);
-                                    sequentialarray.add(target);
-                                }
+                                System.out.println("Added a parallel node " + targetid + " for " + sourceid);
+                                parallelarray.add(target);
                             }
                             else
                             {
-                                System.out.println("======Failed to clone the target node!");
+                                System.out.println("Added a sequential node " + targetid + " for " + sourceid);
+                                sequentialarray.add(target);
                             }
                         }
                         else
                         {
-                            System.out.println("Error: failed to find source node " + sourceid);
+                            System.out.println("======Failed to clone the target node!");
                         }
                     }
-                }
-
-                // Now we need to decide the starting nodes
-                String startnodeKey = jsonWorkflow.getString("startNode");
-                startNodeIDs.add(startnodeKey);
-
-                for (String key: nodeIndegree.keySet())
-                {
-                    Integer indegree = nodeIndegree.get(key);
-                    if (indegree.intValue() == 0)
+                    else
                     {
-                        System.out.println("Found a starting node: " + key);
-                        if (!startNodeIDs.contains(key))
-                            startNodeIDs.add(key);
+                        System.out.println("Error: failed to find source node " + sourceid);
                     }
                 }
             }
-        }
-        catch (Exception e)
-        {
-            System.out.println("Failed to parse Workflow JSON object: " + e.getMessage());
+
+            // Now we need to decide the starting nodes
+            String startnodeKey = jsonWorkflow.getString("startNode");
+            startNodeIDs.add(startnodeKey);
+
+            for (String key: nodeIndegree.keySet())
+            {
+                Integer indegree = nodeIndegree.get(key);
+                if (indegree.intValue() == 0)
+                {
+                    System.out.println("Found a starting node: " + key);
+                    if (!startNodeIDs.contains(key))
+                        startNodeIDs.add(key);
+                }
+            }
         }
 
         /*
@@ -333,26 +333,19 @@ public class Workflow implements Serializable, GaggleData {
     public ArrayList<String> getStartNodeIDs() { return startNodeIDs; }
     public HashMap<String, ArrayList<ArrayList<WorkflowComponent>>> getWorkflow() { return workflowMap; }
 
-    public GaggleData loadGaggleData(String filename)
+    public GaggleData loadGaggleData(String filename) throws Exception
     {
         GaggleData result = null;
         if (filename != null && filename.length() > 0)
         {
-            try
+            String dataFileName = filename;
+            System.out.println("LoadGaggleData: " + dataFileName);
+            FileInputStream inputStream = new FileInputStream(dataFileName);
+            if (inputStream != null)
             {
-                String dataFileName = filename;
-                System.out.println("LoadGaggleData: " + dataFileName);
-                FileInputStream inputStream = new FileInputStream(dataFileName);
-                if (inputStream != null)
-                {
-                    ObjectInputStream in = new ObjectInputStream(inputStream);
-                    result = (GaggleData)in.readObject();
-                    in.close();
-                }
-            }
-            catch (Exception e)
-            {
-                System.out.println("Failed to read gaggle data " + e.getMessage());
+                ObjectInputStream in = new ObjectInputStream(inputStream);
+                result = (GaggleData)in.readObject();
+                in.close();
             }
         }
         return result;
