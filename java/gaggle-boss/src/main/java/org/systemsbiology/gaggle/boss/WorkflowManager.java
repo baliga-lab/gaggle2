@@ -40,6 +40,7 @@ public class WorkflowManager {
     private String tempFileToken = UUID.randomUUID().toString();
     private ArrayList<Workflow> submittedWorkflows = new ArrayList<Workflow>();
     private Workflow topWorkflow = null;
+    private Boolean gooseStarted = false;
 
     public static String ErrorMessage = "Error";
     public static String WarningMessage = "Warning";
@@ -472,7 +473,7 @@ public class WorkflowManager {
         public void run() {
             long elapsed = System.currentTimeMillis() - startTime;
             if (elapsed > timerTimeout || this.syncObj == null) {
-                Log.info("Didn't hear from the goose for 15 seconds, timing out.");
+                Log.info("Didn't hear from the goose, timing out.");
                 this.cancel();
             }
 
@@ -563,7 +564,7 @@ public class WorkflowManager {
         {
             //String command = System.getProperty("java.home");
             //command += File.separator +  "bin" + File.separator + "javaws " + GaggleConstants.BOSS_URL;
-            Boolean gooseStarted = false;
+            gooseStarted = false;
             String[] gooseCmds = new String[2];
             gooseCmds[0] = bossImpl.getAppInfo(goose.getName());
             gooseCmds[1] = goose.getCommandUri();
@@ -585,7 +586,9 @@ public class WorkflowManager {
                         Log.info("Arguments: " + goose.getArguments());
                     if (cmdToRun != null && cmdToRun.trim().length() > 0)
                     {
-                        gooseStarted = startGoose(cmdToRun, goose.getArguments(), tempFileToken);
+                        gooseStarted = startGoose(cmdToRun,
+                                (String)goose.getParams().get(WorkflowComponent.ParamNames.SubTarget.getValue()),
+                                goose.getArguments(), tempFileToken);
 
                         if (!gooseStarted)
                         {
@@ -601,6 +604,7 @@ public class WorkflowManager {
                         }
                         else
                         {
+                            // In cases that we only start a command shell, we j
                             return null;
                         }
                     }
@@ -630,8 +634,11 @@ public class WorkflowManager {
         return null;
     }
 
-    public boolean startGoose(String cmdToRun, String arguments, String tempFileToken) throws Exception
+    public boolean startGoose(String cmdToRun, String subaction, String arguments, String tempFileToken) throws Exception
     {
+        if (cmdToRun == null || cmdToRun.length() == 0)
+            return false;
+
         boolean gooseStarted = false;
         String os = System.getProperty("os.name");
         String cmdToRunTarget = cmdToRun.trim().toLowerCase();
@@ -654,6 +661,30 @@ public class WorkflowManager {
             cmdsToRun[3] = cmdToRunTarget;
             cmdsToRun[4] = arguments;
             Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+        }
+        else if (cmdToRunTarget.toLowerCase().endsWith(".py"))
+        {
+            // This is a python script file, we first take a look at the subaction, which contains the
+            // url of the application needs to be started first
+            if (subaction != null && subaction.length() > 0)
+            {
+                Report(InformationMessage, "Starting goose " + subaction + " before executing script " + cmdToRunTarget);
+                startGoose(subaction, null, null, tempFileToken);
+            }
+            Thread.sleep(25000);
+            Report(InformationMessage, "Now start script " + cmdToRunTarget);
+            File f = new File(cmdToRun);
+            String path = f.getParent();
+
+            String[] cmdsToRun = new String[6];
+            cmdsToRun[0] = "cmd.exe";
+            cmdsToRun[1] = "/C";
+            cmdsToRun[2] = "start";
+            cmdsToRun[3] = "python";
+            cmdsToRun[4] = cmdToRun;
+            cmdsToRun[5] = arguments;
+            Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+            gooseStarted = true;
         }
         else if (cmdToRunTarget.endsWith(".sh"))
         {
@@ -981,7 +1012,7 @@ public class WorkflowManager {
                         workflowNode.state = ProcessingState.Error;
                     }
                 }
-                else
+                else if (!gooseStarted)
                 {
                     Report(ErrorMessage, ("Failed to start goose " + workflowNode.component.getGooseName()));
 
@@ -989,6 +1020,12 @@ public class WorkflowManager {
                     // we allow other errors so that the workflow won't be broken by one single node
                     Log.info("Node " + workflowNode.component.getComponentID() + " marked error state.");
                     workflowNode.state = ProcessingState.Error;
+                }
+                else
+                {
+                    // A command shell is started
+                    workflowNode.state = ProcessingState.Finished;
+                    Report(InformationMessage, "Successfully started " + workflowNode.gooseName);
                 }
 
                 if (sourceStarted)

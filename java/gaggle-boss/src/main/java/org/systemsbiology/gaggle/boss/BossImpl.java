@@ -955,6 +955,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             {
                 String tempDir = System.getProperty("java.io.tmpdir");
                 Log.info("Temp dir: " + tempDir);
+                if (tempDir.toLowerCase().startsWith("/var/folders/"))
+                    tempDir = "/tmp/";
                 tempDir += ("Gaggle" + File.separator + stateTempFolderName);
                 Log.info("Upload file path: " + tempDir);
                 File temp = new File(tempDir);
