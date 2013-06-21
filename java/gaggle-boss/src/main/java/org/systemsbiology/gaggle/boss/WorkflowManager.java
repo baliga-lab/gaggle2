@@ -567,7 +567,8 @@ public class WorkflowManager {
             gooseStarted = false;
             String[] gooseCmds = new String[2];
             gooseCmds[0] = bossImpl.getAppInfo(goose.getName());
-            gooseCmds[1] = goose.getCommandUri();
+            gooseCmds[1] = goose.getCommandUri(); // If goose is "Generic", command uri is the data uri
+            Log.info("Goose commanduri: " + gooseCmds[1]);
             if (gooseCmds[1].toLowerCase().indexOf(".jnlp") >= 0)
             {
                 // JNLP overrides execution path
@@ -578,16 +579,18 @@ public class WorkflowManager {
                 try {
                     String cmdToRun = gooseCmds[i];
                     Log.info("Starting goose " + goose.getGooseName() + " using " + cmdToRun);
-                    Report(InformationMessage, ("Starting goose " + goose.getGooseName() + " using " + cmdToRun));
                     if (cmdToRun == null || cmdToRun.isEmpty())
                         continue;
 
+                    Report(InformationMessage, ("Starting goose " + goose.getGooseName() + " using " + cmdToRun));
                     if (goose.getArguments() != null && goose.getArguments().length() > 0)
                         Log.info("Arguments: " + goose.getArguments());
                     if (cmdToRun != null && cmdToRun.trim().length() > 0)
                     {
-                        gooseStarted = startGoose(cmdToRun,
-                                (String)goose.getParams().get(WorkflowComponent.ParamNames.SubTarget.getValue()),
+                        String goosename = goose.getGooseName();
+                        String subaction = (String)goose.getParams().get(WorkflowComponent.ParamNames.SubTarget.getValue());
+                        gooseStarted = startGoose(goose.getGooseName(), cmdToRun,
+                                subaction,
                                 goose.getArguments(), tempFileToken);
 
                         if (!gooseStarted)
@@ -634,11 +637,41 @@ public class WorkflowManager {
         return null;
     }
 
-    public boolean startGoose(String cmdToRun, String subaction, String arguments, String tempFileToken) throws Exception
+    private boolean gooseIsListening(String gooseName)
+    {
+        String[] geeseNames = bossImpl.getListeningGooseNames();
+        if (geeseNames != null)
+        {
+            for (int i = 0; i < geeseNames.length; i++)
+            {
+                String currentGooseName = geeseNames[i];
+                Log.info("Current goose name: " + currentGooseName);
+                String[] gooseNameSplitted = currentGooseName.split(";");
+                Log.info("Splitted goose name: " + gooseNameSplitted.length);
+                if (gooseNameSplitted.length > 1)
+                    Log.info("Splitted goose name: " + gooseNameSplitted[0] + " " + gooseNameSplitted[1]);
+                if ((gooseNameSplitted.length > 1 && gooseNameSplitted[0].equals(gooseNameSplitted[1]))
+                        || gooseNameSplitted.length == 1)
+                {
+                    // We always append the name of the application for Cytoscape, we want to broadcast
+                    // to the original goose with the name similar to Cytoscape v2.8.3;Cytoscape v2.8.3
+                    if (currentGooseName.trim().toLowerCase().contains(gooseName.toLowerCase()))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean startGoose(String gooseName, String cmdToRun, String subaction, String arguments, String tempFileToken) throws Exception
     {
         if (cmdToRun == null || cmdToRun.length() == 0)
             return false;
 
+        Report(InformationMessage, "Start goose " + gooseName + " Command line: " + cmdToRun
+                + " Subaction: " + subaction + " Arguments: " + arguments + " File token: " + tempFileToken);
         boolean gooseStarted = false;
         String os = System.getProperty("os.name");
         String cmdToRunTarget = cmdToRun.trim().toLowerCase();
@@ -662,28 +695,93 @@ public class WorkflowManager {
             cmdsToRun[4] = arguments;
             Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
         }
-        else if (cmdToRunTarget.toLowerCase().endsWith(".py"))
+        else if (cmdToRunTarget.toLowerCase().endsWith(".py;;"))
         {
             // This is a python script file, we first take a look at the subaction, which contains the
-            // url of the application needs to be started first
+            // url of the application needs to be started first and the name of the goose to be started
             if (subaction != null && subaction.length() > 0)
             {
-                Report(InformationMessage, "Starting goose " + subaction + " before executing script " + cmdToRunTarget);
-                startGoose(subaction, null, null, tempFileToken);
-            }
-            Thread.sleep(25000);
-            Report(InformationMessage, "Now start script " + cmdToRunTarget);
-            File f = new File(cmdToRun);
-            String path = f.getParent();
+                String[] subactionsplitted = subaction.split(";;");
+                if (subactionsplitted.length > 1)
+                    // In this case, the goose name is the second string of the subaction string
+                    gooseName = subactionsplitted[1];
 
-            String[] cmdsToRun = new String[6];
-            cmdsToRun[0] = "cmd.exe";
-            cmdsToRun[1] = "/C";
-            cmdsToRun[2] = "start";
-            cmdsToRun[3] = "python";
-            cmdsToRun[4] = cmdToRun;
-            cmdsToRun[5] = arguments;
-            Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+                if (!gooseIsListening(gooseName))
+                {
+                    if (subaction != null)
+                    {
+                        if (subactionsplitted != null && subactionsplitted.length > 0)
+                        Report(InformationMessage, "Starting goose " + gooseName + " before executing script " + cmdToRunTarget);
+                        startGoose(gooseName, subactionsplitted[0], null, null, tempFileToken);
+                        Thread.sleep(30000);
+                    }
+                }
+            }
+
+            int argcnt = 0;
+            String[] arglist = null;
+            if (arguments != null)
+            {
+                arglist = arguments.split(" ");
+                argcnt = arglist.length;
+                Log.info("arguments " + arglist.length);
+            }
+            String[] commandsplitted = cmdToRun.split(";;");
+            if (commandsplitted != null && commandsplitted.length > 0)
+            {
+                for (int i= 0; i < commandsplitted.length; i++)
+                {
+                    if (commandsplitted[i] != null && commandsplitted[i].length() > 0)
+                    {
+                        try {
+                            String tempfilename = commandsplitted[i];
+                            if (commandsplitted[i].contains("http://"))
+                            {
+                                // We need to download the script first
+                                tempfilename = this.getMyTempFolder().getAbsolutePath() + File.separator + UUID.randomUUID().toString() + ".py";
+                                downloadFileFromUrl(tempfilename, commandsplitted[i]);
+                            }
+
+                            Report(InformationMessage, "Now start script " + tempfilename);
+                            try
+                            {
+                                File f = new File(tempfilename);
+                                String path = f.getParent();
+                                Log.info("Runtime Path " + path);
+
+                                String[] cmdsToRun = new String[4 + argcnt];
+                                cmdsToRun[0] = "cmd.exe";
+                                cmdsToRun[1] = "/C";
+                                //cmdsToRun[2] = "start";
+                                cmdsToRun[2] = "python";
+                                cmdsToRun[3] = tempfilename;
+                                for (int j = 0; j < argcnt; j++)
+                                {
+                                    Log.info("Argument " + arglist[j]);
+                                    cmdsToRun[4 + j] = arglist[j];
+                                }
+                                Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+                            }
+                            catch (Exception e1)
+                            {
+                                // FAiled, try Shell
+                                File f = new File(tempfilename);
+                                String path = f.getParent();
+
+                                String[] cmdsToRun = new String[3];
+                                cmdsToRun[0] = "python";
+                                cmdsToRun[1] = tempfilename;
+                                cmdsToRun[2] = arguments;
+                                Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Report(ErrorMessage, "Failed to start script " + commandsplitted[i] + " " + e.getMessage());
+                        }
+                    }
+                }
+            }
             gooseStarted = true;
         }
         else if (cmdToRunTarget.endsWith(".sh"))

@@ -1067,15 +1067,15 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                             }
                         }
                         responseStream = httpRequest.post();
-                        byte data[] = new byte[1024];
-                        int count;
-                        String jsonresponse = "";
-                        while ((count = responseStream.read(data, 0, 1024)) != -1)
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream));
+                        StringBuilder builder = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null)
                         {
-                            String buffer = new String(data);
-                            jsonresponse += buffer;
+                            builder.append(line);
                         }
-                        Log.info("jsonresponse: " + jsonresponse);
+                        String jsonresponse = builder.toString();
+                        Log.info("Save state json response " + jsonresponse);
 
                         // Remove the temp state files
                         for (int i = 0; i < statefiles.size(); i++)

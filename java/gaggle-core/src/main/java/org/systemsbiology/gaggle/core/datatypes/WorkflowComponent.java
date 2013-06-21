@@ -131,9 +131,34 @@ public class WorkflowComponent implements Serializable {
     public String getComponentID() { return componentID; }
     public String getWorkflowIndex() { return workflowIndex; }
     public String getName() { return name; }
-    public String getGooseName() { return gooseName; }
+    public String getGooseName()
+    {
+        return gooseName;
+    }
     public String getVersion() { return version; }
-    public String getCommandUri() { return commandUri; }
+    public String getCommandUri()
+    {
+        System.out.println("Getting command uri for " + gooseName);
+        if (gooseName.equals("Generic"))
+        {
+            // For Generic goose, we return the data uri as command uri
+            // See WorkflowManager.startGoose for details
+            ArrayList<Object> datalist = (ArrayList)params.get(WorkflowComponent.ParamNames.Data.getValue());
+            if (datalist != null && datalist.size() > 0)
+            {
+                String result = "";
+                for (int i = 0; i < datalist.size(); i++)
+                {
+                    result += ((String)datalist.get(i) + ";;");
+                    System.out.println("Data uri: " + result);
+                }
+                return result;
+            }
+
+        }
+        return commandUri;
+    }
+
     public String getArguments() { return arguments; }
     //public ProcessingState getState() { return state; }
     //public void setState(ProcessingState s) { this.state = s; }
