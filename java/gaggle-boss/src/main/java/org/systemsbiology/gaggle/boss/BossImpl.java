@@ -116,25 +116,6 @@ class RestoreStateThread extends Thread
             // download all state files to local temp dir
             try
             {
-                String toplevelfn = "";
-                for (int i = 0; i < fileinfo.size(); i++)
-                {
-                    String fileurl = fileinfo.get(i);
-                    String restorefilename = fileurl.substring(fileurl.lastIndexOf("/") + 1);
-
-                    if (restorefilename != null && restorefilename.length() > 0)
-                    {
-                        restorefilename = workflowManager.getMyTempFolder().getAbsolutePath() + File.separator + restorefilename;
-                        if (restorefilename.indexOf(".dat") < 0)
-                            // this is a "top" level restore file. Lower level files are used to store serialized objects
-                            // and their file ext are ".dat"
-                            toplevelfn = restorefilename;
-
-                        Log.info("Temp restore file name: " + restorefilename + " download from " + fileurl);
-                        workflowManager.downloadFileFromUrl(restorefilename, fileurl);
-                    }
-                }
-
                 // Start the goose and parse the restore file
                 Log.info("Starting goose " + goosename);
                 WorkflowComponent c = new WorkflowComponent("", "", "", goosename, goosename, "", serviceurl, "", null);
@@ -142,9 +123,37 @@ class RestoreStateThread extends Thread
                 Goose3 goose = workflowManager.PrepareGoose(c, syncObj);
                 if (goose != null)
                 {
-                    Log.info("Load state from " + toplevelfn);
-                    workflowManager.Report(WorkflowManager.InformationMessage, ("Load state from " + toplevelfn));
-                    goose.loadState(toplevelfn);
+                    String toplevelfn = "";
+                    for (int i = 0; i < fileinfo.size(); i++)
+                    {
+                        String fileurl = fileinfo.get(i);
+                        String restorefilename = fileurl.substring(fileurl.lastIndexOf("/") + 1);
+
+                        if (restorefilename != null && restorefilename.length() > 0)
+                        {
+                            restorefilename = workflowManager.getMyTempFolder().getAbsolutePath() + File.separator + restorefilename;
+                            if (restorefilename.indexOf(".dat") < 0)
+                                // this is a "top" level restore file. Lower level files are used to store serialized objects
+                                // and their file ext are ".dat"
+                                toplevelfn = restorefilename;
+
+                            Log.info("Temp restore file name: " + restorefilename + " download from " + fileurl);
+                            workflowManager.downloadFileFromUrl(restorefilename, fileurl);
+                            if (goosename.equals("Multiple Array Viewer"))
+                            {
+                                // MeV can have multiple anl files
+                                workflowManager.Report(WorkflowManager.InformationMessage, ("Load state for MeV from " + restorefilename));
+                                goose.loadState(restorefilename);
+                            }
+                        }
+                    }
+
+                    if (!goosename.equals("Multiple Array Viewer"))
+                    {
+                        Log.info("Load state from " + toplevelfn);
+                        workflowManager.Report(WorkflowManager.InformationMessage, ("Load state from " + toplevelfn));
+                        goose.loadState(toplevelfn);
+                    }
                 }
             }
             catch (Exception e)
@@ -1044,7 +1053,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         Log.info("Searching for state files with prefix " + filePrefix);
                         //final String fpre = filePrefix;
 
-                        Thread.sleep(10000); // wait for geese to save the state files
+                        Thread.sleep(25000); // wait for geese to save the state files
                         String filenames[] = temp.list();
                         /*(new FilenameFilter() {
                            @Override
