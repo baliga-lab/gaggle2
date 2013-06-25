@@ -768,10 +768,15 @@ public class WorkflowManager {
                                 File f = new File(tempfilename);
                                 String path = f.getParent();
 
-                                String[] cmdsToRun = new String[3];
+                                String[] cmdsToRun = new String[3 + argcnt];
                                 cmdsToRun[0] = "python";
                                 cmdsToRun[1] = tempfilename;
                                 cmdsToRun[2] = arguments;
+                                for (int j = 0; j < argcnt; j++)
+                                {
+                                    Log.info("Argument " + arglist[j]);
+                                    cmdsToRun[3 + j] = arglist[j];
+                                }
                                 Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
                             }
                         }
