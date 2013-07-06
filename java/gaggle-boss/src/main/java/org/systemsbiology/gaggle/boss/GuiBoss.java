@@ -25,6 +25,8 @@ import org.systemsbiology.gaggle.boss.plugins.*;
 import org.systemsbiology.gaggle.util.*;
 import org.systemsbiology.gaggle.core.*;
 import org.systemsbiology.gaggle.core.datatypes.*;
+import sun.awt.AppContext;
+import sun.awt.SunToolkit;
 
 import java.util.logging.*;
 
@@ -56,11 +58,19 @@ public final class GuiBoss implements BossUI {
     private BossConfig config;
     private BossImpl bossImpl;
     private BossHttpServer httpServer;
+    private AppContext evtContext; //field
 
     public GuiBoss(String[] args) {
         Security.setProperty("networkaddress.cache.ttl","0");
         Security.setProperty("networkaddress.cache.negative.ttl","0");
         Log.info("ttl settings changed in boss");
+
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                evtContext = AppContext.getAppContext();
+                Log.info("AppContext " + evtContext);
+            }
+        });
 
         config = new BossConfig(args);
         try {
@@ -98,6 +108,16 @@ public final class GuiBoss implements BossUI {
             frame.setState(Frame.ICONIFIED);
         }
 
+    }
+
+    public void invokeLater2(Runnable rn) {
+        if (AppContext.getAppContext() == null) {
+            Log.warning("AppContext is null, using EVT AppContext"
+                    + " through SunToolKit");
+            sun.awt.SunToolkit.invokeLaterOnAppContext(evtContext, rn);
+        } else {
+            SwingUtilities.invokeLater(rn);
+        }
     }
 
     public BossConfig getConfig() { return config; }
@@ -417,27 +437,59 @@ public final class GuiBoss implements BossUI {
         }
     }
 
-    public void gooseAdded(String name) { gooseTableModel.addClient(name); }
+    public void gooseAdded(final String name)
+    {
+        Runnable updateGooseTable = new Runnable() {
+            public void run() {
+                gooseTableModel.addClient(name);
+            }
+        };
 
-    public void gooseUnregistered(String gooseName) {
-        gooseTableModel.removeGoose(gooseName);
+        this.invokeLater2(updateGooseTable);
+        //gooseTableModel.addClient(name);
     }
 
-    public void gooseRenamed(String oldName, String uniqueName) {
-        String[] appNames = GuiBoss.this.gooseTableModel.getAppNames();
+    public void gooseUnregistered(final String gooseName) {
+        Runnable updateGooseTable = new Runnable() {
+            public void run() {
+                gooseTableModel.removeGoose(gooseName);
+            }
+        };
+
+        this.invokeLater2(updateGooseTable);
+
+        //gooseTableModel.removeGoose(gooseName);
+    }
+
+    public void gooseRenamed(final String oldName, final String uniqueName) {
+        Runnable updateGooseTable = new Runnable() {
+            public void run() {
+                String[] appNames = GuiBoss.this.gooseTableModel.getAppNames();
+                for (int i = 0; i < appNames.length; i++) {
+                    if (appNames[i].equals(oldName)) {
+                        GuiBoss.this.gooseTableModel.setAppNameAtRow(uniqueName, i);
+                        GuiBoss.this.gooseTableModel.fireTableDataChanged();
+                    }
+                }
+            }
+        };
+        this.invokeLater2(updateGooseTable);
+
+        // TODO When Oracle has a fix for Java 7u25, we uncomment these
+        /*String[] appNames = GuiBoss.this.gooseTableModel.getAppNames();
         for (int i = 0; i < appNames.length; i++) {
             if (appNames[i].equals(oldName)) {
                 GuiBoss.this.gooseTableModel.setAppNameAtRow(uniqueName, i);
                 GuiBoss.this.gooseTableModel.fireTableDataChanged();
             }
-        }
+        } */
     }
 
     public void displayErrorMessage(String message) {
         JOptionPane.showMessageDialog(frame, message);
     }
 
-    public boolean isListening(String gooseName) {
+    public boolean isListening(final String gooseName) {
         return gooseTableModel.isListening(gooseName);
     }
 
@@ -461,6 +513,7 @@ public final class GuiBoss implements BossUI {
 
     public static void main(String[] args) throws Exception {
         try {
+
             for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
                     UIManager.setLookAndFeel(info.getClassName());

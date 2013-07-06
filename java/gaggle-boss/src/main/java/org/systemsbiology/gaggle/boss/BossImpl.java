@@ -22,6 +22,8 @@ import org.systemsbiology.gaggle.geese.DeafGoose;
 import org.systemsbiology.gaggle.core.datatypes.*;
 import org.systemsbiology.gaggle.util.*;
 import org.hyperic.sigar.ProcExe;
+import sun.awt.AppContext;
+
 import java.util.logging.*;
 
 class ProxyGooseMessage
@@ -183,6 +185,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     private Goose3 proxyGoose;
     private ProxyCallbackThread proxyCallbackThread;
     private String stateTempFolderName = "StateFiles";
+    private Object syncObj = null;
+    private String submitWorkflowResult = "";
 
     private static Logger Log = Logger.getLogger("Boss");
 
@@ -196,7 +200,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             nameHelper = new NewNameHelper(nameHelperURI);
         }
 
-        String os = System.getProperty("os.name");
+        /*String os = System.getProperty("os.name");
         String arch = System.getProperty("os.arch");
         String javalibpath = System.getProperty("java.library.path");
         Log.info("SSIIGGAARRRRRRR ===== loading " + os + " " + arch + " " + javalibpath + " SSIIGGAARRRRR...");
@@ -261,6 +265,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 Log.severe("Failed to load SIGAR class: " + e.getMessage());
             }
         }
+        */
+
 
         proxyCallbackThread = new ProxyCallbackThread(this, null);
         proxyCallbackThread.start();
@@ -565,13 +571,64 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         }
     }
 
+    private String processWorkflow(Goose3 proxyGoose, String jsonWorkflow, Object syncObj)
+    {
+        workflowManager.Report(WorkflowManager.InformationMessage, ("Boss received JSON workflow string " + jsonWorkflow));
+        JSONReader jsonReader = new JSONReader();
+        try {
+            Workflow w = jsonReader.createWorkflowFromJSONString(jsonWorkflow);
+
+            // Now we hand over to the manager, which will spawn a thread to process the workflow
+            workflowManager.SubmitWorkflow(proxyGoose, w);
+
+            HashMap<String, String> nodeInfoMap = w.getNodeInfoMap();
+            Log.info("Key set size: " + nodeInfoMap.keySet().size());
+
+            for (String key : nodeInfoMap.keySet())
+            {
+                // Key is the ID of the component
+                String goosename = nodeInfoMap.get(key);
+                String exepath = getAppInfo(goosename);
+                Log.info("Path for " + goosename + ": " + exepath);
+                if (exepath != null)
+                {
+                    Log.info("Exec path for " + key + ": " + exepath);
+                    nodeInfoMap.put(key, exepath);
+                }
+                else {
+                    Log.info("Removing " + key);
+                    nodeInfoMap.put(key, "");
+                }
+            }
+
+            Log.info("Generating goose json string...");
+            JSONObject json = new JSONObject();
+            json.putAll(nodeInfoMap);
+            Log.info("Workflow goose json string: " + json.toString());
+            if (syncObj != null)
+            {
+                submitWorkflowResult = json.toString();
+                synchronized (syncObj) {
+                    syncObj.notify();
+                }
+            }
+            return json.toString();
+        }
+        catch (Exception e)
+        {
+            Log.severe("Failed to generate goose json string " + e.getMessage());
+            workflowManager.Report(WorkflowManager.ErrorMessage, "Failed to parse workflow json string " + e.getMessage());
+        }
+        return null;
+    }
+
     /**
      * Accepts a workflow (usually from a Proxy Applet, but we do not assume so)
      * @param proxyGoose: A goose that communicates workflow related info with the boss.
      *               Typically it is the ProxyApplet goose.
      * @param jsonWorkflow: a workflow in JSON format submitted by goose
      */
-    public String submitWorkflow(Goose3 proxyGoose, String jsonWorkflow)
+    public String submitWorkflow(final Goose3 proxyGoose, final String jsonWorkflow)
     {
         if (jsonWorkflow != null && jsonWorkflow.length() > 0)
         {
@@ -581,44 +638,38 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             }
 
             Log.info("JSON workflow string: " + jsonWorkflow);
-            this.workflowManager.Report(WorkflowManager.InformationMessage, ("Boss received JSON workflow string " + jsonWorkflow));
-            JSONReader jsonReader = new JSONReader();
-            try {
-                Workflow w = jsonReader.createWorkflowFromJSONString(jsonWorkflow);
-
-                // Now we hand over to the manager, which will spawn a thread to process the workflow
-                workflowManager.SubmitWorkflow(proxyGoose, w);
-
-                HashMap<String, String> nodeInfoMap = w.getNodeInfoMap();
-                Log.info("Key set size: " + nodeInfoMap.keySet().size());
-
-                for (String key : nodeInfoMap.keySet())
-                {
-                    // Key is the ID of the component
-                    String goosename = nodeInfoMap.get(key);
-                    String exepath = this.getAppInfo(goosename);
-                    Log.info("Path for " + goosename + ": " + exepath);
-                    if (exepath != null)
-                    {
-                        Log.info("Exec path for " + key + ": " + exepath);
-                        nodeInfoMap.put(key, exepath);
+            AppContext appContext = AppContext.getAppContext();
+            if (appContext == null)
+            {
+                workflowManager.Report(WorkflowManager.InformationMessage, "Submitting workflow to handle with valid appContext");
+                syncObj = new Object();
+                Runnable workflowTask = new Runnable() {
+                    public void run() {
+                         processWorkflow(proxyGoose, jsonWorkflow, syncObj);
                     }
-                    else {
-                        Log.info("Removing " + key);
-                        nodeInfoMap.put(key, "");
+                };
+
+                GuiBoss guiBoss = (GuiBoss)this.ui;
+                guiBoss.invokeLater2(workflowTask);
+
+                try
+                {
+                    synchronized (syncObj) {
+                        syncObj.wait();
+                        Log.info("Submit workflow result " + submitWorkflowResult);
+                        return submitWorkflowResult;
                     }
                 }
-
-                Log.info("Generating goose json string...");
-                JSONObject json = new JSONObject();
-                json.putAll(nodeInfoMap);
-                Log.info("Workflow goose json string: " + json.toString());
-                return json.toString();
+                catch (Exception e)
+                {
+                    Log.warning("Failed to wait on syncObj " + e.getMessage());
+                    return null;
+                }
             }
-            catch (Exception e)
+            else
             {
-                Log.severe("Failed to generate goose json string " + e.getMessage());
-                workflowManager.Report(WorkflowManager.ErrorMessage, "Failed to parse workflow json string " + e.getMessage());
+                workflowManager.Report(WorkflowManager.InformationMessage, "Processing workflow with proper appContext");
+                return processWorkflow(proxyGoose, jsonWorkflow, null);
             }
         }
         return null;
@@ -774,7 +825,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         if (sourceGoose != null && targetGoose == null && data != null)
         {
             // Application information report
-            try
+            /*try
             {
                 Log.info("Goose " + sourceGoose + " query: " + (String)data);
                 ProcessFinder procFinder = new ProcessFinder(sigar);
@@ -795,7 +846,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             catch (Exception e0)
             {
                 Log.severe("Failed to get path of the process for " + sourceGoose + " " + e0.getMessage());
-            }
+            } */
 
         }
         else if (isRecording)

@@ -42,16 +42,19 @@ import static org.systemsbiology.gaggle.core.datatypes.JSONConstants.KEY_WORKFLO
  */
 public class Workflow implements Serializable, GaggleData {
 
+    protected ArrayList<String> workflowList = new ArrayList<String>();
     protected HashMap<String, ArrayList<ArrayList<WorkflowComponent>>> workflowMap = null;
     // There can be multiple starting nodes (nodes with 0 in-degree, assuming there is no cycle!)
     protected ArrayList<String> startNodeIDs = new ArrayList<String>();
     protected String workflowID;
     protected HashMap<String, String> nodeInfoMap = new HashMap<String, String>();
     protected boolean isReset = false;
+    protected int startIndex = 0;
 
     public String getWorkflowID() { return workflowID; }
     public HashMap<String, String> getNodeInfoMap() { return nodeInfoMap; }
     public boolean getIsReset() { return this.isReset; }
+    public int getStartIndex() { return startIndex; }
 
     public Workflow()
     {
@@ -64,6 +67,7 @@ public class Workflow implements Serializable, GaggleData {
         System.out.println(jsonWorkflow.toString());
         System.out.println("Instantiating workflow object...");
         workflowMap = new HashMap<String, ArrayList<ArrayList<WorkflowComponent>>>();
+        HashMap<String, String> workflowDictionary = new HashMap<String, String>();
 
         // Parse the json object into the hashmap
         // For now we hard code it
@@ -150,7 +154,10 @@ public class Workflow implements Serializable, GaggleData {
                                                         jsonnode.getString("serviceuri"),
                                                         jsonnode.getString("arguments"),
                                                         params);
-                System.out.println("Added a node " + jsonnode.getString("id"));
+                System.out.println("=========>  Added a node " + jsonnode.getString("id") + " Workflow index: " + node.getWorkflowIndex());
+                // add the node to the dictionary according to its order in the workflow
+                // the nodes will be stored in workflowList sorted on the order
+                workflowDictionary.put(node.getWorkflowIndex(), node.getComponentID());
                 nodeMap.put(jsonnode.getString("id"), node);
                 nodeInfoMap.put(jsonnode.getString("id"), jsonnode.getString("name"));
 
@@ -251,6 +258,27 @@ public class Workflow implements Serializable, GaggleData {
                         startNodeIDs.add(key);
                 }
             }
+
+            // Add workflow component to the array in the order of execution
+            if (workflowDictionary.size() > 0)
+            {
+                int index = 0;
+                Boolean initial = true;
+                do {
+                   if (workflowDictionary.containsKey(Integer.toString(index)))
+                   {
+                       initial = false;
+                       startIndex = index;
+                       this.workflowList.add(workflowDictionary.get(Integer.toString(index)));
+                       index++;
+                   }
+                   else if (initial)
+                       index++;
+                   else
+                        break;
+                }
+                while (true);
+            }
         }
 
         /*
@@ -333,6 +361,17 @@ public class Workflow implements Serializable, GaggleData {
     public ArrayList<String> getStartNodeIDs() { return startNodeIDs; }
     public HashMap<String, ArrayList<ArrayList<WorkflowComponent>>> getWorkflow() { return workflowMap; }
 
+    public WorkflowComponent getNode(int index)
+    {
+        if (index >= 0 && index < this.workflowList.size())
+        {
+            WorkflowComponent c = this.workflowMap.get(this.workflowList.get(index)).get(0).get(0);
+            System.out.println(" ==> Got component with workflow order index " + index + " " + c.getComponentID());
+            return c;
+        }
+        return null;
+    }
+
     public GaggleData loadGaggleData(String filename) throws Exception
     {
         GaggleData result = null;
@@ -391,6 +430,7 @@ public class Workflow implements Serializable, GaggleData {
                     this.workflowMap.put(key, hashMapWorkflow.get(key));
                 }
             }
+
         }
     }
 

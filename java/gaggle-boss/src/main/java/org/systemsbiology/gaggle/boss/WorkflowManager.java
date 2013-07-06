@@ -419,7 +419,12 @@ public class WorkflowManager {
         }
         catch (Exception e)
         {
-            Log.severe("Failed to save file from url " + urlString + " " + e.getMessage());
+            Log.severe("Failed to save file from url " + urlString);
+            for (StackTraceElement ste : e.getStackTrace())
+            {
+                Log.severe(ste.toString() + " " + ste.getClassName() + " " + ste.getFileName() + " "
+                        + ste.getMethodName() + " " + ste.getLineNumber());
+            }
         }
         finally
         {
@@ -923,6 +928,7 @@ public class WorkflowManager {
         String messageType;
         String message;
         int MAX_ERROR_RETRIES = 1;
+        int currIndex = 0;
 
         //Object threadSyncObj = new Object();
         //int stepsize = 1;
@@ -944,7 +950,7 @@ public class WorkflowManager {
             //this.stepsize = stepsize;
 
             // add start nodes into the processingQueue
-            ArrayList<String> startnodes = w.getStartNodeIDs();
+            /*ArrayList<String> startnodes = w.getStartNodeIDs();
             for (int i = 0; i < startnodes.size(); i++)
             {
                 Log.info("Adding start node " + startnodes.get(i));
@@ -960,8 +966,18 @@ public class WorkflowManager {
                 {
                     Log.severe(e.getMessage());
                 }
+            } */
+
+            currIndex = 0;
+            WorkflowComponent c = this.myWorkflow.getNode(currIndex++);
+            if (c != null)
+            {
+                WorkflowNode node = new WorkflowNode(c);
+                this.processingQueue.add(node);
+                Report(InformationMessage, ("Workflow " + this.sessionID.toString() + " started"));
             }
-            Report(InformationMessage, ("Workflow " + this.sessionID.toString() + " started"));
+            else
+                Report(WarningMessage, ("Workflow " + this.sessionID.toString() + " is empty"));
         }
 
         public void HandleError(WorkflowAction action)
@@ -1216,6 +1232,19 @@ public class WorkflowManager {
             return false;
         }
 
+        private Boolean nodeProcessed(WorkflowComponent c)
+        {
+            for (int i = 0; i < this.processingQueue.size(); i++)
+            {
+                if (c.getComponentID().equals(this.processingQueue.get(i).component.getComponentID()))
+                {
+                    Log.info("Component " + c.getComponentID() + " " + c.getGooseName() + " already processed.");
+                    return true;
+                }
+            }
+            return false;
+        }
+
         /**
          * Process a workflow. It's a state machine. Basically, for each component,
          * we first start its corresponding goose
@@ -1238,23 +1267,41 @@ public class WorkflowManager {
                 if (this.acknowledgedParallelNodes.containsKey(source.getComponentID()))
                 {
                     // Add all the parallel components to processingQueue
-                    Log.info("Found acknowledgement!");
+                    Log.info("Found acknowledgement for " + source.getComponentID() + " " + source.getGooseName());
+
+                    WorkflowComponent nextcomponent = this.myWorkflow.getNode(currIndex++);
+                    if (nextcomponent != null && !nodeProcessed(nextcomponent))
+                    {
+                        WorkflowNode pn = new WorkflowNode(nextcomponent);
+                        this.processingQueue.add(pn);
+                    }
                     ArrayList<WorkflowComponent> parallelcomponents = workflowMap.get(source.getComponentID()).get(0);
+                    Boolean allStarted = true;
                     for (int i = 1; i < parallelcomponents.size(); i++)
                     {
                         WorkflowComponent pc = parallelcomponents.get(i);
-                        GaggleData dataForChild = this.stagingParallelData.get(pc.getComponentID());
-                        if (dataForChild != null)
+                        if (Integer.parseInt(pc.getWorkflowIndex()) < Integer.parseInt(c.component.getWorkflowIndex()) && !nodeProcessed(pc))
                         {
-                            Log.info("Adding ack data " + dataForChild.getName());
-                            pc.addParam(WorkflowComponent.ParamNames.Data.getValue(), dataForChild);
+                            // If this component's order is less than the current workflow order,
+                            // we should add it to the process queue
+                            GaggleData dataForChild = this.stagingParallelData.get(pc.getComponentID());
+                            if (dataForChild != null)
+                            {
+                                Log.info("Adding ack data " + dataForChild.getName() + " for node " + pc.getComponentID());
+                                pc.addParam(WorkflowComponent.ParamNames.Data.getValue(), dataForChild);
+                            }
+                            WorkflowNode pn = new WorkflowNode(pc);
+                            this.processingQueue.add(pn);
                         }
-                        WorkflowNode pn = new WorkflowNode(pc);
-                        this.processingQueue.add(pn);
+                        else
+                            allStarted = false;
                     }
-                    // remove acknowledge data
-                    this.acknowledgedParallelNodes.remove(source.getComponentID());
-                    c.state = ProcessingState.ParallelAcknowledged;
+                    if (allStarted)
+                    {
+                        // remove acknowledge data
+                        this.acknowledgedParallelNodes.remove(source.getComponentID());
+                        c.state = ProcessingState.ParallelAcknowledged;
+                    }
                 }
             }
             else if (c.state == ProcessingState.ParallelAcknowledged)
