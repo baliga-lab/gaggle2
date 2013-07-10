@@ -68,11 +68,16 @@ public class Workflow implements Serializable, GaggleData {
         System.out.println("Instantiating workflow object...");
         workflowMap = new HashMap<String, ArrayList<ArrayList<WorkflowComponent>>>();
         HashMap<String, String> workflowDictionary = new HashMap<String, String>();
+        int maxIndex = 0;
 
         // Parse the json object into the hashmap
         // For now we hard code it
+        if (jsonWorkflow.containsKey(JSONConstants.WORKFLOW_RESET))
+        {
+            System.out.println("Workflow resetting " + jsonWorkflow.getString(JSONConstants.WORKFLOW_RESET));
+        }
 
-        if (jsonWorkflow.containsKey(JSONConstants.WORKFLOW_RESET) && jsonWorkflow.getString(JSONConstants.WORKFLOW_RESET).toLowerCase() == "true")
+        if (jsonWorkflow.containsKey(JSONConstants.WORKFLOW_RESET) && jsonWorkflow.getString(JSONConstants.WORKFLOW_RESET).toLowerCase().equals("true"))
         {
             // This is a reset top workflow command
             this.isReset = true;
@@ -158,6 +163,9 @@ public class Workflow implements Serializable, GaggleData {
                 // add the node to the dictionary according to its order in the workflow
                 // the nodes will be stored in workflowList sorted on the order
                 workflowDictionary.put(node.getWorkflowIndex(), node.getComponentID());
+                int nodeIndex = Integer.parseInt(node.getWorkflowIndex());
+                if (nodeIndex > maxIndex)
+                    maxIndex = nodeIndex;
                 nodeMap.put(jsonnode.getString("id"), node);
                 nodeInfoMap.put(jsonnode.getString("id"), jsonnode.getString("name"));
 
@@ -260,24 +268,11 @@ public class Workflow implements Serializable, GaggleData {
             }
 
             // Add workflow component to the array in the order of execution
-            if (workflowDictionary.size() > 0)
+            System.out.println("Max workflow index " + maxIndex);
+            for (int i = 0; i <= maxIndex; i++)
             {
-                int index = 0;
-                Boolean initial = true;
-                do {
-                   if (workflowDictionary.containsKey(Integer.toString(index)))
-                   {
-                       initial = false;
-                       startIndex = index;
-                       this.workflowList.add(workflowDictionary.get(Integer.toString(index)));
-                       index++;
-                   }
-                   else if (initial)
-                       index++;
-                   else
-                        break;
-                }
-                while (true);
+                if (workflowDictionary.containsKey(Integer.toString(i)))
+                    this.workflowList.add(workflowDictionary.get(Integer.toString(i)));
             }
         }
 

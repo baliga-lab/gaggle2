@@ -167,7 +167,6 @@ public class WorkflowManager {
         {
             Log.info("Workflow submitted");
 
-            submittedWorkflows.add(w);
             // Add the workflow to the top level workflow.
             if (topWorkflow == null || w.getIsReset())
             {
@@ -178,6 +177,7 @@ public class WorkflowManager {
             {
                 Log.info("Adding workflow to top level workflow");
                 topWorkflow.addWorkflow(w);
+                submittedWorkflows.add(w);
 
                 UUID sessionID = UUID.randomUUID();
                 WorkflowThread t = new WorkflowThread(goose, sessionID, w);
@@ -974,7 +974,7 @@ public class WorkflowManager {
             {
                 WorkflowNode node = new WorkflowNode(c);
                 this.processingQueue.add(node);
-                Report(InformationMessage, ("Workflow " + this.sessionID.toString() + " started"));
+                Report(InformationMessage, ("Workflow " + this.sessionID.toString() + " started with index " + currIndex));
             }
             else
                 Report(WarningMessage, ("Workflow " + this.sessionID.toString() + " is empty"));
@@ -1058,7 +1058,26 @@ public class WorkflowManager {
                         }
 
                         if (!hasPendingNodes)
-                            cancel = true;
+                        {
+                            int i = 0;
+                            while (true)
+                            {
+                                // check if there are still nodes not processed
+                                WorkflowComponent c = myWorkflow.getNode(i);
+                                if (c != null && !nodeProcessed(c))
+                                {
+                                    hasPendingNodes = true;
+                                    WorkflowNode n = new WorkflowNode(c);
+                                    processingQueue.add(n);
+                                    break;
+                                }
+                                if (c == null)
+                                    break;
+                                i++;
+                            }
+                            if (!hasPendingNodes)
+                                cancel = true;
+                        }
                     }
                     /*else if (pendingQueue.size() > 0)
                     {
@@ -1215,14 +1234,14 @@ public class WorkflowManager {
          * @param c
          * @return
          */
-        private Boolean isPending(WorkflowNode c)
+        private Boolean checkState(WorkflowNode c, ProcessingState target)
         {
             if (c != null && c.component != null && c.component.getGooseName() != null)
             {
                 for (int i = 0; i < processingQueue.size(); i++)
                 {
                     WorkflowNode n = processingQueue.get(i);
-                    if (n.state == ProcessingState.Pending &&  n.component.getGooseName().equalsIgnoreCase(c.component.getGooseName()))
+                    if (n.state == target &&  n.component.getGooseName().equalsIgnoreCase(c.component.getGooseName()))
                     {
                        return true;
                     }
@@ -1255,7 +1274,7 @@ public class WorkflowManager {
         {
             Goose3 sourceGoose = c.goose;
             WorkflowComponent source = c.component;
-            if (c.state == ProcessingState.Initial && !isPending(c))
+            if (c.state == ProcessingState.Initial) // && !checkState(c, ProcessingState.Pending))
             {
                 StartGooseThread startGooseThread = new StartGooseThread(c);
                 c.state = ProcessingState.Pending;
@@ -1269,39 +1288,32 @@ public class WorkflowManager {
                     // Add all the parallel components to processingQueue
                     Log.info("Found acknowledgement for " + source.getComponentID() + " " + source.getGooseName());
 
-                    WorkflowComponent nextcomponent = this.myWorkflow.getNode(currIndex++);
+                    /*WorkflowComponent nextcomponent = this.myWorkflow.getNode(currIndex++);
                     if (nextcomponent != null && !nodeProcessed(nextcomponent))
                     {
                         WorkflowNode pn = new WorkflowNode(nextcomponent);
                         this.processingQueue.add(pn);
-                    }
+                    } */
                     ArrayList<WorkflowComponent> parallelcomponents = workflowMap.get(source.getComponentID()).get(0);
-                    Boolean allStarted = true;
                     for (int i = 1; i < parallelcomponents.size(); i++)
                     {
                         WorkflowComponent pc = parallelcomponents.get(i);
-                        if (Integer.parseInt(pc.getWorkflowIndex()) < Integer.parseInt(c.component.getWorkflowIndex()) && !nodeProcessed(pc))
+                        WorkflowNode pn = new WorkflowNode(pc);
+
+                        // If this component's order is less than the current workflow order,
+                        // we should add it to the process queue
+                        GaggleData dataForChild = this.stagingParallelData.get(pc.getComponentID());
+                        if (dataForChild != null)
                         {
-                            // If this component's order is less than the current workflow order,
-                            // we should add it to the process queue
-                            GaggleData dataForChild = this.stagingParallelData.get(pc.getComponentID());
-                            if (dataForChild != null)
-                            {
-                                Log.info("Adding ack data " + dataForChild.getName() + " for node " + pc.getComponentID());
-                                pc.addParam(WorkflowComponent.ParamNames.Data.getValue(), dataForChild);
-                            }
-                            WorkflowNode pn = new WorkflowNode(pc);
-                            this.processingQueue.add(pn);
+                            Log.info("Adding ack data " + dataForChild.getName() + " for node " + pc.getComponentID());
+                            pc.addParam(WorkflowComponent.ParamNames.Data.getValue(), dataForChild);
                         }
-                        else
-                            allStarted = false;
+
+                        this.processingQueue.add(pn);
                     }
-                    if (allStarted)
-                    {
-                        // remove acknowledge data
-                        this.acknowledgedParallelNodes.remove(source.getComponentID());
-                        c.state = ProcessingState.ParallelAcknowledged;
-                    }
+                    // remove acknowledge data
+                    this.acknowledgedParallelNodes.remove(source.getComponentID());
+                    c.state = ProcessingState.ParallelAcknowledged;
                 }
             }
             else if (c.state == ProcessingState.ParallelAcknowledged)

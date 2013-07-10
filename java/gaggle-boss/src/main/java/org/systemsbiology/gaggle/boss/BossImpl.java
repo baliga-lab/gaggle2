@@ -24,6 +24,7 @@ import org.systemsbiology.gaggle.util.*;
 import org.hyperic.sigar.ProcExe;
 import sun.awt.AppContext;
 
+import javax.swing.*;
 import java.util.logging.*;
 
 class ProxyGooseMessage
@@ -575,51 +576,61 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     {
         workflowManager.Report(WorkflowManager.InformationMessage, ("Boss received JSON workflow string " + jsonWorkflow));
         JSONReader jsonReader = new JSONReader();
+        submitWorkflowResult = "";
         try {
             Workflow w = jsonReader.createWorkflowFromJSONString(jsonWorkflow);
 
             // Now we hand over to the manager, which will spawn a thread to process the workflow
             workflowManager.SubmitWorkflow(proxyGoose, w);
+            JSONObject json = new JSONObject();
 
-            HashMap<String, String> nodeInfoMap = w.getNodeInfoMap();
-            Log.info("Key set size: " + nodeInfoMap.keySet().size());
-
-            for (String key : nodeInfoMap.keySet())
+            if (!w.getIsReset())
             {
-                // Key is the ID of the component
-                String goosename = nodeInfoMap.get(key);
-                String exepath = getAppInfo(goosename);
-                Log.info("Path for " + goosename + ": " + exepath);
-                if (exepath != null)
+                // This is the submission of a workflow (not a resetting command)
+                HashMap<String, String> nodeInfoMap = w.getNodeInfoMap();
+                Log.info("Key set size: " + nodeInfoMap.keySet().size());
+
+                for (String key : nodeInfoMap.keySet())
                 {
-                    Log.info("Exec path for " + key + ": " + exepath);
-                    nodeInfoMap.put(key, exepath);
+                    // Key is the ID of the component
+                    String goosename = nodeInfoMap.get(key);
+                    String exepath = getAppInfo(goosename);
+                    Log.info("Path for " + goosename + ": " + exepath);
+                    if (exepath != null)
+                    {
+                        Log.info("Exec path for " + key + ": " + exepath);
+                        nodeInfoMap.put(key, exepath);
+                    }
+                    else {
+                        Log.info("Removing " + key);
+                        nodeInfoMap.put(key, "");
+                    }
                 }
-                else {
-                    Log.info("Removing " + key);
-                    nodeInfoMap.put(key, "");
-                }
+
+                Log.info("Generating goose json string...");
+                json.putAll(nodeInfoMap);
+                submitWorkflowResult = json.toString();
             }
 
-            Log.info("Generating goose json string...");
-            JSONObject json = new JSONObject();
-            json.putAll(nodeInfoMap);
             Log.info("Workflow goose json string: " + json.toString());
             if (syncObj != null)
             {
-                submitWorkflowResult = json.toString();
-                synchronized (syncObj) {
-                    syncObj.notify();
-                }
+                Log.info("Releasing syncObj...");
             }
-            return json.toString();
         }
         catch (Exception e)
         {
             Log.severe("Failed to generate goose json string " + e.getMessage());
             workflowManager.Report(WorkflowManager.ErrorMessage, "Failed to parse workflow json string " + e.getMessage());
         }
-        return null;
+        finally
+        {
+            synchronized (syncObj) {
+                workflowManager.Report(WorkflowManager.InformationMessage, "Workflow Submit Sync Object released.");
+                syncObj.notify();
+            }
+            return submitWorkflowResult;
+        }
     }
 
     /**
@@ -1168,16 +1179,32 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         }
     }
 
-    public void saveState(Goose3 proxyGoose, String userid, String name, String desc, String filePrefix)
+    public void saveState(final Goose3 proxyGoose, final String userid, final String name,
+                          final String desc, final String filePrefix)
     {
         Log.info("Saving state...");
-        SaveStateThread sst = new SaveStateThread(proxyGoose, userid, name, desc, filePrefix);
-        sst.start();
+
+        if (AppContext.getAppContext() == null) {
+            Runnable saveStateTask = new Runnable() {
+                public void run() {
+                    SaveStateThread sst = new SaveStateThread(proxyGoose, userid, name, desc, filePrefix);
+                    sst.start();
+                }
+            };
+
+            GuiBoss guiBoss = (GuiBoss)this.ui;
+            guiBoss.invokeLater2(saveStateTask);
+
+        }
+        else {
+            SaveStateThread sst = new SaveStateThread(proxyGoose, userid, name, desc, filePrefix);
+            sst.start();
+        }
     }
 
-    public void loadState(String stateid) throws RemoteException
+
+    private void handleLoadState(String stateid)
     {
-        // Get the state information
         URL url = null;
         try {
             String server = System.getProperty("server");
@@ -1250,8 +1277,24 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         {
             Log.severe("Failed to load state " + e1.getMessage());
         }
+    }
 
+    public void loadState(final String stateid) throws RemoteException
+    {
+        // Get the state information
+        if (AppContext.getAppContext() == null) {
+            Runnable loadStateTask = new Runnable() {
+                public void run() {
+                    handleLoadState(stateid);
+                }
+            };
 
+            GuiBoss guiBoss = (GuiBoss)this.ui;
+            guiBoss.invokeLater2(loadStateTask);
+
+        } else {
+            handleLoadState(stateid);
+        }
     }
 
     public void hide(String targetGoose) {
