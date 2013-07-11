@@ -718,10 +718,23 @@ public class WorkflowManager {
                         if (subactionsplitted != null && subactionsplitted.length > 0)
                         Report(InformationMessage, "Starting goose " + gooseName + " before executing script " + cmdToRunTarget);
                         startGoose(gooseName, subactionsplitted[0], null, null, tempFileToken);
-                        Thread.sleep(30000);
+                        int wait = 0;
+                        while (!gooseIsListening(gooseName) && wait < 40)
+                        {
+                            Thread.sleep(5000);
+                            wait++;
+                        }
+
+                        if (gooseIsListening(gooseName))
+                        {
+                            // Make sure we wait a while before we pass data to the goose
+                            // Cytoscape crashes if we run script right after it starts
+                            Thread.sleep(5000);
+                        }
                     }
                 }
             }
+
 
             int argcnt = 0;
             String[] arglist = null;

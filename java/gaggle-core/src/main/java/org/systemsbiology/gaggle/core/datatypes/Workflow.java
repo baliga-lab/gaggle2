@@ -120,9 +120,10 @@ public class Workflow implements Serializable, GaggleData {
                         System.out.println("Namelist generated " + names[0]);
                         params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
                     }
-                    else if (datauri.startsWith("URL:"))
+                    else
                     {
-                        datauri = datauri.substring(4);
+                        if (datauri.startsWith("URL:"))
+                            datauri = datauri.substring(4);
                         String[] dataurisplit = datauri.split(";");
                         for (int i = 0; i < dataurisplit.length; i++)
                         {
