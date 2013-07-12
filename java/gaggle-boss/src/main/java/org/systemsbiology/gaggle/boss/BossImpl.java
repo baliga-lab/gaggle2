@@ -625,9 +625,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         }
         finally
         {
-            synchronized (syncObj) {
-                workflowManager.Report(WorkflowManager.InformationMessage, "Workflow Submit Sync Object released.");
-                syncObj.notify();
+            if (syncObj != null)
+            {
+                synchronized (syncObj) {
+                    workflowManager.Report(WorkflowManager.InformationMessage, "Workflow Submit Sync Object released.");
+                    syncObj.notify();
+                }
             }
             return submitWorkflowResult;
         }
