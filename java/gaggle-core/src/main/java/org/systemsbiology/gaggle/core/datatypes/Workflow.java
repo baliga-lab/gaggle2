@@ -50,6 +50,7 @@ public class Workflow implements Serializable, GaggleData {
     protected HashMap<String, String> nodeInfoMap = new HashMap<String, String>();
     protected boolean isReset = false;
     protected int startIndex = 0;
+    protected String organismInfo = "";
 
     public String getWorkflowID() { return workflowID; }
     public HashMap<String, String> getNodeInfoMap() { return nodeInfoMap; }
@@ -87,6 +88,7 @@ public class Workflow implements Serializable, GaggleData {
             System.out.println("Populating nodes...");
 
             workflowID = jsonWorkflow.getString(JSONConstants.WORKFLOW_ID);
+            organismInfo = jsonWorkflow.getString(JSONConstants.WORKFLOW_ORGANISMINFO);
             HashMap<String, WorkflowComponent> nodeMap = new HashMap<String, WorkflowComponent>();
 
             // Calculate the indegree of nodes. Nodes with 0 indgrees are the starting nodes
@@ -352,7 +354,7 @@ public class Workflow implements Serializable, GaggleData {
     }
 
     public String getName() { return "Workflow"; }
-    public String getSpecies() { return ""; }
+    public String getSpecies() { return organismInfo; }
     public Tuple getMetadata() { return null; }
     public ArrayList<String> getStartNodeIDs() { return startNodeIDs; }
     public HashMap<String, ArrayList<ArrayList<WorkflowComponent>>> getWorkflow() { return workflowMap; }

@@ -63,4 +63,5 @@ public interface JSONConstants {
     String WORKFLOW_EDGE_STARTNODE = "startnode";
     String WORKFLOW_EMPTY_ARGUMENT = "NONE";
     String WORKFLOW_RESET = "reset";
+    String WORKFLOW_ORGANISMINFO = "organism";
 }

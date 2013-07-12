@@ -58,6 +58,13 @@ public class WorkflowGaggleData
             System.out.println("=====> Initializing Workflow data " + requestID);
             try
             {
+                // get species info
+                if (workflowAction.getSource().getParams().containsKey(JSONConstants.WORKFLOW_ORGANISMINFO))
+                {
+                    species = (String)workflowAction.getSource().getParams().get(JSONConstants.WORKFLOW_ORGANISMINFO);
+                    System.out.println("Workflow passed species info " + species);
+                }
+
                 if (workflowAction.getSource().getParams().containsKey(WorkflowComponent.ParamNames.Data.getValue()))
                 {
                     ArrayList<Object> datalist = (ArrayList<Object>)workflowAction.getSource().getParams().get(WorkflowComponent.ParamNames.Data.getValue());
@@ -178,7 +185,10 @@ public class WorkflowGaggleData
     }
 
     protected void handleNameList(String sourceGooseName, Namelist namelist) throws RemoteException {
-        this.species = namelist.getSpecies();
+        if (namelist.getSpecies() != null && namelist.getSpecies().length() > 0)
+        {
+            this.species = namelist.getSpecies();
+        }
         this.nameList = namelist.getNames();
         this.type = "NameList";
         this.size = String.valueOf(nameList.length);
@@ -188,7 +198,8 @@ public class WorkflowGaggleData
     protected void handleMatrix(String sourceGooseName, DataMatrix simpleDataMatrix) throws RemoteException {
         System.out.println("incoming broadcast: DataMatrix");
         this.type = "DataMatrix";
-        this.species = simpleDataMatrix.getSpecies();
+        if (simpleDataMatrix.getSpecies() != null && simpleDataMatrix.getSpecies().length() > 0)
+            this.species = simpleDataMatrix.getSpecies();
         this.nameList = simpleDataMatrix.getRowTitles();    //TODO: is this correct?
         this.size = String.valueOf(simpleDataMatrix.getRowCount());
     }
@@ -197,7 +208,8 @@ public class WorkflowGaggleData
     protected void handleTuple(String sourceGooseName, GaggleTuple gaggleTuple) throws RemoteException {
         System.out.println("incoming broadcast: gaggleTuple");
         this.type = "Map";    // TODO: is this correct?
-        this.species = gaggleTuple.getSpecies();
+        if (gaggleTuple.getSpecies() != null && gaggleTuple.getSpecies().length() > 0)
+            this.species = gaggleTuple.getSpecies();
         Tuple data = gaggleTuple.getData();
         if (data != null)
         {
@@ -219,7 +231,8 @@ public class WorkflowGaggleData
 
     protected void handleCluster(String sourceGooseName, Cluster cluster) throws RemoteException {
         // we handle clusters by translating them to namelists
-        this.species = cluster.getSpecies();
+        if (cluster.getSpecies() != null && cluster.getSpecies().length() > 0)
+            this.species = cluster.getSpecies();
         this.nameList = cluster.getColumnNames();
         this.type = "NameList";
         this.size = String.valueOf(nameList.length);
@@ -228,7 +241,8 @@ public class WorkflowGaggleData
 
     protected void handleNetwork(String sourceGooseName, Network network) throws RemoteException {
         System.out.println("incoming broadcast: network");
-        this.species = network.getSpecies();
+        if (network.getSpecies() != null && network.getSpecies().length() > 0)
+            this.species = network.getSpecies();
         this.nameList = network.getNodes();
         this.type = "Network";
         this.size = String.valueOf(nameList.length);

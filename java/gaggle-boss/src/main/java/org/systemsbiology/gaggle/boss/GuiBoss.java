@@ -149,8 +149,15 @@ public final class GuiBoss implements BossUI {
         return list.toArray(new String[0]);
     }
 
-    public void broadcastToPlugins(String[] names) {
-        for (GaggleBossPlugin plugin : plugins) plugin.select(names);
+    public void broadcastToPlugins(final String[] names) {
+        Runnable broadcastTask = new Runnable() {
+            public void run() {
+                for (GaggleBossPlugin plugin : plugins) plugin.select(names);
+            }
+        };
+
+        this.invokeLater2(broadcastTask);
+        //for (GaggleBossPlugin plugin : plugins) plugin.select(names);
     }
     public void broadcastNamelist(String sourceGoose, String targetGoose,
                                   Namelist nameList) {

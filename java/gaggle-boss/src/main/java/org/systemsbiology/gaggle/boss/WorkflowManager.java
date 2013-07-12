@@ -1131,10 +1131,12 @@ public class WorkflowManager {
         class StartGooseThread extends Thread
         {
             private WorkflowNode workflowNode;
+            private Workflow workflow;
 
-            public StartGooseThread(WorkflowNode c)
+            public StartGooseThread(WorkflowNode c, Workflow w)
             {
                 this.workflowNode = c;
+                this.workflow = w;
             }
 
             public void run()
@@ -1201,6 +1203,8 @@ public class WorkflowManager {
                     try {
                         Log.info("Pass data to source for parallel children");
                         Log.info(source.getParams().get(WorkflowComponent.ParamNames.Data.getValue()).toString());
+                        Log.info("Pass species info " + workflow.getSpecies());
+                        source.addParam(JSONConstants.WORKFLOW_ORGANISMINFO, workflow.getSpecies());
                         Log.info("SessionID: " + sessionID.toString());
                         Log.info("ComponentID: " + source.getComponentID());
                         Report(InformationMessage, "Passing data to goose "
@@ -1243,7 +1247,7 @@ public class WorkflowManager {
         }
 
         /**
-         * Check if another goose is pending starting
+         * Check if a goose is in a particular state
          * @param c
          * @return
          */
@@ -1289,7 +1293,7 @@ public class WorkflowManager {
             WorkflowComponent source = c.component;
             if (c.state == ProcessingState.Initial) // && !checkState(c, ProcessingState.Pending))
             {
-                StartGooseThread startGooseThread = new StartGooseThread(c);
+                StartGooseThread startGooseThread = new StartGooseThread(c, this.myWorkflow);
                 c.state = ProcessingState.Pending;
                 startGooseThread.start();
             }
