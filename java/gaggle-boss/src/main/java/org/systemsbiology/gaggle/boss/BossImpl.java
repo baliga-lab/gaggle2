@@ -421,155 +421,191 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     public void setRecording(boolean recording) { isRecording = recording; }
 
     // ***** Broadcasting *****
-    public void broadcastNamelist(String sourceGoose, String targetGoose,
-                                  Namelist nameList) {
-        ui.broadcastToPlugins(nameList.getNames());
+    public void broadcastNamelist(final String sourceGoose, final String targetGoose,
+                                  final Namelist nameList) {
+        Runnable broadcastTask = new Runnable()
+        {
+            public void run()
+            {
+                ui.broadcastToPlugins(nameList.getNames());
 
-        String[] gooseNames;
-        if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
-            targetGoose.equalsIgnoreCase("all")) {
-            gooseNames = ui.getListeningGeese();
-        } else {
-            gooseNames = new String[]{targetGoose};
-        }
-
-        for (int i = 0; i < gooseNames.length; i++) {
-            String gooseName = gooseNames[i];
-            if (gooseName.equals(sourceGoose)) continue;
-            Goose goose = getGoose(gooseName);
-            if (goose == null) continue;
-
-            try {
-                if (isRecording)
-                    recordAction(sourceGoose, gooseName, nameList, -1, null, null, null);
-                goose.handleNameList(sourceGoose, nameList);
-            } catch (Exception ex0) {
-                Log.severe("error in select request to " + gooseName + ": " +
-                           ex0.getMessage());
-                ex0.printStackTrace();
-            }
-        }
-    }
-
-    public void broadcastMatrix(String sourceGoose, String targetGoose,
-                                DataMatrix matrix) {
-        ui.broadcastToPlugins(matrix.getRowTitles());
-
-        String[] gooseNames;
-        if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
-            targetGoose.equalsIgnoreCase("all")) {
-            gooseNames = ui.getListeningGeese();
-        } else {
-            gooseNames = new String[]{targetGoose};
-        }
-
-        for (int i = 0; i < gooseNames.length; i++) {
-            String gooseName = gooseNames[i];
-            if (gooseName.equals(sourceGoose)) continue;
-            Goose goose = getGoose(gooseName);
-            if (goose == null) continue;
-            try {
-                if (isRecording)
-                    recordAction(sourceGoose, gooseName, matrix, -1, null, null, null);
-                goose.handleMatrix(sourceGoose, matrix);
-            } catch (Exception ex0) {
-                Log.severe("error in handleMatrix request to " + gooseName + ": " +
-                           ex0.getMessage());
-                ex0.printStackTrace();
-            }
-        }
-    }
-
-    public void broadcastTuple(String sourceGoose, String targetGoose,
-                               GaggleTuple gaggleTuple) {
-
-        String[] gooseNames;
-        if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
-            targetGoose.equalsIgnoreCase("all")) {
-            gooseNames = ui.getListeningGeese();
-        } else {
-            gooseNames = new String[]{targetGoose};
-        }
-        for (int i = 0; i < gooseNames.length; i++) {
-            String gooseName = gooseNames[i];
-            if (gooseName.equals(sourceGoose)) continue;
-            Goose goose = getGoose(gooseName);
-            if (goose == null) continue;
-            try {
-                System.out.println("broadcastTuple to " + gooseName);
-                if (isRecording)
-                    recordAction(sourceGoose, gooseName, gaggleTuple, -1, null, null, null);
-                goose.handleTuple(sourceGoose, gaggleTuple);
-            } catch (Exception ex0) {
-                Log.severe("error in broadcastTuple to " + gooseName + ": " +
-                           ex0.getMessage());
-                ex0.printStackTrace();
-            }
-        }
-    }
-
-    public void broadcastCluster(String sourceGoose, String targetGoose,
-                                 Cluster cluster) {
-        ui.broadcastToPlugins(cluster.getRowNames());
-
-        String[] gooseNames;
-        if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
-            targetGoose.equalsIgnoreCase("all")) {
-            gooseNames = ui.getListeningGeese();
-        } else {
-            gooseNames = new String[]{targetGoose};
-        }
-        for (int i = 0; i < gooseNames.length; i++) {
-            String gooseName = gooseNames[i];
-            if (gooseName.equals(sourceGoose)) continue;
-            if (!ui.isListening(gooseName)) continue;
-            Goose goose = getGoose(gooseName);
-            if (goose == null) continue;
-            try {
-                Log.info("Check recording flag " + isRecording);
-                if (isRecording)
-                {
-                    // Record the action
-                    recordAction(sourceGoose, gooseName, cluster, -1, null, null, null);
+                String[] gooseNames;
+                if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
+                        targetGoose.equalsIgnoreCase("all")) {
+                    gooseNames = ui.getListeningGeese();
+                } else {
+                    gooseNames = new String[]{targetGoose};
                 }
-                goose.handleCluster(sourceGoose, cluster);
-            } catch (Exception ex0) {
-                Log.severe("error in broadcastCluster () to " + gooseName + ": " +
-                           ex0.getMessage());
-                ex0.printStackTrace();
+
+                for (int i = 0; i < gooseNames.length; i++) {
+                    String gooseName = gooseNames[i];
+                    if (gooseName.equals(sourceGoose)) continue;
+                    Goose goose = getGoose(gooseName);
+                    if (goose == null) continue;
+
+                    try {
+                        if (isRecording)
+                            recordAction(sourceGoose, gooseName, nameList, -1, null, null, null);
+                        goose.handleNameList(sourceGoose, nameList);
+                    } catch (Exception ex0) {
+                        Log.severe("error in select request to " + gooseName + ": " +
+                                ex0.getMessage());
+                        ex0.printStackTrace();
+                    }
+                }
             }
-        }
+        };
+        ((GuiBoss)ui).invokeLater2(broadcastTask);
     }
 
-    public void broadcastNetwork(String sourceGoose, String targetGoose,
-                                 Network network) {
-        String[] gooseNames;
-        if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
-            targetGoose.equalsIgnoreCase("all")) {
-            gooseNames = ui.getListeningGeese();
-        } else {
-            gooseNames = new String[]{targetGoose};
-        }
+    public void broadcastMatrix(final String sourceGoose, final String targetGoose,
+                                final DataMatrix matrix) {
+        Runnable broadcastTask = new Runnable()
+        {
+            public void run()
+            {
+                ui.broadcastToPlugins(matrix.getRowTitles());
 
-        for (int i = 0; i < gooseNames.length; i++) {
-            String gooseName = gooseNames[i];
-            if (gooseName.equals(sourceGoose)) continue;
-            Goose goose = getGoose(gooseName);
-            if (goose == null) continue;
-            try {
-                if (isRecording)
-                {
-                    // Record the action
-                    recordAction(sourceGoose, gooseName, network, -1, null, null, null);
-                    //this.proxyGoose.handleWorkflowInformation("Recording", ("Network;" + sourceGoose + ";" + gooseName));
+                String[] gooseNames;
+                if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
+                    targetGoose.equalsIgnoreCase("all")) {
+                    gooseNames = ui.getListeningGeese();
+                } else {
+                    gooseNames = new String[]{targetGoose};
                 }
-                goose.handleNetwork(sourceGoose, network);
-            } catch (Exception ex0) {
-                System.err.println("error in broadcastNetwork () to " + gooseName + ": " +
+
+                for (int i = 0; i < gooseNames.length; i++) {
+                    String gooseName = gooseNames[i];
+                    if (gooseName.equals(sourceGoose)) continue;
+                    Goose goose = getGoose(gooseName);
+                    if (goose == null) continue;
+                    try {
+                        if (isRecording)
+                            recordAction(sourceGoose, gooseName, matrix, -1, null, null, null);
+                        goose.handleMatrix(sourceGoose, matrix);
+                    } catch (Exception ex0) {
+                        Log.severe("error in handleMatrix request to " + gooseName + ": " +
                                    ex0.getMessage());
-                ex0.printStackTrace();
+                        ex0.printStackTrace();
+                    }
+                }
             }
-        }
+        };
+
+        ((GuiBoss)ui).invokeLater2(broadcastTask);
+    }
+
+    public void broadcastTuple(final String sourceGoose, final String targetGoose,
+                               final GaggleTuple gaggleTuple) {
+
+        Runnable broadcastTask = new Runnable()
+        {
+            public void run()
+            {
+                String[] gooseNames;
+                if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
+                    targetGoose.equalsIgnoreCase("all")) {
+                    gooseNames = ui.getListeningGeese();
+                } else {
+                    gooseNames = new String[]{targetGoose};
+                }
+                for (int i = 0; i < gooseNames.length; i++) {
+                    String gooseName = gooseNames[i];
+                    if (gooseName.equals(sourceGoose)) continue;
+                    Goose goose = getGoose(gooseName);
+                    if (goose == null) continue;
+                    try {
+                        System.out.println("broadcastTuple to " + gooseName);
+                        if (isRecording)
+                            recordAction(sourceGoose, gooseName, gaggleTuple, -1, null, null, null);
+                        goose.handleTuple(sourceGoose, gaggleTuple);
+                    } catch (Exception ex0) {
+                        Log.severe("error in broadcastTuple to " + gooseName + ": " +
+                                   ex0.getMessage());
+                        ex0.printStackTrace();
+                    }
+                }
+            }
+        };
+        ((GuiBoss)ui).invokeLater2(broadcastTask);
+    }
+
+    public void broadcastCluster(final String sourceGoose, final String targetGoose,
+                                 final Cluster cluster) {
+        Runnable broadcastTask = new Runnable()
+        {
+            public void run()
+            {
+                ui.broadcastToPlugins(cluster.getRowNames());
+
+                String[] gooseNames;
+                if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
+                    targetGoose.equalsIgnoreCase("all")) {
+                    gooseNames = ui.getListeningGeese();
+                } else {
+                    gooseNames = new String[]{targetGoose};
+                }
+                for (int i = 0; i < gooseNames.length; i++) {
+                    String gooseName = gooseNames[i];
+                    if (gooseName.equals(sourceGoose)) continue;
+                    if (!ui.isListening(gooseName)) continue;
+                    Goose goose = getGoose(gooseName);
+                    if (goose == null) continue;
+                    try {
+                        Log.info("Check recording flag " + isRecording);
+                        if (isRecording)
+                        {
+                            // Record the action
+                            recordAction(sourceGoose, gooseName, cluster, -1, null, null, null);
+                        }
+                        goose.handleCluster(sourceGoose, cluster);
+                    } catch (Exception ex0) {
+                        Log.severe("error in broadcastCluster () to " + gooseName + ": " +
+                                   ex0.getMessage());
+                        ex0.printStackTrace();
+                    }
+                }
+            }
+        };
+        ((GuiBoss)ui).invokeLater2(broadcastTask);
+    }
+
+    public void broadcastNetwork(final String sourceGoose, final String targetGoose,
+                                 final Network network) {
+        Runnable broadcastTask = new Runnable()
+        {
+            public void run()
+            {
+                String[] gooseNames;
+                if (targetGoose == null || targetGoose.equalsIgnoreCase("boss") ||
+                    targetGoose.equalsIgnoreCase("all")) {
+                    gooseNames = ui.getListeningGeese();
+                } else {
+                    gooseNames = new String[]{targetGoose};
+                }
+
+                for (int i = 0; i < gooseNames.length; i++) {
+                    String gooseName = gooseNames[i];
+                    if (gooseName.equals(sourceGoose)) continue;
+                    Goose goose = getGoose(gooseName);
+                    if (goose == null) continue;
+                    try {
+                        if (isRecording)
+                        {
+                            // Record the action
+                            recordAction(sourceGoose, gooseName, network, -1, null, null, null);
+                            //this.proxyGoose.handleWorkflowInformation("Recording", ("Network;" + sourceGoose + ";" + gooseName));
+                        }
+                        goose.handleNetwork(sourceGoose, network);
+                    } catch (Exception ex0) {
+                        System.err.println("error in broadcastNetwork () to " + gooseName + ": " +
+                                           ex0.getMessage());
+                        ex0.printStackTrace();
+                    }
+                }
+            }
+        };
+        ((GuiBoss)ui).invokeLater2(broadcastTask);
     }
 
     private String processWorkflow(Goose3 proxyGoose, String jsonWorkflow, Object syncObj)
