@@ -60,6 +60,9 @@ public final class GuiBoss implements BossUI {
     private BossHttpServer httpServer;
     private AppContext evtContext; //field
 
+    private Object syncObj = null;
+    private String[] listeningGeese = null;
+
     public GuiBoss(String[] args) {
         Security.setProperty("networkaddress.cache.ttl","0");
         Security.setProperty("networkaddress.cache.negative.ttl","0");
@@ -395,13 +398,62 @@ public final class GuiBoss implements BossUI {
         for (String name : getUnselectedGooseNames()) bossImpl.hide(name);
     }
 
-    public String[] getListeningGeese() {
+    private String[] processGetListeningGeese(Object syncObj)
+    {
         List<String> result = new ArrayList<String>();
         for (String goose : bossImpl.getGooseNames()) {
-            if (isListening(goose)) result.add(goose);
+            try
+            {
+                if (isListening(goose)) result.add(goose);
+            }
+            catch (Exception e)
+            {
+                Log.warning("Failed to check listening goose " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        if (syncObj != null)
+        {
+            synchronized (syncObj)
+            {
+                syncObj.notify();
+            }
         }
         return result.toArray(new String[0]);
+    }
 
+    public String[] getListeningGeese() {
+        if (AppContext.getAppContext() == null) {
+            Log.warning("AppContext is null, using EVT AppContext to get listening geese");
+            syncObj = new Object();
+            listeningGeese = null;
+            Runnable uiTask = new Runnable()
+            {
+                 public void run()
+                 {
+                     listeningGeese = processGetListeningGeese(syncObj);
+                 }
+            };
+            this.invokeLater2(uiTask);
+
+            try
+            {
+                synchronized (syncObj) {
+                    syncObj.wait();
+                    Log.info("Listening geese " + listeningGeese);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.warning("Failed to get listening geese " + e.getMessage());
+                return null;
+            }
+        }
+        else
+        {
+            return processGetListeningGeese(null);
+        }
+        return listeningGeese;
     }
 
     class GaggleMouseListener extends MouseAdapter {
