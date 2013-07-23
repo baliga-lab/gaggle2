@@ -439,7 +439,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
                 for (int i = 0; i < gooseNames.length; i++) {
                     String gooseName = gooseNames[i];
-                    if (gooseName.equals(sourceGoose)) continue;
+                    if (sourceGoose.contains(gooseName) || gooseName.contains(sourceGoose)) continue;
                     Goose goose = getGoose(gooseName);
                     if (goose == null) continue;
 
@@ -476,7 +476,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
                 for (int i = 0; i < gooseNames.length; i++) {
                     String gooseName = gooseNames[i];
-                    if (gooseName.equals(sourceGoose)) continue;
+                    //if (gooseName.equals(sourceGoose)) continue;
+                    if (sourceGoose.contains(gooseName) || gooseName.contains(sourceGoose)) continue;
                     Goose goose = getGoose(gooseName);
                     if (goose == null) continue;
                     try {
@@ -511,7 +512,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 }
                 for (int i = 0; i < gooseNames.length; i++) {
                     String gooseName = gooseNames[i];
-                    if (gooseName.equals(sourceGoose)) continue;
+                    //if (gooseName.equals(sourceGoose)) continue;
+                    if (sourceGoose.contains(gooseName) || gooseName.contains(sourceGoose)) continue;
                     Goose goose = getGoose(gooseName);
                     if (goose == null) continue;
                     try {
@@ -547,7 +549,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 }
                 for (int i = 0; i < gooseNames.length; i++) {
                     String gooseName = gooseNames[i];
-                    if (gooseName.equals(sourceGoose)) continue;
+                    //if (gooseName.equals(sourceGoose)) continue;
+                    if (sourceGoose.contains(gooseName) || gooseName.contains(sourceGoose)) continue;
                     if (!ui.isListening(gooseName)) continue;
                     Goose goose = getGoose(gooseName);
                     if (goose == null) continue;
@@ -586,7 +589,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
                 for (int i = 0; i < gooseNames.length; i++) {
                     String gooseName = gooseNames[i];
-                    if (gooseName.equals(sourceGoose)) continue;
+                    //if (gooseName.equals(sourceGoose)) continue;
+                    if (sourceGoose.contains(gooseName) || gooseName.contains(sourceGoose)) continue;
                     Goose goose = getGoose(gooseName);
                     if (goose == null) continue;
                     try {
@@ -906,8 +910,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             String sourceGooseName = processGooseName(sourceGoose);
             String targetGooseName = processGooseName(targetGoose);
 
-            Goose srcGoose = getGoose(sourceGoose);
-            Goose trgtGoose = getGoose(targetGoose);
+            Goose srcGoose = getGoose(sourceGooseName);
+            Goose trgtGoose = getGoose(targetGooseName);
 
             // Add nodes to the nodes dict
             if (this.dictNodes.isEmpty())
