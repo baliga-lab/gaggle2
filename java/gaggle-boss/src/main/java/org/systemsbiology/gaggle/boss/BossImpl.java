@@ -201,7 +201,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             nameHelper = new NewNameHelper(nameHelperURI);
         }
 
-        /*String os = System.getProperty("os.name");
+        String os = System.getProperty("os.name");
         String arch = System.getProperty("os.arch");
         String javalibpath = System.getProperty("java.library.path");
         Log.info("SSIIGGAARRRRRRR ===== loading " + os + " " + arch + " " + javalibpath + " SSIIGGAARRRRR...");
@@ -266,8 +266,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 Log.severe("Failed to load SIGAR class: " + e.getMessage());
             }
         }
-        */
-
 
         proxyCallbackThread = new ProxyCallbackThread(this, null);
         proxyCallbackThread.start();
@@ -879,7 +877,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         if (sourceGoose != null && targetGoose == null && data != null)
         {
             // Application information report
-            /*try
+            try
             {
                 Log.info("Goose " + sourceGoose + " query: " + (String)data);
                 ProcessFinder procFinder = new ProcessFinder(sigar);
@@ -900,7 +898,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             catch (Exception e0)
             {
                 Log.severe("Failed to get path of the process for " + sourceGoose + " " + e0.getMessage());
-            } */
+            }
 
         }
         else if (isRecording)
