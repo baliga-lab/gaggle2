@@ -42,9 +42,13 @@ public class WorkflowManager {
     private Workflow topWorkflow = null;
     private Boolean gooseStarted = false;
 
+    public static int temporaryWorkflowID = -999;
     public static String ErrorMessage = "Error";
     public static String WarningMessage = "Warning";
     public static String InformationMessage = "Information";
+    public static String SaveStateResponseMessage = "SaveStateResponse";
+    public static String WorkflowInformation = "WorkflowInformation";
+
 
     class ShutdownHookThread extends Thread
     {
@@ -171,11 +175,19 @@ public class WorkflowManager {
             if (topWorkflow == null || w.getIsReset())
             {
                 topWorkflow = new Workflow();
+                temporaryWorkflowID--;
+                topWorkflow.setWorkflowID(Integer.toString(temporaryWorkflowID));
+                submittedWorkflows.clear();
             }
 
             if (!w.getIsReset())
             {
                 Log.info("Adding workflow to top level workflow");
+                // If the workflow has an existing ID (meaning it has been saved),
+                // we used its ID for the top workflow (i.e., it is no longer a "tempororay" workflow)
+                // And we can correlate the saved sessions using the workflow ID
+                if (w.getWorkflowID() != null && w.getWorkflowID().length() > 0)
+                    topWorkflow.setWorkflowID(w.getWorkflowID());
                 topWorkflow.addWorkflow(w);
                 submittedWorkflows.add(w);
 
@@ -187,6 +199,8 @@ public class WorkflowManager {
                 // will be on forever!! At each step, we broadcast the source and target
                 // goose back to the Proxy Goose
                 this.bossImpl.setRecording(true);
+                // Tell the proxy applet the top workflow ID
+                Report(WorkflowInformation, this.topWorkflow.getWorkflowID());
             }
         }
     }
@@ -325,9 +339,10 @@ public class WorkflowManager {
                             if (value != null && !((String)value).isEmpty())
                             {
                                 // send the component name
+                                httpRequest.setParameter("userid", topWorkflow.getUserID());
                                 httpRequest.setParameter("sessionid", action.getSessionID());
                                 httpRequest.setParameter("component-name", componentname);
-                                httpRequest.setParameter("workflowid", action.getWorkflowID());
+                                httpRequest.setParameter("workflowid", topWorkflow.getWorkflowID());
                                 httpRequest.setParameter("componentid", action.getComponentID());
                                 httpRequest.setParameter("componentworkflownodeid", action.getSource().getComponentWorkflowNodeID());
                                 File f = new File((String)value);
@@ -342,9 +357,10 @@ public class WorkflowManager {
                         else if (type.equals("url"))
                         {
                             Log.info("Upload url: " + (String)value + " of Component " + componentname + " component workflow node id " + action.getSource().getComponentWorkflowNodeID() + " for Workflow " + action.getWorkflowID());
+                            httpRequest.setParameter("userid", topWorkflow.getUserID());
                             httpRequest.setParameter("sessionid", action.getSessionID());
                             httpRequest.setParameter("component-name", componentname);
-                            httpRequest.setParameter("workflowid", action.getWorkflowID());
+                            httpRequest.setParameter("workflowid", topWorkflow.getWorkflowID());
                             httpRequest.setParameter("componentid", action.getComponentID());
                             httpRequest.setParameter("componentworkflownodeid", action.getSource().getComponentWorkflowNodeID());
 
@@ -352,6 +368,26 @@ public class WorkflowManager {
                             //        "name=" + URLEncoder.encode((String)value, "utf-8");
                             httpRequest.setParameter("url", (String)value);
                             responseStream = httpRequest.post();
+                        }
+
+                        if (responseStream != null)
+                        {
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream));
+                            StringBuilder builder = new StringBuilder();
+                            String line;
+                            while ((line = reader.readLine()) != null)
+                            {
+                                Log.info("Got line: " + line);
+                                builder.append(line);
+                            }
+                            String workflowid = builder.toString();
+                            Log.info("Save report to workflow " + workflowid);
+                            if (workflowid != null && workflowid.length() > 0)
+                            {
+                                this.topWorkflow.setWorkflowID(workflowid);
+                                Report(WorkflowInformation, this.topWorkflow.getWorkflowID());
+                                Report(InformationMessage, ("Pass workflow ID " + this.topWorkflow.getWorkflowID() + " to Proxy Applet"));
+                            }
                         }
                     }
                     catch (Exception e)

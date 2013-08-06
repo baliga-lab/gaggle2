@@ -51,8 +51,11 @@ public class Workflow implements Serializable, GaggleData {
     protected boolean isReset = false;
     protected int startIndex = 0;
     protected String organismInfo = "";
+    protected String userID = "";
 
+    public String getUserID() { return userID; }
     public String getWorkflowID() { return workflowID; }
+    public void setWorkflowID(String wid) { workflowID = wid; }
     public HashMap<String, String> getNodeInfoMap() { return nodeInfoMap; }
     public boolean getIsReset() { return this.isReset; }
     public int getStartIndex() { return startIndex; }
@@ -60,7 +63,7 @@ public class Workflow implements Serializable, GaggleData {
     public Workflow()
     {
         workflowMap = new HashMap<String, ArrayList<ArrayList<WorkflowComponent>>>();
-        workflowID = UUID.randomUUID().toString();
+        workflowID = "";
     }
 
     public Workflow(JSONObject jsonWorkflow) throws Exception
@@ -86,7 +89,7 @@ public class Workflow implements Serializable, GaggleData {
         else
         {
             System.out.println("Populating nodes...");
-
+            userID = jsonWorkflow.getString(JSONConstants.WORKFLOW_USERID);
             workflowID = jsonWorkflow.getString(JSONConstants.WORKFLOW_ID);
             organismInfo = jsonWorkflow.getString(JSONConstants.WORKFLOW_ORGANISMINFO);
             HashMap<String, WorkflowComponent> nodeMap = new HashMap<String, WorkflowComponent>();
@@ -392,6 +395,7 @@ public class Workflow implements Serializable, GaggleData {
     {
         if (w != null)
         {
+            this.userID = w.getUserID();
             HashMap<String, ArrayList<ArrayList<WorkflowComponent>>> hashMapWorkflow = w.getWorkflow();
             for (String key : hashMapWorkflow.keySet())
             {

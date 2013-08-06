@@ -647,14 +647,9 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
                 Log.info("Generating goose json string...");
                 json.putAll(nodeInfoMap);
-                submitWorkflowResult = json.toString();
             }
-
+            submitWorkflowResult = json.toString();
             Log.info("Workflow goose json string: " + json.toString());
-            if (syncObj != null)
-            {
-                Log.info("Releasing syncObj...");
-            }
         }
         catch (Exception e)
         {
@@ -1206,7 +1201,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         if (proxyGoose != null)
                         {
                             Log.info("Save state return json: " + jsonresponse);
-                            ProxyGooseMessage m = new ProxyGooseMessage("SaveStateResponse", jsonresponse);
+                            ProxyGooseMessage m = new ProxyGooseMessage(WorkflowManager.SaveStateResponseMessage, jsonresponse);
                             proxyCallbackThread.setProxyGoose(proxyGoose);
                             proxyCallbackThread.AddMessage(m);
                         }
