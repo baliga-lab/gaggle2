@@ -82,28 +82,37 @@ class ProxyCallbackThread extends Thread
     public void run()
     {
         //int readahead = stepsize;
+        int index = 0;
         while (!cancel)
         {
            try {
                if (!processingQueue.isEmpty())
                {
                    // Handle msg for the proxy goose
-                   ProxyGooseMessage msg = processingQueue.get(0);
                    synchronized (syncObj)
                    {
                        if (proxyGoose != null) {
-                           Log.info("Passing " + msg.getType() + " " + msg.getMessage() + " to ProxyGoose");
-                           proxyGoose.handleWorkflowInformation(msg.getType(), msg.getMessage());
+                           ProxyGooseMessage msg = processingQueue.remove(0);
+                           if (msg != null) {
+                               Log.info("Passing " + msg.getType() + " " + Integer.toString(index++) + " " + msg.getMessage() + " to ProxyGoose");
+                               try
+                               {
+                                    proxyGoose.handleWorkflowInformation(msg.getType(), msg.getMessage());
+                               }
+                               catch (Exception e0)
+                               {
+                                   Log.warning("Failed in handleworkfloInformation callback: " + e0.getMessage());
+                                   proxyGoose = null;
+                               }
+                           }
                        }
                    }
-                   processingQueue.remove(0);
                }
 
                Thread.sleep(5000);
            }
            catch (Exception e) {
-               Log.warning("Failed to process proxy goose callback: " + e.getMessage());
-               processingQueue.remove(0);
+               Log.warning("Failed in processing proxy goose callback: " + e.getMessage());
            }
         }
     }
@@ -718,7 +727,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     synchronized (syncObj) {
                         syncObj.wait();
                         Log.info("Submit workflow result " + submitWorkflowResult);
-                        return submitWorkflowResult;
                     }
                 }
                 catch (Exception e)
@@ -726,6 +734,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     Log.warning("Failed to wait on syncObj " + e.getMessage());
                     return null;
                 }
+                return submitWorkflowResult;
             }
             else
             {

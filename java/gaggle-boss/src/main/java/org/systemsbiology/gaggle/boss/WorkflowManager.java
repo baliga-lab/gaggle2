@@ -41,6 +41,7 @@ public class WorkflowManager {
     private ArrayList<Workflow> submittedWorkflows = new ArrayList<Workflow>();
     private Workflow topWorkflow = null;
     private Boolean gooseStarted = false;
+    private Object topWorkflowSyncObj = new Object();
 
     public static int temporaryWorkflowID = -999;
     public static String ErrorMessage = "Error";
@@ -48,6 +49,8 @@ public class WorkflowManager {
     public static String InformationMessage = "Information";
     public static String SaveStateResponseMessage = "SaveStateResponse";
     public static String WorkflowInformation = "WorkflowInformation";
+
+
 
 
     class ShutdownHookThread extends Thread
@@ -172,35 +175,38 @@ public class WorkflowManager {
             Log.info("Workflow submitted");
 
             // Add the workflow to the top level workflow.
-            if (topWorkflow == null || w.getIsReset())
+            synchronized (topWorkflowSyncObj)
             {
-                topWorkflow = new Workflow();
-                temporaryWorkflowID--;
-                topWorkflow.setWorkflowID(Integer.toString(temporaryWorkflowID));
-                submittedWorkflows.clear();
-            }
+                if (topWorkflow == null || w.getIsReset())
+                {
+                    topWorkflow = new Workflow();
+                    temporaryWorkflowID--;
+                    topWorkflow.setWorkflowID(Integer.toString(temporaryWorkflowID));
+                    submittedWorkflows.clear();
+                }
 
-            if (!w.getIsReset())
-            {
-                Log.info("Adding workflow to top level workflow");
-                // If the workflow has an existing ID (meaning it has been saved),
-                // we used its ID for the top workflow (i.e., it is no longer a "tempororay" workflow)
-                // And we can correlate the saved sessions using the workflow ID
-                if (w.getWorkflowID() != null && w.getWorkflowID().length() > 0)
-                    topWorkflow.setWorkflowID(w.getWorkflowID());
-                topWorkflow.addWorkflow(w);
-                submittedWorkflows.add(w);
+                if (!w.getIsReset())
+                {
+                    Log.info("Adding workflow to top level workflow");
+                    // If the workflow has an existing ID (meaning it has been saved),
+                    // we used its ID for the top workflow (i.e., it is no longer a "tempororay" workflow)
+                    // And we can correlate the saved sessions using the workflow ID
+                    if (w.getWorkflowID() != null && w.getWorkflowID().length() > 0)
+                        topWorkflow.setWorkflowID(w.getWorkflowID());
+                    topWorkflow.addWorkflow(w);
+                    submittedWorkflows.add(w);
 
-                UUID sessionID = UUID.randomUUID();
-                WorkflowThread t = new WorkflowThread(goose, sessionID, w);
-                this.threadMap.put(sessionID, t);
-                t.start();
-                // We start reccording as soon as the user submits a workflow, recording
-                // will be on forever!! At each step, we broadcast the source and target
-                // goose back to the Proxy Goose
-                this.bossImpl.setRecording(true);
-                // Tell the proxy applet the top workflow ID
-                Report(WorkflowInformation, this.topWorkflow.getWorkflowID());
+                    UUID sessionID = UUID.randomUUID();
+                    WorkflowThread t = new WorkflowThread(goose, sessionID, w);
+                    this.threadMap.put(sessionID, t);
+                    t.start();
+                    // We start reccording as soon as the user submits a workflow, recording
+                    // will be on forever!! At each step, we broadcast the source and target
+                    // goose back to the Proxy Goose
+                    this.bossImpl.setRecording(true);
+                    // Tell the proxy applet the top workflow ID
+                    Report(WorkflowInformation, this.topWorkflow.getWorkflowID());
+                }
             }
         }
     }
@@ -339,10 +345,13 @@ public class WorkflowManager {
                             if (value != null && !((String)value).isEmpty())
                             {
                                 // send the component name
-                                httpRequest.setParameter("userid", topWorkflow.getUserID());
+                                synchronized (topWorkflowSyncObj)
+                                {
+                                    httpRequest.setParameter("userid", topWorkflow.getUserID());
+                                    httpRequest.setParameter("workflowid", topWorkflow.getWorkflowID());
+                                }
                                 httpRequest.setParameter("sessionid", action.getSessionID());
                                 httpRequest.setParameter("component-name", componentname);
-                                httpRequest.setParameter("workflowid", topWorkflow.getWorkflowID());
                                 httpRequest.setParameter("componentid", action.getComponentID());
                                 httpRequest.setParameter("componentworkflownodeid", action.getSource().getComponentWorkflowNodeID());
                                 File f = new File((String)value);
@@ -357,10 +366,13 @@ public class WorkflowManager {
                         else if (type.equals("url"))
                         {
                             Log.info("Upload url: " + (String)value + " of Component " + componentname + " component workflow node id " + action.getSource().getComponentWorkflowNodeID() + " for Workflow " + action.getWorkflowID());
-                            httpRequest.setParameter("userid", topWorkflow.getUserID());
+                            synchronized (topWorkflowSyncObj)
+                            {
+                                httpRequest.setParameter("userid", topWorkflow.getUserID());
+                                httpRequest.setParameter("workflowid", topWorkflow.getWorkflowID());
+                            }
                             httpRequest.setParameter("sessionid", action.getSessionID());
                             httpRequest.setParameter("component-name", componentname);
-                            httpRequest.setParameter("workflowid", topWorkflow.getWorkflowID());
                             httpRequest.setParameter("componentid", action.getComponentID());
                             httpRequest.setParameter("componentworkflownodeid", action.getSource().getComponentWorkflowNodeID());
 
