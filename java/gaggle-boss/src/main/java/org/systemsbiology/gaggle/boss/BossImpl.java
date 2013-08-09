@@ -55,6 +55,7 @@ class ProxyCallbackThread extends Thread
     List<ProxyGooseMessage> processingQueue = Collections.synchronizedList(new ArrayList<ProxyGooseMessage>());
     boolean cancel = false;
     private static Logger Log = Logger.getLogger("Boss");
+    Object syncObj = new Object();
 
     public ProxyCallbackThread(BossImpl bossimpl, Goose3 pg)
     {
@@ -62,7 +63,16 @@ class ProxyCallbackThread extends Thread
         this.proxyGoose = pg;
     }
 
-    public void setProxyGoose(Goose3 proxyGoose) { this.proxyGoose = proxyGoose; }
+    public void setProxyGoose(Goose3 proxyGoose)
+    {
+        // Access to the proxyGoose should be synchronized
+        // Sometimes the proxygoose is terminated by the applet, and a new proxygoose will be generated
+        // when submitWorkflow is called. We need to synchronize here.
+        synchronized (syncObj)
+        {
+            this.proxyGoose = proxyGoose;
+        }
+    }
 
     public void AddMessage(ProxyGooseMessage msg)
     {
@@ -79,14 +89,17 @@ class ProxyCallbackThread extends Thread
                {
                    // Handle msg for the proxy goose
                    ProxyGooseMessage msg = processingQueue.get(0);
-                   if (proxyGoose != null) {
-                       Log.info("Passing " + msg.getType() + " " + msg.getMessage() + " to ProxyGoose");
-                       proxyGoose.handleWorkflowInformation(msg.getType(), msg.getMessage());
+                   synchronized (syncObj)
+                   {
+                       if (proxyGoose != null) {
+                           Log.info("Passing " + msg.getType() + " " + msg.getMessage() + " to ProxyGoose");
+                           proxyGoose.handleWorkflowInformation(msg.getType(), msg.getMessage());
+                       }
                    }
                    processingQueue.remove(0);
                }
 
-               Thread.sleep(3000);
+               Thread.sleep(5000);
            }
            catch (Exception e) {
                Log.warning("Failed to process proxy goose callback: " + e.getMessage());
@@ -647,9 +660,11 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
                 Log.info("Generating goose json string...");
                 json.putAll(nodeInfoMap);
+                submitWorkflowResult = json.toString();
             }
-            submitWorkflowResult = json.toString();
-            Log.info("Workflow goose json string: " + json.toString());
+            else
+                submitWorkflowResult = "";
+            Log.info("Workflow goose json string: " + submitWorkflowResult);
         }
         catch (Exception e)
         {
@@ -661,7 +676,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             if (syncObj != null)
             {
                 synchronized (syncObj) {
-                    workflowManager.Report(WorkflowManager.InformationMessage, "Workflow Submit Sync Object released.");
                     syncObj.notify();
                 }
             }
