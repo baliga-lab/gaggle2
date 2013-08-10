@@ -91,13 +91,14 @@ class ProxyCallbackThread extends Thread
                    // Handle msg for the proxy goose
                    synchronized (syncObj)
                    {
-                       if (proxyGoose != null) {
+                       if (proxyGoose != null)
+                       {
                            ProxyGooseMessage msg = processingQueue.remove(0);
                            if (msg != null) {
                                Log.info("Passing " + msg.getType() + " " + Integer.toString(index++) + " " + msg.getMessage() + " to ProxyGoose");
                                try
                                {
-                                    proxyGoose.handleWorkflowInformation(msg.getType(), msg.getMessage());
+                                   proxyGoose.handleWorkflowInformation(msg.getType(), msg.getMessage());
                                }
                                catch (Exception e0)
                                {
@@ -416,6 +417,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
     // ***** Goose Management *****
     public Goose getGoose(String name) { return gooseManager.getGoose(name); }
+    public Goose getGooseWith(String query) { return gooseManager.getGooseWith(query); }
     public String[] getGooseNames() { return gooseManager.getGooseNames(); }
     public String[] getListeningGooseNames() { return ui.getListeningGeese(); }
     public String renameGoose(String oldName, String proposedName) {
@@ -711,7 +713,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             AppContext appContext = AppContext.getAppContext();
             if (appContext == null)
             {
-                workflowManager.Report(WorkflowManager.InformationMessage, "Submitting workflow to handle with valid appContext");
+                //workflowManager.Report(WorkflowManager.InformationMessage, "Submitting workflow to handle with valid appContext");
                 syncObj = new Object();
                 Runnable workflowTask = new Runnable() {
                     public void run() {
@@ -738,7 +740,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             }
             else
             {
-                workflowManager.Report(WorkflowManager.InformationMessage, "Processing workflow with proper appContext");
+                //workflowManager.Report(WorkflowManager.InformationMessage, "Processing workflow with proper appContext");
                 return processWorkflow(proxyGoose, jsonWorkflow, null);
             }
         }
@@ -860,7 +862,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             String msg = dataType + ";" + srcGooseComponentID + ";" + trgtGooseComponentID;
             Log.info("Sending goose info back to proxy goose. " + msg);
             try {
-                //this.proxyGoose.handleWorkflowInformation("Recording", msg);
                 ProxyGooseMessage m = new ProxyGooseMessage("Recording", msg);
                 this.proxyCallbackThread.AddMessage(m);
             }

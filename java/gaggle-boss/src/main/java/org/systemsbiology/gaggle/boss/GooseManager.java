@@ -25,6 +25,20 @@ public class GooseManager {
         return gooseMap.get(name);
     }
 
+    public SuperGoose getGooseWith(String query)
+    {
+        Log.info("Search for goose with " + query);
+        if (query != null && query.length() > 0)
+        {
+            for (String key : gooseMap.keySet())
+            {
+                if (key.contains(query))
+                    return gooseMap.get(key);
+            }
+        }
+        return null;
+    }
+
     public String[] getGooseNames() {
         return gooseMap.keySet().toArray(new String[0]);
     }
