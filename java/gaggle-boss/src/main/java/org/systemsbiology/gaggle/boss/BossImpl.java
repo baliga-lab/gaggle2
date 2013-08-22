@@ -1,31 +1,31 @@
 package org.systemsbiology.gaggle.boss;
 
+import net.sf.json.JSONObject;
+import org.hyperic.sigar.ProcExe;
+import org.hyperic.sigar.Sigar;
+import org.hyperic.sigar.ptql.ProcessFinder;
+import org.systemsbiology.gaggle.core.Boss3;
+import org.systemsbiology.gaggle.core.Goose;
+import org.systemsbiology.gaggle.core.Goose3;
+import org.systemsbiology.gaggle.core.JSONGoose;
+import org.systemsbiology.gaggle.core.datatypes.*;
+import org.systemsbiology.gaggle.geese.DeafGoose;
+import org.systemsbiology.gaggle.util.ClientHttpRequest;
+import org.systemsbiology.gaggle.util.NewNameHelper;
+import sun.awt.AppContext;
+
 import java.io.*;
 import java.lang.reflect.Field;
-import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.*;
-
-import java.rmi.server.*;
-import java.rmi.registry.*;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
-
-import net.sf.json.JSONObject;
-import org.hyperic.sigar.Sigar;
-import org.hyperic.sigar.ptql.ProcessFinder;
-import org.systemsbiology.gaggle.core.*;
-import org.systemsbiology.gaggle.geese.DeafGoose;
-import org.systemsbiology.gaggle.core.datatypes.*;
-import org.systemsbiology.gaggle.util.*;
-import org.hyperic.sigar.ProcExe;
-import sun.awt.AppContext;
-
-import javax.swing.*;
-import java.util.logging.*;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.server.UnicastRemoteObject;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.logging.Logger;
 
 class ProxyGooseMessage
 {
@@ -76,7 +76,11 @@ class ProxyCallbackThread extends Thread
 
     public void AddMessage(ProxyGooseMessage msg)
     {
-        this.processingQueue.add(msg);
+        if (msg.getType().equals(WorkflowManager.WorkflowInformation))
+            // This is higher priority message
+            this.processingQueue.add(0, msg);
+        else
+            this.processingQueue.add(msg);
     }
 
     public void run()
@@ -1069,6 +1073,10 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         String name;
         String desc;
         String filePrefix;
+        String stateid = "";
+        String saveStateResponse = "";
+
+        final int WORKFLOW_MAX_UPLOAD_SIZE = 52428801; // upper limit of the size of a batch of files (in bytes) sent to the server
 
         public SaveStateThread(Goose3 proxyGoose, String userid, String name, String desc, String filePrefix)
         {
@@ -1077,6 +1085,81 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             this.name = name;
             this.desc = desc;
             this.filePrefix = filePrefix;
+        }
+
+        private String uploadBatch(ClientHttpRequest httpRequest, ArrayList<File> batch)
+        {
+            if (httpRequest != null && batch != null && batch.size() > 0)
+            {
+                try
+                {
+                    Log.info("Uploading state batch files...");
+                    for (File f : batch)
+                    {
+                        Log.info("File " + f.getName());
+                        httpRequest.setParameter(f.getName(), f);
+                    }
+
+                    InputStream responseStream = null;
+                    responseStream = httpRequest.post();
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream));
+                    StringBuilder builder = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null)
+                    {
+                        builder.append(line);
+                    }
+                    String jsonresponse = builder.toString();
+                    Log.info("Save state json response " + jsonresponse);
+                    saveStateResponse = jsonresponse;
+
+                    if (stateid.length() == 0)
+                    {
+                        JSONObject jsonobj = JSONObject.fromObject(jsonresponse);
+                        JSONObject stateobj = jsonobj.getJSONObject(JSONConstants.WORKFLOW_SAVESTATERESULTKEY);
+                        stateid = stateobj.getString(JSONConstants.WORKFLOW_STATEID);
+                        Log.info("Saved state id " + stateid);
+                    }
+                    return stateid;
+
+                }
+                catch (Exception e)
+                {
+                    Log.warning("Failed to set http request file parameter " + e.getMessage());
+                    return "";
+                }
+            }
+            return "";
+        }
+
+        private ClientHttpRequest createHttpRequest(HttpURLConnection urlConnection, String stateid, String userid, String name, String desc)
+        {
+            try
+            {
+                ClientHttpRequest httpRequest = new ClientHttpRequest(urlConnection);
+
+                httpRequest.setParameter("stateid", stateid);
+                httpRequest.setParameter("userid", userid);
+                httpRequest.setParameter("name", name);
+                httpRequest.setParameter("desc", desc);
+                return httpRequest;
+            }
+            catch (Exception e)
+            {
+                Log.warning("Failed to create HttpRequest " + e.getMessage());
+                return null;
+            }
+        }
+
+        private String processBatchUpload(HttpURLConnection urlConnection, String stateid, String userid,
+                                        String name, String desc, ArrayList<File> batch)
+        {
+            Log.info("Processing batch " + stateid + " size " + batch.size());
+            String sid = "";
+            ClientHttpRequest httpRequest = createHttpRequest(urlConnection, stateid, userid, name, desc);
+            sid = uploadBatch(httpRequest, batch);
+            batch.clear();
+            return sid;
         }
 
         public void run()
@@ -1163,15 +1246,9 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
                 try
                 {
-                    ClientHttpRequest httpRequest = new ClientHttpRequest(urlConn);
-                    InputStream responseStream = null;
-
                     if (temp.exists())
                     {
                         // send the component name
-                        httpRequest.setParameter("userid", userid);
-                        httpRequest.setParameter("name", name);
-                        httpRequest.setParameter("desc", desc);
                         Log.info("Searching for state files with prefix " + filePrefix);
                         //final String fpre = filePrefix;
 
@@ -1194,19 +1271,39 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                                 File f = new File(tempDir + File.separator + fn);
                                 statefiles.add(f);
                                 //FileInputStream is = new FileInputStream((String)value);
-                                httpRequest.setParameter(fn, f);
+                                //httpRequest.setParameter(fn, f);
                             }
                         }
-                        responseStream = httpRequest.post();
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream));
-                        StringBuilder builder = new StringBuilder();
-                        String line;
-                        while ((line = reader.readLine()) != null)
+
+                        ArrayList<File> batch = new ArrayList<File>();
+                        int findex = 0;
+                        long totalbatchsize = 0;
+                        stateid = "";
+                        for (File f : statefiles)
                         {
-                            builder.append(line);
+                            long flen = f.length();
+                            if (totalbatchsize + flen < WORKFLOW_MAX_UPLOAD_SIZE)
+                            {
+                                batch.add(f);
+                                if (findex == statefiles.size() - 1)
+                                {
+                                    processBatchUpload(urlConn, stateid, userid, name, desc, batch);
+                                }
+                            }
+                            else
+                            {
+                                processBatchUpload(urlConn, stateid, userid, name, desc, batch);
+                                if (flen < WORKFLOW_MAX_UPLOAD_SIZE)
+                                {
+                                    totalbatchsize = flen;
+                                    batch.add(f);
+                                }
+                                else
+                                    totalbatchsize = 0;
+                            }
+                            findex++;
                         }
-                        String jsonresponse = builder.toString();
-                        Log.info("Save state json response " + jsonresponse);
+
 
                         // Remove the temp state files
                         for (int i = 0; i < statefiles.size(); i++)
@@ -1224,8 +1321,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         // Parse the JSON string
                         if (proxyGoose != null)
                         {
-                            Log.info("Save state return json: " + jsonresponse);
-                            ProxyGooseMessage m = new ProxyGooseMessage(WorkflowManager.SaveStateResponseMessage, jsonresponse);
+                            Log.info("Save state return json: " + saveStateResponse);
+                            ProxyGooseMessage m = new ProxyGooseMessage(WorkflowManager.SaveStateResponseMessage, saveStateResponse);
                             proxyCallbackThread.setProxyGoose(proxyGoose);
                             proxyCallbackThread.AddMessage(m);
                         }
