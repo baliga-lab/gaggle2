@@ -169,7 +169,7 @@ class RestoreStateThread extends Thread
 
                             Log.info("Temp restore file name: " + restorefilename + " download from " + fileurl);
                             workflowManager.downloadFileFromUrl(restorefilename, fileurl);
-                            if (goosename.equals("Multiple Array Viewer"))
+                            if (!goosename.toLowerCase().equals("firegoose"))
                             {
                                 // MeV can have multiple anl files
                                 workflowManager.Report(WorkflowManager.InformationMessage, ("Load state for MeV from " + restorefilename));
@@ -178,7 +178,7 @@ class RestoreStateThread extends Thread
                         }
                     }
 
-                    if (!goosename.equals("Multiple Array Viewer"))
+                    if (goosename.toLowerCase().equals("firegoose"))
                     {
                         Log.info("Load state from " + toplevelfn);
                         workflowManager.Report(WorkflowManager.InformationMessage, ("Load state from " + toplevelfn));
@@ -1311,7 +1311,10 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                             File f = statefiles.get(i);
                             try {
                                 if (f != null)
+                                {
+                                    Log.info("Deleting file " + f.getName());
                                     f.delete();
+                                }
                             }
                             catch (Exception e2) {
                                 Log.warning("Failed to delete temp state file " + e2.getMessage());
