@@ -27,6 +27,128 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.Logger;
 
+
+class HttpFileUploadHelper
+{
+    private ClientHttpRequest httpRequest = null;
+    private HttpURLConnection urlConnection = null;
+    private static Logger Log = Logger.getLogger("Boss");
+    ArrayList<File> allfiles = null;
+    private final int WORKFLOW_MAX_UPLOAD_SIZE = 52428801; // upper limit of the size of a batch of files (in bytes) sent to the server
+    private ArrayList<String> uploadResult = new ArrayList<String>();
+
+    public HttpFileUploadHelper(URL u, String[] propNames, String[] propValues, ArrayList<File> files)
+    {
+        try {
+            // URL connection channel.
+            urlConnection = (HttpURLConnection) u.openConnection();
+
+            // Let the run-time system (RTS) know that we want input.
+            urlConnection.setDoInput (true);
+
+            // Let the RTS know that we want to do output.
+            urlConnection.setDoOutput (true);
+
+            // No caching, we want the real thing.
+            urlConnection.setUseCaches (false);
+
+            httpRequest = new ClientHttpRequest(urlConnection);
+
+            if (propNames != null && propValues != null && propNames.length <= propValues.length)
+            {
+                for (int i = 0; i < propNames.length; i++)
+                {
+                    if (propNames[i] != null && propValues[i] != null)
+                        httpRequest.setParameter(propNames[i], propValues[i]);
+                }
+            }
+            allfiles = files;
+        }
+        catch (IOException ex) {
+            Log.severe("Failed to create url Connection " + ex.getMessage());
+            //workflowManager.Report(WorkflowManager.ErrorMessage, ("Failed to create connection to " + url.toString()));
+        }
+    }
+
+    public ArrayList<String> getUploadResult() { return uploadResult; }
+
+    public String uploadBatch(ArrayList<File> batch)
+    {
+        if (httpRequest != null && batch != null && batch.size() > 0)
+        {
+            try
+            {
+                Log.info("Uploading batch files...");
+                for (File f : batch)
+                {
+                    Log.info("File " + f.getName());
+                    httpRequest.setParameter(f.getName(), f);
+                }
+
+                InputStream responseStream = null;
+                responseStream = httpRequest.post();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream));
+                StringBuilder builder = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null)
+                {
+                    builder.append(line);
+                }
+                String jsonresponse = builder.toString();
+                Log.info("Batch upload json response " + jsonresponse);
+                return jsonresponse;
+            }
+            catch (Exception e)
+            {
+                Log.warning("Failed to set http request file parameter " + e.getMessage());
+                return "";
+            }
+        }
+        return "";
+    }
+
+    public void startUpload()
+    {
+        if (allfiles != null)
+        {
+            ArrayList<File> batch = new ArrayList<File>();
+            int findex = 0;
+            long totalbatchsize = 0;
+            for (File f : allfiles)
+            {
+                long flen = f.length();
+                if (totalbatchsize + flen < WORKFLOW_MAX_UPLOAD_SIZE)
+                {
+                    batch.add(f);
+                    totalbatchsize += flen;
+                    if (findex == allfiles.size() - 1)
+                    {
+                        String result = uploadBatch(batch);
+                        if (result != null)
+                            uploadResult.add(result);
+                        totalbatchsize = 0;
+                    }
+                }
+                else
+                {
+                    String result = uploadBatch(batch);
+                    if (result != null)
+                        uploadResult.add(result);
+                    if (flen < WORKFLOW_MAX_UPLOAD_SIZE)
+                    {
+                        totalbatchsize = flen;
+                        batch.add(f);
+                    }
+                    else
+                        totalbatchsize = 0;
+                }
+                findex++;
+            }
+        }
+    }
+}
+
+
 class ProxyGooseMessage
 {
     private String type;
@@ -197,6 +319,8 @@ class RestoreStateThread extends Thread
 
 public class BossImpl extends UnicastRemoteObject implements Boss3 {
     public static final String SERVICE_NAME = "gaggle";
+    public static String GAGGLE_SERVER = "";
+
     private NewNameHelper nameHelper;
     private BossUI ui;
     private GooseManager gooseManager;
@@ -227,6 +351,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         if (nameHelperURI != null && nameHelperURI.length() > 0) {
             nameHelper = new NewNameHelper(nameHelperURI);
         }
+
+        String server = System.getProperty("server");
+        Log.info("Web server: " + server);
+        if (server == null || server.length() == 0)
+            server = "http://networks.systemsbiology.net";
+        GAGGLE_SERVER = server;
 
         String os = System.getProperty("os.name");
         String arch = System.getProperty("os.arch");
@@ -472,6 +602,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     try {
                         if (isRecording)
                             recordAction(sourceGoose, gooseName, nameList, -1, null, null, null);
+                        Log.info("Broadcasting namelist to " + gooseName);
                         goose.handleNameList(sourceGoose, nameList);
                     } catch (Exception ex0) {
                         Log.severe("error in select request to " + gooseName + ": " +
@@ -706,13 +837,16 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
      */
     public String submitWorkflow(final Goose3 proxyGoose, final String jsonWorkflow)
     {
-        if (jsonWorkflow != null && jsonWorkflow.length() > 0)
+        if (proxyGoose != null)
         {
             this.proxyGoose = proxyGoose;
             if (this.proxyCallbackThread != null) {
                 this.proxyCallbackThread.setProxyGoose(proxyGoose);
             }
+        }
 
+        if (jsonWorkflow != null && jsonWorkflow.length() > 0)
+        {
             Log.info("JSON workflow string: " + jsonWorkflow);
             AppContext appContext = AppContext.getAppContext();
             if (appContext == null)
@@ -758,8 +892,13 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
      */
     public void handleWorkflowAction(WorkflowAction action)
     {
-        System.out.println("Processing workflow action: " + action.getSource().getName());
-        this.workflowManager.HandleWorkflowAction(action);
+        if (action != null)
+        {
+            System.out.println("Processing workflow action ");
+            if (action.getSource() != null)
+                System.out.println("Source: " + action.getSource().getName());
+            this.workflowManager.HandleWorkflowAction(action);
+        }
     }
 
 
@@ -1076,8 +1215,6 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         String stateid = "";
         String saveStateResponse = "";
 
-        final int WORKFLOW_MAX_UPLOAD_SIZE = 52428801; // upper limit of the size of a batch of files (in bytes) sent to the server
-
         public SaveStateThread(Goose3 proxyGoose, String userid, String name, String desc, String filePrefix)
         {
             this.proxyGoose = proxyGoose;
@@ -1087,78 +1224,26 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             this.filePrefix = filePrefix;
         }
 
-        private String uploadBatch(ClientHttpRequest httpRequest, ArrayList<File> batch)
+        private String processBatchUpload(HttpFileUploadHelper httpFileUploadHelper)  //, ArrayList<File> batch)
+                //(HTTP urlConnection, String stateid, String userid,
+                //                        String name, String desc, ArrayList<File> batch)
         {
-            if (httpRequest != null && batch != null && batch.size() > 0)
-            {
-                try
-                {
-                    Log.info("Uploading state batch files...");
-                    for (File f : batch)
-                    {
-                        Log.info("File " + f.getName());
-                        httpRequest.setParameter(f.getName(), f);
-                    }
-
-                    InputStream responseStream = null;
-                    responseStream = httpRequest.post();
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(responseStream));
-                    StringBuilder builder = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null)
-                    {
-                        builder.append(line);
-                    }
-                    String jsonresponse = builder.toString();
-                    Log.info("Save state json response " + jsonresponse);
-                    saveStateResponse = jsonresponse;
-
-                    if (stateid.length() == 0)
-                    {
-                        JSONObject jsonobj = JSONObject.fromObject(jsonresponse);
-                        JSONObject stateobj = jsonobj.getJSONObject(JSONConstants.WORKFLOW_SAVESTATERESULTKEY);
-                        stateid = stateobj.getString(JSONConstants.WORKFLOW_STATEID);
-                        Log.info("Saved state id " + stateid);
-                    }
-                    return stateid;
-
-                }
-                catch (Exception e)
-                {
-                    Log.warning("Failed to set http request file parameter " + e.getMessage());
-                    return "";
-                }
-            }
-            return "";
-        }
-
-        private ClientHttpRequest createHttpRequest(HttpURLConnection urlConnection, String stateid, String userid, String name, String desc)
-        {
-            try
-            {
-                ClientHttpRequest httpRequest = new ClientHttpRequest(urlConnection);
-
-                httpRequest.setParameter("stateid", stateid);
-                httpRequest.setParameter("userid", userid);
-                httpRequest.setParameter("name", name);
-                httpRequest.setParameter("desc", desc);
-                return httpRequest;
-            }
-            catch (Exception e)
-            {
-                Log.warning("Failed to create HttpRequest " + e.getMessage());
-                return null;
-            }
-        }
-
-        private String processBatchUpload(HttpURLConnection urlConnection, String stateid, String userid,
-                                        String name, String desc, ArrayList<File> batch)
-        {
-            Log.info("Processing batch " + stateid + " size " + batch.size());
+            /*Log.info("Processing batch " + stateid + " size " + batch.size());
             String sid = "";
             ClientHttpRequest httpRequest = createHttpRequest(urlConnection, stateid, userid, name, desc);
             sid = uploadBatch(httpRequest, batch);
-            batch.clear();
+            batch.clear(); */
+
+            String sid = "";
+            httpFileUploadHelper.startUpload();
+            ArrayList<String> jsonresponses = httpFileUploadHelper.getUploadResult();
+            if (jsonresponses.size() > 0 && stateid.length() == 0)
+            {
+                JSONObject jsonobj = JSONObject.fromObject(jsonresponses.get(0));
+                JSONObject stateobj = jsonobj.getJSONObject(JSONConstants.WORKFLOW_SAVESTATERESULTKEY);
+                sid = stateobj.getString(JSONConstants.WORKFLOW_STATEID);
+                Log.info("Saved state id " + stateid);
+            }
             return sid;
         }
 
@@ -1219,30 +1304,13 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     Log.info("Web server: " + server);
                     if (server == null || server.length() == 0)
                         server = "http://networks.systemsbiology.net";
+                    GAGGLE_SERVER = server;
                     url = new URL((server + "/workflow/savestate"));
                     //url = new URL("http://localhost:8000/workflow/savereport/");
                 } catch (MalformedURLException ex) {
                     Log.warning("Malformed URL " + ex.getMessage());
                 }
 
-                HttpURLConnection urlConn = null;
-                try {
-                    // URL connection channel.
-                    urlConn = (HttpURLConnection) url.openConnection();
-
-                    // Let the run-time system (RTS) know that we want input.
-                    urlConn.setDoInput (true);
-
-                    // Let the RTS know that we want to do output.
-                    urlConn.setDoOutput (true);
-
-                    // No caching, we want the real thing.
-                    urlConn.setUseCaches (false);
-                }
-                catch (IOException ex) {
-                    Log.severe("Failed to create url Connection " + ex.getMessage());
-                    workflowManager.Report(WorkflowManager.ErrorMessage, ("Failed to create connection to " + url.toString()));
-                }
 
                 try
                 {
@@ -1275,35 +1343,24 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                             }
                         }
 
-                        ArrayList<File> batch = new ArrayList<File>();
-                        int findex = 0;
-                        long totalbatchsize = 0;
-                        stateid = "";
-                        for (File f : statefiles)
-                        {
-                            long flen = f.length();
-                            if (totalbatchsize + flen < WORKFLOW_MAX_UPLOAD_SIZE)
-                            {
-                                batch.add(f);
-                                if (findex == statefiles.size() - 1)
-                                {
-                                    processBatchUpload(urlConn, stateid, userid, name, desc, batch);
-                                }
-                            }
-                            else
-                            {
-                                processBatchUpload(urlConn, stateid, userid, name, desc, batch);
-                                if (flen < WORKFLOW_MAX_UPLOAD_SIZE)
-                                {
-                                    totalbatchsize = flen;
-                                    batch.add(f);
-                                }
-                                else
-                                    totalbatchsize = 0;
-                            }
-                            findex++;
-                        }
+                        String[] propNames = new String[4];
+                        String[] propValues = new String[4];
+                        propNames[0] = "stateid";
+                        propValues[0] = stateid;
+                        propNames[1] = "userid";
+                        propValues[1] = userid;
+                        propNames[2] = "name";
+                        propValues[2] = name;
+                        propNames[3] = "desc";
+                        propValues[3] = desc;
+                        HttpFileUploadHelper httpFileUploadHelper = new HttpFileUploadHelper(url, propNames, propValues, statefiles);
 
+                        //ArrayList<File> batch = new ArrayList<File>();
+                        //int findex = 0;
+                        //long totalbatchsize = 0;
+                        stateid = processBatchUpload(httpFileUploadHelper);
+                        Log.info("Save state json response " + httpFileUploadHelper.getUploadResult().get(0));
+                        saveStateResponse = httpFileUploadHelper.getUploadResult().get(0);
 
                         // Remove the temp state files
                         for (int i = 0; i < statefiles.size(); i++)

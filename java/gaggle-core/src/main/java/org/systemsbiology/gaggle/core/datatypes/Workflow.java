@@ -1,20 +1,13 @@
 package org.systemsbiology.gaggle.core.datatypes;
 
-import net.sf.ezmorph.test.ArrayAssertions;
-import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import org.apache.commons.collections.iterators.ArrayListIterator;
-import org.apache.commons.collections.iterators.ObjectArrayIterator;
-import org.apache.commons.collections.map.HashedMap;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.util.*;
-import java.util.logging.Logger;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
 
-import static org.systemsbiology.gaggle.core.datatypes.JSONConstants.KEY_GAGGLE_DATA;
 import static org.systemsbiology.gaggle.core.datatypes.JSONConstants.KEY_WORKFLOW_EDGES;
 import static org.systemsbiology.gaggle.core.datatypes.JSONConstants.KEY_WORKFLOW_NODES;
 
@@ -139,10 +132,6 @@ public class Workflow implements Serializable, GaggleData {
                                     // This is a serialized gaggle data object
                                     // Remove the http protocol part of the link
                                     String tempdatauri = dataurisplit[i];
-                                    if (tempdatauri.startsWith("http://"))
-                                    {
-                                        tempdatauri = tempdatauri.substring(6);
-                                    }
                                     System.out.println("Deserializing data object " + tempdatauri);
                                     GaggleData gdata = loadGaggleData(tempdatauri);
                                     datalist.add(gdata);
@@ -380,13 +369,12 @@ public class Workflow implements Serializable, GaggleData {
         {
             String dataFileName = filename;
             System.out.println("LoadGaggleData: " + dataFileName);
-            FileInputStream inputStream = new FileInputStream(dataFileName);
-            if (inputStream != null)
-            {
-                ObjectInputStream in = new ObjectInputStream(inputStream);
-                result = (GaggleData)in.readObject();
-                in.close();
-            }
+            //FileInputStream inputStream = new FileInputStream(dataFileName);
+            URL fileUrl = new URL(filename);
+            //ObjectInputStream in = new ObjectInputStream(inputStream);
+            ObjectInputStream in = new ObjectInputStream(fileUrl.openStream());
+            result = (GaggleData)in.readObject();
+            in.close();
         }
         return result;
     }

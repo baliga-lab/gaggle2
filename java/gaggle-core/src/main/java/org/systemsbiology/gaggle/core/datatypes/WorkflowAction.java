@@ -1,8 +1,6 @@
 package org.systemsbiology.gaggle.core.datatypes;
 
-import javax.xml.transform.Source;
-import java.io.*;
-import java.util.UUID;
+import java.io.Serializable;
 
 /**
  *
@@ -60,7 +58,8 @@ public class WorkflowAction implements Serializable {
         Sequential(0x00010),
         SuccessMessage(0x00100),
         ErrorMessage(0x01000),
-        WorkflowReportData(0x10000);
+        WorkflowReportData(0x10000),
+        FileUploadRequest(0x100000);
 
         private final int id;
         Options(int id) { this.id = id; }

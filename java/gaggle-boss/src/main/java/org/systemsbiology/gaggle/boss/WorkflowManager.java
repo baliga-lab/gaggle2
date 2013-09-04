@@ -1,19 +1,18 @@
 package org.systemsbiology.gaggle.boss;
 
-import org.apache.commons.collections.iterators.ArrayListIterator;
+import net.sf.json.JSONObject;
 import org.systemsbiology.gaggle.core.Goose;
 import org.systemsbiology.gaggle.core.Goose3;
 import org.systemsbiology.gaggle.core.datatypes.*;
 import org.systemsbiology.gaggle.util.ClientHttpRequest;
 
-import java.awt.*;
 import java.io.*;
-import java.net.*;
-import java.rmi.RemoteException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -49,7 +48,7 @@ public class WorkflowManager {
     public static String InformationMessage = "Information";
     public static String SaveStateResponseMessage = "SaveStateResponse";
     public static String WorkflowInformation = "WorkflowInformation";
-
+    public static String UploadResponse = "UploadResponse";
 
 
 
@@ -221,8 +220,9 @@ public class WorkflowManager {
     {
         if (action != null)
         {
-            Log.info("Handle workflow action from: "
-                    + action.getSource().getName() + " " + action.getSessionID());
+            if (action.getSource() != null)
+                Log.info("Handle workflow action from: "
+                        + action.getSource().getName() + " " + action.getSessionID());
             switch (action.getActionType())
             {
                 case Response:
@@ -248,6 +248,10 @@ public class WorkflowManager {
                         // This is report data, we need to send it to web server
                         reportData(action);
                     }
+                    else if ((action.getOption() & WorkflowAction.Options.FileUploadRequest.getValue()) > 0)
+                    {
+                        // This is a request to upload a user data file captured from the gaggled web page to the server
+                        uploadUserData(action);                    }
                     break;
 
                 default:
@@ -255,6 +259,69 @@ public class WorkflowManager {
                     break;
             }
         }
+    }
+
+    private void uploadUserData(WorkflowAction action)
+    {
+        String jsonstring = (String)((WorkflowData)action.getData()[0]).getData();
+        System.out.println("Upload data json string " + jsonstring);
+        JSONObject jsonObject = JSONObject.fromObject(jsonstring);
+
+        String[] propNames = new String[6];
+        String[] propValues = new String[6];
+        propNames[0] = "organismtype";
+        propValues[0] = jsonObject.getString("organismtype");
+        propNames[1] = "userid";
+        propValues[1] = jsonObject.getString("userid");
+
+        JSONObject filesobj = jsonObject.getJSONObject("data");
+        int index = 0;
+        do{
+            Log.info("Retrieving file object with index " + Integer.toString(index));
+            JSONObject fileobj = filesobj.getJSONObject(Integer.toString(index));
+            if (fileobj != null)
+            {
+                propNames[2] = "datatype";
+                propValues[2] = fileobj.getString("datatype");
+                propNames[3] = "description";
+                propValues[3] = fileobj.getString("description");
+                propNames[4] = "nodeindex";
+                propValues[4] = fileobj.getString("nodeindex");
+                propNames[5] = "text";
+                propValues[5] = fileobj.getString("text");
+
+                String fileurl = fileobj.getString("fileurl");
+                System.out.println("File url to upload " + fileurl);
+                if (fileurl.toLowerCase().startsWith("file:///"))
+                    fileurl = fileurl.substring(8); // remove "file:///"
+                try
+                {
+                    URL serverurl = new URL(BossImpl.GAGGLE_SERVER + "/workflow/uploaddata");
+                    ArrayList<File> files = new ArrayList<File>();
+                    File f = new File(fileurl);
+                    files.add(f);
+                    HttpFileUploadHelper httpFileUploadHelper = new HttpFileUploadHelper(serverurl, propNames, propValues, files);
+                    httpFileUploadHelper.startUpload();
+                    ArrayList<String> jsonresponses = httpFileUploadHelper.getUploadResult();
+                    for (String response : jsonresponses)
+                    {
+                        if (response != null && response.length() > 0)
+                        {
+                            bossImpl.addMessage(WorkflowManager.UploadResponse, response);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    System.out.println("Failed to open file url " + fileurl + " " + e.getMessage());
+                    e.printStackTrace();
+                }
+                index++;
+            }
+            else
+                break;
+        }
+        while (true);
     }
 
     /**
