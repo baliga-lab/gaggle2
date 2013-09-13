@@ -281,21 +281,43 @@ public class WorkflowManager {
             JSONObject fileobj = filesobj.getJSONObject(Integer.toString(index));
             if (fileobj != null)
             {
-                propNames[2] = "datatype";
-                propValues[2] = fileobj.getString("datatype");
-                propNames[3] = "description";
-                propValues[3] = fileobj.getString("description");
-                propNames[4] = "nodeindex";
-                propValues[4] = fileobj.getString("nodeindex");
-                propNames[5] = "text";
-                propValues[5] = fileobj.getString("text");
-
-                String fileurl = fileobj.getString("fileurl");
-                System.out.println("File url to upload " + fileurl);
-                if (fileurl.toLowerCase().startsWith("file:///"))
-                    fileurl = fileurl.substring(8); // remove "file:///"
                 try
                 {
+                    propNames[2] = "datatype";
+                    propValues[2] = fileobj.getString("datatype");
+                    propNames[3] = "description";
+                    propValues[3] = fileobj.getString("description");
+                    propNames[4] = "nodeindex";
+                    propValues[4] = fileobj.getString("nodeindex");
+                    propNames[5] = "text";
+                    propValues[5] = fileobj.getString("text");
+
+                    String fileurl = fileobj.getString("fileurl");
+                    System.out.println("File url to upload " + fileurl);
+                    if (fileurl.toLowerCase().startsWith("file://"))
+                    {
+                        int hostnameslash = fileurl.indexOf("/", 7);
+                        if (hostnameslash >= 7)
+                        {
+                            String hostname = fileurl.substring(7, hostnameslash);
+                            Log.info("File hostname " + hostname);
+                            if (hostname.length() == 0 || hostname.toLowerCase().equals("localhost"))
+                            {
+                                if ((fileurl.charAt(hostnameslash + 2) == ':') || (fileurl.charAt(hostnameslash + 2) == '|'))
+                                {
+                                    // this is a windows file url
+                                    fileurl = fileurl.substring(hostnameslash + 1);
+                                }
+                                else
+                                {
+                                    // This is a Unix file url
+                                    fileurl = fileurl.substring(hostnameslash);
+                                }
+                            }
+                        }
+                    }
+
+                    Log.info("File to be uploaded: " + fileurl);
                     URL serverurl = new URL(BossImpl.GAGGLE_SERVER + "/workflow/uploaddata");
                     ArrayList<File> files = new ArrayList<File>();
                     File f = new File(fileurl);
@@ -313,8 +335,9 @@ public class WorkflowManager {
                 }
                 catch (Exception e)
                 {
-                    System.out.println("Failed to open file url " + fileurl + " " + e.getMessage());
+                    System.out.println("Failed to handle file object " + e.getMessage());
                     e.printStackTrace();
+                    break;
                 }
                 index++;
             }

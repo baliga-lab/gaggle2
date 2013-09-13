@@ -1,11 +1,12 @@
 package org.systemsbiology.gaggle.core;
 
 import org.systemsbiology.gaggle.core.datatypes.*;
+import sun.awt.AppContext;
 
+import javax.swing.*;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.rmi.RemoteException;
 import java.util.*;
 
 /**
@@ -374,4 +375,66 @@ public class GooseWorkflowManager
         return null;
     }
 
+
+    private ThreadGroup getRootThreadGroup( ) {
+        ThreadGroup tg = Thread.currentThread( ).getThreadGroup( );
+        ThreadGroup ptg;
+        while ( (ptg = tg.getParent( )) != null )
+            tg = ptg;
+        System.out.println("Root Threadgroup: " + tg);
+        return tg;
+    }
+
+    private ThreadGroup[] getAllThreadGroups( ) {
+        final ThreadGroup root = getRootThreadGroup( );
+        int nAlloc = root.activeGroupCount( );
+        int n = 0;
+        ThreadGroup[] groups;
+        do {
+            nAlloc *= 2;
+            groups = new ThreadGroup[ nAlloc ];
+            n = root.enumerate( groups, true );
+        } while ( n == nAlloc );
+
+        ThreadGroup[] allGroups = new ThreadGroup[n+1];
+        allGroups[0] = root;
+        System.arraycopy( groups, 0, allGroups, 1, n );
+        return allGroups;
+    }
+
+    public ThreadGroup getThreadGroup( final String name ) {
+        if ( name == null )
+            throw new NullPointerException( "Null name" );
+        final ThreadGroup[] groups = getAllThreadGroups( );
+        for ( ThreadGroup group : groups )
+            if ( group.getName( ).equals( name ) )
+                return group;
+        return null;
+    }
+
+    public void invokeLater2(ThreadGroup javawsApplicationThreadGroup, AppContext appContext, Runnable rn) {
+        if (javawsApplicationThreadGroup != null)
+        {
+            // Starting from Java 7u25, the webstart is run on the javawsApplication ThreadGroup
+            // We need to make sure all the UI calls are on the same ThreadGroup to avoid deadlocks
+            // which hangs the application
+            System.out.println("Starting from the javawsApplication ThreadGroup");
+            Thread runThread = new Thread(javawsApplicationThreadGroup, rn);
+            runThread.start();
+        }
+        else if (AppContext.getAppContext() == null && appContext != null) {
+            System.out.println("...Invoke on appContext " + appContext);
+            sun.awt.SunToolkit.invokeLaterOnAppContext(appContext, rn);
+        } else {
+            try
+            {
+                SwingUtilities.invokeLater(rn);
+            }
+            catch (Exception e)
+            {
+                System.out.println("Failed to invoke task " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
 }
