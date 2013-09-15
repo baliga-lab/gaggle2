@@ -11,6 +11,17 @@ import java.util.*;
  * subactions, arguments, parameters etc.<p/>
  */
 public class WorkflowComponent implements Serializable {
+
+    public enum Options
+    {
+        None(0x00000),
+        OpenInNewWindow(0x00001);
+
+        private final int id;
+        Options(int id) { this.id = id; }
+        public int getValue() { return id; }
+    }
+
     private String componentWorkflowNodeID;
     private String componentID;
     private String name;  // corresponds to the short name of a goose
@@ -21,6 +32,8 @@ public class WorkflowComponent implements Serializable {
     private String workflowIndex;
     private HashMap<String, Object> params;
     private String jsonParams;
+    private int options;
+
 
     //private ProcessingState state;
 
@@ -53,7 +66,9 @@ public class WorkflowComponent implements Serializable {
      * @param arguments Arguments passed to start the goose
      * @param params Parameters passed to the goose (See the ParamNames enum)
      */
-    public WorkflowComponent(String id, String workflownodeid, String workflowindex, String name, String gooseName, String version, String cmduri, String arguments, HashMap params)
+    public WorkflowComponent(String id, String workflownodeid, String workflowindex, String name,
+                             String gooseName, String version, String cmduri, String arguments,
+                             HashMap params, int options)
     {
         this.componentWorkflowNodeID = workflownodeid;
         this.workflowIndex = workflowindex;
@@ -67,6 +82,7 @@ public class WorkflowComponent implements Serializable {
             this.params = new HashMap(params);
         else
             this.params = new HashMap();
+        this.options = options;
         //this.convertParamsToJSON();
         //this.state = ProcessingState.Initial;
     }
@@ -90,10 +106,12 @@ public class WorkflowComponent implements Serializable {
         this.version = version;
         this.commandUri = cmduri;
         this.arguments = arguments;
+        this.options = options;
         if (params != null)
             this.params = new HashMap(params);
         else
             this.params = new HashMap();
+        this.options = Options.None.getValue();
         //this.convertParamsToJSON();
         //this.state = ProcessingState.Initial;
     }
@@ -118,6 +136,7 @@ public class WorkflowComponent implements Serializable {
                 this.gooseName = source.getGooseName();
                 this.version = source.getVersion();
                 this.params = new HashMap<String, Object>(source.getParams());
+                this.options = source.getOptions();
                 //this.convertParamsToJSON();
             }
             catch (Exception e)
@@ -164,6 +183,8 @@ public class WorkflowComponent implements Serializable {
     //public void setState(ProcessingState s) { this.state = s; }
     public HashMap getParams() { return params; }
     public String getJSONParams() { return jsonParams; }
+    public int getOptions() { return options; }
+
     public void setParams(HashMap para)
     {
         if (para != null)

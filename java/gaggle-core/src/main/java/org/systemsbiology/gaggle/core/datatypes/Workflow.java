@@ -145,6 +145,8 @@ public class Workflow implements Serializable, GaggleData {
                     }
                 }
                 params.put(WorkflowComponent.ParamNames.Data.getValue(), datalist);
+
+                int options = (jsonnode.containsKey("options")) ? Integer.parseInt(jsonnode.getString("options")) : WorkflowComponent.Options.None.getValue();
                 WorkflowComponent node = new WorkflowComponent(jsonnode.getString("id"),
                                                         jsonnode.getString("wfnodeid"),
                                                         jsonnode.getString("workflowindex"),
@@ -153,7 +155,8 @@ public class Workflow implements Serializable, GaggleData {
                                                         "", // TODO add version info
                                                         jsonnode.getString("serviceuri"),
                                                         jsonnode.getString("arguments"),
-                                                        params);
+                                                        params,
+                                                        options);
                 System.out.println("=========>  Added a node " + jsonnode.getString("id") + " Workflow index: " + node.getWorkflowIndex());
                 // add the node to the dictionary according to its order in the workflow
                 // the nodes will be stored in workflowList sorted on the order

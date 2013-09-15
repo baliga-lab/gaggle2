@@ -361,7 +361,9 @@ public class GooseWorkflowManager
             ArrayList<String> namelist = new ArrayList<String>();
             while ((line = breader.readLine()) != null)
             {
-                namelist.add(line);
+                String[] splitted = line.split("\\W");
+                if (splitted != null && splitted.length > 0)
+                    namelist.add(splitted[0]);
             }
             System.out.println("Parsed " + namelist.size() + " names");
             String[] names = new String[namelist.size()];

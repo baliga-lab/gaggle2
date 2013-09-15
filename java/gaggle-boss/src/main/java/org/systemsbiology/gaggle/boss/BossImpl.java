@@ -270,7 +270,8 @@ class RestoreStateThread extends Thread
             {
                 // Start the goose and parse the restore file
                 Log.info("Starting goose " + goosename);
-                WorkflowComponent c = new WorkflowComponent("", "", "", goosename, goosename, "", serviceurl, "", null);
+                WorkflowComponent c = new WorkflowComponent("", "", "", goosename, goosename, "", serviceurl, "", null,
+                        WorkflowComponent.Options.None.getValue());
                 Object syncObj = new Object();
                 Goose3 goose = workflowManager.PrepareGoose(c, syncObj);
                 if (goose != null)
