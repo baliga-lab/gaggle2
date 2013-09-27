@@ -315,8 +315,10 @@ public class GooseWorkflowManager
 
 
     /**
-     * Parse a text file and output a GaggleData object. For now we assume it's a NameList
-     * @param fileurl
+     * First download a text file from the server, then parse it and output a GaggleData object.
+     * For now we assume the first column of the text file contains the gene names.
+     *
+     * @param fileurl  the url of the file to be parsed.
      * @return
      */
     public GaggleData ProcessTextFile(String fileurl)
@@ -404,6 +406,19 @@ public class GooseWorkflowManager
         return allGroups;
     }
 
+    /**
+     * Starting from Java 7 update 25, the Java Runtime is using a different
+     * threadgroup (i.e., javawsApplicationThreadGroup) to run web starts. This causes
+     * some applications such as Cytoscape and MeV to freeze on Mac OS. It turns out that
+     * we have to invoke the function calls on the javawsApplicationThreadGroup to avoid
+     * potential deadlocks on different thread groups.
+     *
+     * This API is provided to get the ThreadGroup given the name. User should pass "javawsApplicationThreadGroup"
+     * as the input parameter.
+     *
+     * @param name
+     * @return
+     */
     public ThreadGroup getThreadGroup( final String name ) {
         if ( name == null )
             throw new NullPointerException( "Null name" );
@@ -414,6 +429,23 @@ public class GooseWorkflowManager
         return null;
     }
 
+    /**
+     * Starting from Java 7 update 25, the Java Runtime is using a different
+     * threadgroup (i.e., javawsApplicationThreadGroup) to run web starts. This causes
+     * some applications such as Cytoscape and MeV to freeze on Mac OS. It turns out that
+     * we have to invoke the function calls on the javawsApplicationThreadGroup to avoid
+     * potential deadlocks on different thread groups. This API is a wrapper
+     * to start a function call on the javawsApplicationThreadGroup.
+     *
+     * User applications should call the getThreadGroup API first to get the javawsApplicationThreadGroup.
+     * Then create a Runnnable task to wrap the target function call, use the AppContext.getAppContext
+     * to get the current application context, and call this API.
+     *
+     *
+     * @param javawsApplicationThreadGroup
+     * @param appContext
+     * @param rn
+     */
     public void invokeLater2(ThreadGroup javawsApplicationThreadGroup, AppContext appContext, Runnable rn) {
         if (javawsApplicationThreadGroup != null)
         {

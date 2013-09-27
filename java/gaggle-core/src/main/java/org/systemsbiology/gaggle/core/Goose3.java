@@ -1,7 +1,6 @@
 package org.systemsbiology.gaggle.core;
 
 import org.systemsbiology.gaggle.core.datatypes.GaggleGooseInfo;
-import org.systemsbiology.gaggle.core.datatypes.Table;
 import org.systemsbiology.gaggle.core.datatypes.WorkflowAction;
 
 import java.rmi.RemoteException;
@@ -52,7 +51,22 @@ public interface Goose3 extends Goose2 {
 
     //public void setGooseInfo(GaggleGooseInfo gooseInfo) throws RemoteException;
 
+    /**
+     * This API is called by the Boss during state saving. The goose should save its current state
+     * to one or multiple files prefixed with the given filePrefix string and save the files in
+     * the destination directory.
+     *
+     * @param directory The destination directory to save the state files.
+     * @param filePrefix  The prefix of the name of the state file.
+     * @throws RemoteException
+     */
     public void saveState(String directory, String filePrefix) throws RemoteException;
 
+    /**
+     * Load the state according given the state file.
+     *
+     * @param location  The full path name of the state file to be loaded.
+     * @throws RemoteException
+     */
     public void loadState(String location) throws RemoteException;
 }

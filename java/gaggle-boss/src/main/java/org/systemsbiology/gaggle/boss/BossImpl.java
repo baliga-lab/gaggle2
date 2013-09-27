@@ -1383,9 +1383,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         if (proxyGoose != null)
                         {
                             Log.info("Save state return json: " + saveStateResponse);
-                            ProxyGooseMessage m = new ProxyGooseMessage(WorkflowManager.SaveStateResponseMessage, saveStateResponse);
-                            proxyCallbackThread.setProxyGoose(proxyGoose);
-                            proxyCallbackThread.AddMessage(m);
+                            if (saveStateResponse != null && saveStateResponse.length() > 0)
+                            {
+                                ProxyGooseMessage m = new ProxyGooseMessage(WorkflowManager.SaveStateResponseMessage, saveStateResponse);
+                                proxyCallbackThread.setProxyGoose(proxyGoose);
+                                proxyCallbackThread.AddMessage(m);
+                            }
                         }
                     }
                 }
