@@ -63,6 +63,20 @@ public class GooseWorkflowManager
         return null;
     }
 
+    public String processSpeciesString(String rawSpecies)
+    {
+        if (rawSpecies != null)
+        {
+            String species = rawSpecies.trim();
+            String[] splitted = species.split(";");
+            if (splitted.length > 1)
+                species = splitted[1].trim().toLowerCase();
+            System.out.println("Workflow species " + species);
+            return species;
+        }
+        return null;
+    }
+
     public String[] getNameList(String requestID)
     {
         if (this.processingQueue.containsKey(requestID))

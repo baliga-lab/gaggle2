@@ -1,10 +1,11 @@
 package org.systemsbiology.gaggle.boss;
 
-import java.rmi.*;
-import java.util.*;
-import java.util.logging.*;
+import org.systemsbiology.gaggle.core.Goose;
+import org.systemsbiology.gaggle.core.JSONGoose;
 
-import org.systemsbiology.gaggle.core.*;
+import java.rmi.RemoteException;
+import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * A class for Goose management.
@@ -147,9 +148,11 @@ public class GooseManager {
 
     private List<String> disconnectedGooseNames() {
         List<String> result = new ArrayList<String>();
+        Log.info("Get disconnectd goose names...");
         for (String gooseName : gooseMap.keySet()) {
             try {
-                gooseMap.get(gooseName).getName();
+                String name = gooseMap.get(gooseName).getName();
+                Log.info("Obtained goose name: " + name);
             } catch (RemoteException e) {
                 Log.info("Removing idle goose '" + gooseName + "'");
                 result.add(gooseName);

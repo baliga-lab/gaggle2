@@ -346,6 +346,25 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     public BossImpl(BossUI ui, String nameHelperURI)
         throws Exception {
         this.ui = ui;
+
+        // We clean up the temp folder before doing everything else
+        // Workflow manager will create its own temp folder afterwards
+        try
+        {
+            String tempDir = System.getProperty("java.io.tmpdir");
+            if (tempDir.toLowerCase().startsWith("/var/folders/"))
+                tempDir = "/tmp/";
+            tempDir += "Gaggle";
+            File tdFile = new File(tempDir);
+            CleanTempDirectory(tdFile);
+        }
+        catch (Exception e)
+        {
+            Log.warning("Failed to clean up temp dir " + e.getMessage());
+            e.printStackTrace();
+        }
+
+
         this.gooseManager = new GooseManager(ui);
         this.workflowManager = new WorkflowManager(this, this.gooseManager);
 
@@ -427,6 +446,32 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
         proxyCallbackThread = new ProxyCallbackThread(this, null);
         proxyCallbackThread.start();
+
+    }
+
+    private void CleanTempDirectory(File directory)
+    {
+        // Iterate through all the sub folders and clean up
+        if (directory != null)
+        {
+            if(directory.exists() && directory.isDirectory())
+            {
+                File[] files = directory.listFiles();
+                if(null != files){
+                    for(int i=0; i<files.length; i++) {
+                        if(files[i].isDirectory())
+                        {
+                            CleanTempDirectory(files[i]);
+                        }
+                        else
+                        {
+                            files[i].delete();
+                        }
+                    }
+                }
+            }
+            directory.delete();
+        }
     }
 
     private void loadJarLib(InputStream in, String libName) throws IOException {
@@ -524,15 +569,16 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         Log.info("???? Getting executable for " + appName);
         for (String key : applicationInfo.keySet())
         {
+            String name = NameUniquifier.getOrginalGooseName(key);
             if (key.toLowerCase().equals(appName.toLowerCase()))
                 return applicationInfo.get(key);
         }
 
-        for (String key : applicationInfo.keySet())
+        /*for (String key : applicationInfo.keySet())
         {
             if (key.toLowerCase().indexOf(appName.toLowerCase()) >= 0)
                 return applicationInfo.get(key);
-        }
+        } */
         return null;
     }
 

@@ -55,4 +55,14 @@ public class NameUniquifier {
         if (max < 10) stringToReturn += "0";
         return stringToReturn += max;
     }
+
+    public static String getOrginalGooseName(String goosename)
+    {
+        if (goosename != null)
+        {
+            String[] splitted = goosename.split("-");
+            return splitted[0].trim();
+        }
+        return null;
+    }
 }

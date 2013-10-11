@@ -50,7 +50,10 @@ public class WorkflowManager {
     public static String WorkflowInformation = "WorkflowInformation";
     public static String UploadResponse = "UploadResponse";
 
-
+    public static String gaggleRInitFile = "gaggleInit.R";
+    public static String gaggleRBatchFile64 = "gaggleR64.bat";
+    public static String gaggleRBatchFile32 = "gaggleR32.bat";
+    public static String gaggleRShellFile = "gaggleR.sh";
 
     class ShutdownHookThread extends Thread
     {
@@ -633,7 +636,10 @@ public class WorkflowManager {
                     {
                         // We always append the name of the application for Cytoscape, we want to broadcast
                         // to the original goose
-                        if (currentGooseName.toLowerCase().contains(this.gooseName.toLowerCase())
+                        String finalgoosename = NameUniquifier.getOrginalGooseName(currentGooseName).toLowerCase();
+                        Log.info("Wait for goose final name " + finalgoosename);
+                        if (((this.gooseName.equals("R") && (finalgoosename.toLowerCase().equals("r")))
+                                || (!this.gooseName.equals("R") && finalgoosename.contains(this.gooseName.toLowerCase())))
                                 && !InSnapshot(currentGooseName))
                         {
                             // The goose has been started correctly!
@@ -660,6 +666,9 @@ public class WorkflowManager {
 
     public Goose3 PrepareGoose(WorkflowComponent source, Object syncObj)
     {
+        // First clean up unregistered geese (Firegoose can be lingering around even if Firefox is closed)
+        bossImpl.unregisterIdleGeeseAndUpdate();
+
         String[] geeseNames = bossImpl.getListeningGooseNames();
         boolean foundGoose = false;
         Goose goose = null;
@@ -678,7 +687,9 @@ public class WorkflowManager {
                 {
                     // We always append the name of the application for Cytoscape, we want to broadcast
                     // to the original goose with the name similar to Cytoscape v2.8.3;Cytoscape v2.8.3
-                    if (currentGooseName.trim().toLowerCase().contains(source.getGooseName().toLowerCase()))
+                    String finalgoosename = NameUniquifier.getOrginalGooseName(currentGooseName).toLowerCase();
+                    Log.info("Final goose name to compare " + finalgoosename);
+                    if (finalgoosename.equals(source.getGooseName().toLowerCase()))
                     {
                         goose = bossImpl.getGoose(geeseNames[i]);
                         if (goose instanceof Goose3)
@@ -837,6 +848,59 @@ public class WorkflowManager {
             cmdsToRun[3] = cmdToRunTarget;
             cmdsToRun[4] = arguments;
             Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
+        }
+        else if (cmdToRunTarget.toLowerCase().indexOf("r.exe") >= 0 || cmdToRun.toLowerCase().endsWith("/r"))
+        {
+            // Download the gaggle init.r file
+            String server = System.getProperty("server");
+            String initfilename = this.getMyTempFolder().getAbsolutePath() + File.separator + gaggleRInitFile;
+            downloadFileFromUrl(initfilename, (server + "/static/applications/" + gaggleRInitFile));
+            Log.info("Downloading R init file " + gaggleRInitFile + " from " + server);
+
+            String[] cmdsToRun = null;
+            String fullscriptfilename = "";
+            String scriptfilename = "";
+            String arch = System.getProperty("os.arch");
+            if (os.toLowerCase().indexOf("win") >= 0)
+            {
+                if (arch.startsWith("amd64") || arch.startsWith("x64"))
+                {
+                    fullscriptfilename = this.getMyTempFolder().getAbsolutePath() + File.separator + gaggleRBatchFile64;
+                    scriptfilename = gaggleRBatchFile64;
+                }
+                else
+                {
+                    fullscriptfilename = this.getMyTempFolder().getAbsolutePath() + File.separator + gaggleRBatchFile32;
+                    scriptfilename = gaggleRBatchFile32;
+                }
+
+                Log.info("Downloading script file " + fullscriptfilename + " Server " + server);
+                downloadFileFromUrl(fullscriptfilename, (server + "/static/applications/" + scriptfilename));
+
+                cmdsToRun = new String[6];
+                cmdsToRun[0] = "cmd.exe";
+                cmdsToRun[1] = "/K";
+                cmdsToRun[2] = "start";
+                cmdsToRun[3] = "cmd";
+                cmdsToRun[4] = "/K";
+                cmdsToRun[5] = fullscriptfilename;
+            }
+            else
+            {
+                fullscriptfilename = this.getMyTempFolder().getAbsolutePath() + File.separator + gaggleRShellFile;
+                scriptfilename = gaggleRShellFile;
+                Log.info("Downloading Unix script file " + fullscriptfilename + " Server " + server);
+                downloadFileFromUrl(fullscriptfilename, (server + "/static/applications/" + scriptfilename));
+
+                cmdsToRun = new String[2];
+                cmdsToRun[0] = "sh";
+                cmdsToRun[1] = fullscriptfilename;
+            }
+
+            File f = new File(cmdToRunTarget);
+            String path = f.getParent();
+
+            Process proc = Runtime.getRuntime().exec(cmdsToRun, null, this.getMyTempFolder());
         }
         else if (cmdToRunTarget.toLowerCase().endsWith(".py;;"))
         {

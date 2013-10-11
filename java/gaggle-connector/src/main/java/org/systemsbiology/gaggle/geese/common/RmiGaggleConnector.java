@@ -200,6 +200,7 @@ public class RmiGaggleConnector {
         //command += File.separator +  "bin" + File.separator + "javaws " + GaggleConstants.BOSS_URL;
 
         String jwsdir = System.getProperty("java.home");
+        jwsdir = jwsdir.replace("\\", "\\\\");
         jwsdir += File.separator + "bin";
         try {
             ProcessBuilder pb = new ProcessBuilder("javaws", GaggleConstants.BOSS_URL);
