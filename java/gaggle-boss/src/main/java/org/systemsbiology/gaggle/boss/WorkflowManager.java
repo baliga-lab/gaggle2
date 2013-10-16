@@ -28,7 +28,7 @@ import java.util.logging.Logger;
 public class WorkflowManager {
     protected GooseManager gooseManager = null;
     protected BossImpl bossImpl = null;
-    private long timerInterval = 200L; //milliseconds
+    private long timerInterval = 1000L; //milliseconds
     private long timerTimeout = 600000L; // timer for verifying if a goose is started correctly
     private static Logger Log = Logger.getLogger("Boss");
     private Thread resourceManagementThread;
@@ -596,6 +596,8 @@ public class WorkflowManager {
             super();
             this.gooseName = gooseName;
             this.syncObj = syncObj;
+            // Take a snapshot
+            snapshotBeforeStartingGoose = bossImpl.getListeningGooseNames();
         }
 
         public boolean IsGooseStarted() { return gooseStarted; }
@@ -666,50 +668,84 @@ public class WorkflowManager {
 
     public Goose3 PrepareGoose(WorkflowComponent source, Object syncObj)
     {
-        // First clean up unregistered geese (Firegoose can be lingering around even if Firefox is closed)
-        bossImpl.unregisterIdleGeeseAndUpdate();
-
-        String[] geeseNames = bossImpl.getListeningGooseNames();
-        boolean foundGoose = false;
-        Goose goose = null;
-        if (geeseNames != null)
+        if (source != null)
         {
-            for (int i = 0; i < geeseNames.length; i++)
+            Goose goose = null;
+            boolean  forceStart = ((source.getOptions() & WorkflowComponent.Options.OpenInNewWindow.getValue()) > 0) ? true : false;
+            Log.info("Component " + source.getComponentID() + " force start " + forceStart);
+            if (!forceStart)
             {
-                String currentGooseName = geeseNames[i];
-                Log.info("Current goose name: " + currentGooseName);
-                String[] gooseNameSplitted = currentGooseName.split(";");
-                Log.info("Splitted goose name: " + gooseNameSplitted.length);
-                if (gooseNameSplitted.length > 1)
-                    Log.info("Splitted goose name: " + gooseNameSplitted[0] + " " + gooseNameSplitted[1]);
-                if ((gooseNameSplitted.length > 1 && gooseNameSplitted[0].equals(gooseNameSplitted[1]))
-                        || gooseNameSplitted.length == 1)
+
+                if (source.getExistingGooseName() != null)
                 {
-                    // We always append the name of the application for Cytoscape, we want to broadcast
-                    // to the original goose with the name similar to Cytoscape v2.8.3;Cytoscape v2.8.3
-                    String finalgoosename = NameUniquifier.getOrginalGooseName(currentGooseName).toLowerCase();
-                    Log.info("Final goose name to compare " + finalgoosename);
-                    if (finalgoosename.equals(source.getGooseName().toLowerCase()))
+                    Log.info("Find existing goose: " + source.getExistingGooseName());
+
+                    String[] geeseNames = bossImpl.getListeningGooseNames();
+                    for (int i = 0; i < geeseNames.length; i++)
                     {
-                        goose = bossImpl.getGoose(geeseNames[i]);
-                        if (goose instanceof Goose3)
+                        if (geeseNames[i].equals(source.getExistingGooseName()))
                         {
                             Log.info("Found existing goose " + geeseNames[i]);
-                            Report(InformationMessage, ("Found existing goose " + geeseNames[i]));
-                            return (Goose3)goose;
+                            goose = bossImpl.getGoose(geeseNames[i]);
+                            break;
                         }
                     }
                 }
             }
-        }
+            /*else
+            {
+                // First clean up unregistered geese (Firegoose can be lingering around even if Firefox is closed)
+                bossImpl.unregisterIdleGeeseAndUpdate();
+                String[] geeseNames = bossImpl.getListeningGooseNames();
+                boolean foundGoose = false;
 
-        if (goose == null)
-        {
-            goose = tryToStartGoose(source, syncObj);
-            if (goose != null && goose instanceof Goose3)
-                return (Goose3)goose;
+                if (geeseNames != null)
+                {
+                    for (int i = 0; i < geeseNames.length; i++)
+                    {
+                        String currentGooseName = geeseNames[i];
+                        Log.info("Current goose name: " + currentGooseName);
+                        String[] gooseNameSplitted = currentGooseName.split(";");
+                        Log.info("Splitted goose name: " + gooseNameSplitted.length);
+                        if (gooseNameSplitted.length > 1)
+                            Log.info("Splitted goose name: " + gooseNameSplitted[0] + " " + gooseNameSplitted[1]);
+                        if ((gooseNameSplitted.length > 1 && gooseNameSplitted[0].equals(gooseNameSplitted[1]))
+                                || gooseNameSplitted.length == 1)
+                        {
+                            // We always append the name of the application for Cytoscape, we want to broadcast
+                            // to the original goose with the name similar to Cytoscape v2.8.3;Cytoscape v2.8.3
+                            String finalgoosename = NameUniquifier.getOrginalGooseName(currentGooseName).toLowerCase();
+                            Log.info("Final goose name to compare " + finalgoosename);
+                            if (finalgoosename.equals(source.getGooseName().toLowerCase()))
+                            {
+                                goose = bossImpl.getGoose(geeseNames[i]);
+                                if (goose instanceof Goose3)
+                                {
+                                    Log.info("Found existing goose " + geeseNames[i]);
+                                    Report(InformationMessage, ("Found existing goose " + geeseNames[i]));
+                                    return (Goose3)goose;
+                                }
+                            }
+                        }
+                    }
+                }
+            } */
+
+            if (goose == null)
+            {
+                Log.info("No goose found for " + source.getGooseName());
+                goose = tryToStartGoose(source, syncObj);
+                if (goose != null && goose instanceof Goose3)
+                    return (Goose3)goose;
+            }
+            else
+            {
+                Log.info("Goose " + source.getGooseName() + " Found! ");
+                if (goose instanceof  Goose3)
+                    return (Goose3)goose;
+            }
+            return null;
         }
-        Log.info("No goose found for " + source.getGooseName());
         return null;
     }
 
@@ -849,7 +885,7 @@ public class WorkflowManager {
             cmdsToRun[4] = arguments;
             Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
         }
-        else if (cmdToRunTarget.toLowerCase().indexOf("r.exe") >= 0 || cmdToRun.toLowerCase().endsWith("/r"))
+        else if (cmdToRunTarget.toLowerCase().endsWith("r.exe") || cmdToRun.toLowerCase().endsWith("/r"))
         {
             // Download the gaggle init.r file
             String server = System.getProperty("server");

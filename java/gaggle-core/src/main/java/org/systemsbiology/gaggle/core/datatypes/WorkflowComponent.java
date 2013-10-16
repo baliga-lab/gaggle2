@@ -33,6 +33,9 @@ public class WorkflowComponent implements Serializable {
     private HashMap<String, Object> params;
     private String jsonParams;
     private int options;
+    // The name of an already opened goose, this is used when the user chooses to pass data to an opened goose.
+    private String existingGooseName;
+
 
 
     //private ProcessingState state;
@@ -68,7 +71,7 @@ public class WorkflowComponent implements Serializable {
      */
     public WorkflowComponent(String id, String workflownodeid, String workflowindex, String name,
                              String gooseName, String version, String cmduri, String arguments,
-                             HashMap params, int options)
+                             HashMap params, int options, String existingGooseName)
     {
         this.componentWorkflowNodeID = workflownodeid;
         this.workflowIndex = workflowindex;
@@ -83,6 +86,8 @@ public class WorkflowComponent implements Serializable {
         else
             this.params = new HashMap();
         this.options = options;
+        this.existingGooseName = existingGooseName;
+
         //this.convertParamsToJSON();
         //this.state = ProcessingState.Initial;
     }
@@ -184,6 +189,7 @@ public class WorkflowComponent implements Serializable {
     public HashMap getParams() { return params; }
     public String getJSONParams() { return jsonParams; }
     public int getOptions() { return options; }
+    public String getExistingGooseName() { return existingGooseName; }
 
     public void setParams(HashMap para)
     {

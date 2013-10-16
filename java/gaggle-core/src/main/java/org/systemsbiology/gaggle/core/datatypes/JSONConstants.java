@@ -67,4 +67,5 @@ public interface JSONConstants {
     String WORKFLOW_USERID = "userid";
     String WORKFLOW_SAVESTATERESULTKEY = "state";
     String WORKFLOW_STATEID = "id";
+    String WORKFLOW_OPENINNEWWINDOW = "openinnewwindow";
 }

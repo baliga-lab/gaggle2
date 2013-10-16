@@ -16,6 +16,7 @@ public class GooseManager {
     private Map<String, String> gooseWorkflow
             = Collections.synchronizedMap(new HashMap<String, String>()); // This needs to be thread safe
     private BossUI ui;
+    private Object gooseUpdateObj = new Object();
 
     public GooseManager(BossUI ui) {
         this.ui = ui;
@@ -140,10 +141,13 @@ public class GooseManager {
      * or being renamed.
      */
     public void unregisterIdleGeeseAndUpdate() {
-        for (String gooseName : disconnectedGooseNames()) {
-            unregister(gooseName, false);
+        synchronized (gooseUpdateObj)
+        {
+            for (String gooseName : disconnectedGooseNames()) {
+                unregister(gooseName, false);
+            }
+            updateGeese();
         }
-        updateGeese();
     }
 
     private List<String> disconnectedGooseNames() {
