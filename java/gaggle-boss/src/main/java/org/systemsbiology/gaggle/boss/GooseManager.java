@@ -171,6 +171,7 @@ public class GooseManager {
         for (String gooseName : keys) {
             Goose goose = gooseMap.get(gooseName);
             try {
+                Log.info("Update " + gooseName + " with active geese");
                 goose.update(keys);
             } catch (Exception ex) {
                 ex.printStackTrace();

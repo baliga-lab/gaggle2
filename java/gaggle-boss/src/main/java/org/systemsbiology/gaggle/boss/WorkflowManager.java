@@ -55,6 +55,36 @@ public class WorkflowManager {
     public static String gaggleRBatchFile32 = "gaggleR32.bat";
     public static String gaggleRShellFile = "gaggleR.sh";
 
+    /**
+     * Grab the inputstream of a process started by Runtime.exec
+     */
+    class StreamGobbler extends Thread
+    {
+        InputStream is;
+        String type;
+
+        StreamGobbler(InputStream is, String type)
+        {
+            this.is = is;
+            this.type = type;
+        }
+
+        public void run()
+        {
+            try
+            {
+                InputStreamReader isr = new InputStreamReader(is);
+                BufferedReader br = new BufferedReader(isr);
+                String line=null;
+                while ( (line = br.readLine()) != null)
+                    Log.info(type + ">" + line);
+            } catch (IOException ioe)
+            {
+                ioe.printStackTrace();
+            }
+        }
+    }
+
     class ShutdownHookThread extends Thread
     {
         public void run()
@@ -399,7 +429,7 @@ public class WorkflowManager {
                 {
                     URL url = null;
                     try {
-                        String server = System.getProperty("server");
+                        String server = BossImpl.GAGGLE_SERVER;
                         Log.info("Web server: " + server);
                         if (server == null || server.length() == 0)
                             server = "http://networks.systemsbiology.net";
@@ -670,10 +700,13 @@ public class WorkflowManager {
     {
         if (source != null)
         {
+            // First clean up unregistered geese (Firegoose can be lingering around even if Firefox is closed)
+            bossImpl.unregisterIdleGeeseAndUpdate();
+
             Goose goose = null;
             boolean  forceStart = ((source.getOptions() & WorkflowComponent.Options.OpenInNewWindow.getValue()) > 0) ? true : false;
             Log.info("Component " + source.getComponentID() + " force start " + forceStart);
-            if (!forceStart)
+            /*if (!forceStart)
             {
 
                 if (source.getExistingGooseName() != null)
@@ -690,12 +723,27 @@ public class WorkflowManager {
                             break;
                         }
                     }
+
+                    if (goose == null)
+                    {
+                        // If we didn't find an exact match, we go for the same existing goose
+                        // This is for loading state, where we don't have an exact match.
+                        for (int i = 0; i < geeseNames.length; i++)
+                        {
+                            String finalgoosename = NameUniquifier.getOrginalGooseName(geeseNames[i]).toLowerCase();
+                            if (finalgoosename.equals(source.getExistingGooseName().toLowerCase()))
+                            {
+                                Log.info("Found existing goose with unmatched name " + geeseNames[i]);
+                                goose = bossImpl.getGoose(geeseNames[i]);
+                                break;
+                            }
+                        }
+                    }
                 }
-            }
-            /*else
+            }    */
+            //else
             {
-                // First clean up unregistered geese (Firegoose can be lingering around even if Firefox is closed)
-                bossImpl.unregisterIdleGeeseAndUpdate();
+
                 String[] geeseNames = bossImpl.getListeningGooseNames();
                 boolean foundGoose = false;
 
@@ -729,7 +777,7 @@ public class WorkflowManager {
                         }
                     }
                 }
-            } */
+            }
 
             if (goose == null)
             {
@@ -888,7 +936,7 @@ public class WorkflowManager {
         else if (cmdToRunTarget.toLowerCase().endsWith("r.exe") || cmdToRun.toLowerCase().endsWith("/r"))
         {
             // Download the gaggle init.r file
-            String server = System.getProperty("server");
+            String server = BossImpl.GAGGLE_SERVER;
             String initfilename = this.getMyTempFolder().getAbsolutePath() + File.separator + gaggleRInitFile;
             downloadFileFromUrl(initfilename, (server + "/static/applications/" + gaggleRInitFile));
             Log.info("Downloading R init file " + gaggleRInitFile + " from " + server);
@@ -920,23 +968,94 @@ public class WorkflowManager {
                 cmdsToRun[3] = "cmd";
                 cmdsToRun[4] = "/K";
                 cmdsToRun[5] = fullscriptfilename;
+                Process proc = Runtime.getRuntime().exec(cmdsToRun, null, this.getMyTempFolder());
             }
-            else
+            else if (os.startsWith("Mac"))
             {
                 fullscriptfilename = this.getMyTempFolder().getAbsolutePath() + File.separator + gaggleRShellFile;
                 scriptfilename = gaggleRShellFile;
-                Log.info("Downloading Unix script file " + fullscriptfilename + " Server " + server);
+                Log.info("Downloading Mac script file " + fullscriptfilename + " Server " + server);
                 downloadFileFromUrl(fullscriptfilename, (server + "/static/applications/" + scriptfilename));
 
-                cmdsToRun = new String[2];
-                cmdsToRun[0] = "sh";
-                cmdsToRun[1] = fullscriptfilename;
+                // First give permission to the script file
+                //Process chmod = Runtime.getRuntime().exec("chmod u+x \"" + fullscriptfilename + "\"");
+                Log.info("Setting execution permission for " + fullscriptfilename);
+                File file = new File(fullscriptfilename);
+                file.setReadable(true, true);
+                file.setExecutable(true, false);
+
+                cmdsToRun = new String[4];
+                cmdsToRun[0] = "/usr/bin/open";
+                cmdsToRun[1] = "-a";
+                cmdsToRun[2] = "Terminal";
+                cmdsToRun[3] = fullscriptfilename;
+                Log.info("Execute /bin/sh " + scriptfilename);
+                ProcessBuilder pb = new ProcessBuilder(cmdsToRun);
+                pb.directory(this.getMyTempFolder());
+                //pb.redirectErrorStream(true);
+                Process proc = pb.start();
+                //Process proc = Runtime.getRuntime().exec(("/bin/sh " + fullscriptfilename + " --save"), null, this.getMyTempFolder());
+                StreamGobbler errorGobbler = new
+                        StreamGobbler(proc.getErrorStream(), "ERROR");
+
+                // any output?
+                StreamGobbler outputGobbler = new
+                        StreamGobbler(proc.getInputStream(), "OUTPUT");
+                errorGobbler.start();
+                outputGobbler.start();
+
+                //BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+                proc.waitFor();
+                if(proc.exitValue()!=0)
+                {
+                    Log.info("Failed to start R script file " + proc.exitValue());
+                }
+
+
             }
+            else if (os.startsWith("Linux"))
+            {
+                fullscriptfilename = this.getMyTempFolder().getAbsolutePath() + File.separator + gaggleRShellFile;
+                scriptfilename = gaggleRShellFile;
+                Log.info("Downloading Linux script file " + fullscriptfilename + " Server " + server);
+                downloadFileFromUrl(fullscriptfilename, (server + "/static/applications/" + scriptfilename));
 
-            File f = new File(cmdToRunTarget);
-            String path = f.getParent();
+                // First give permission to the script file
+                //Process chmod = Runtime.getRuntime().exec("chmod u+x \"" + fullscriptfilename + "\"");
+                Log.info("Setting execution permission for " + fullscriptfilename);
+                File file = new File(fullscriptfilename);
+                file.setReadable(true, true);
+                file.setExecutable(true, false);
 
-            Process proc = Runtime.getRuntime().exec(cmdsToRun, null, this.getMyTempFolder());
+                cmdsToRun = new String[3];
+                cmdsToRun[0] = "/usr/bin/xterm";
+                cmdsToRun[1] = "-e";
+                //cmdsToRun[2] = "Terminal";
+                cmdsToRun[2] = fullscriptfilename;
+                Log.info("Execute xterm " + scriptfilename);
+                ProcessBuilder pb = new ProcessBuilder(cmdsToRun);
+                pb.directory(this.getMyTempFolder());
+                //pb.redirectErrorStream(true);
+                Process proc = pb.start();
+                //Process proc = Runtime.getRuntime().exec(("/bin/sh " + fullscriptfilename + " --save"), null, this.getMyTempFolder());
+                StreamGobbler errorGobbler = new
+                        StreamGobbler(proc.getErrorStream(), "ERROR");
+
+                // any output?
+                StreamGobbler outputGobbler = new
+                        StreamGobbler(proc.getInputStream(), "OUTPUT");
+                errorGobbler.start();
+                outputGobbler.start();
+
+                //BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+                proc.waitFor();
+                if(proc.exitValue()!=0)
+                {
+                    Log.info("Failed to start R script file " + proc.exitValue());
+                }
+
+
+            }
         }
         else if (cmdToRunTarget.toLowerCase().endsWith(".py;;"))
         {
@@ -1697,37 +1816,6 @@ public class WorkflowManager {
                 {
                     Log.severe("All retries failed. Terminate the processing of node " + c.component.getGooseName());
                     c.state = ProcessingState.Finished;
-                }
-            }
-        }
-
-
-        /**
-         * Grab the inputstream of a process started by Runtime.exec
-         */
-        class StreamGobbler extends Thread
-        {
-            InputStream is;
-            String type;
-
-            StreamGobbler(InputStream is, String type)
-            {
-                this.is = is;
-                this.type = type;
-            }
-
-            public void run()
-            {
-                try
-                {
-                    InputStreamReader isr = new InputStreamReader(is);
-                    BufferedReader br = new BufferedReader(isr);
-                    String line=null;
-                    while ( (line = br.readLine()) != null)
-                        System.out.println(type + ">" + line);
-                } catch (IOException ioe)
-                {
-                    ioe.printStackTrace();
                 }
             }
         }

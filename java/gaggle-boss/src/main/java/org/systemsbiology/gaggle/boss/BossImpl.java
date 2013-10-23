@@ -271,7 +271,7 @@ class RestoreStateThread extends Thread
                 // Start the goose and parse the restore file
                 Log.info("Starting goose " + goosename);
                 WorkflowComponent c = new WorkflowComponent("", "", "", goosename, goosename, "", serviceurl, "", null,
-                        WorkflowComponent.Options.None.getValue(), "");
+                        WorkflowComponent.Options.None.getValue(), goosename);
                 Object syncObj = new Object();
                 Goose3 goose = workflowManager.PrepareGoose(c, syncObj);
                 if (goose != null)
@@ -364,6 +364,11 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             e.printStackTrace();
         }
 
+        String server = System.getProperty("jnlp.server");
+        Log.info("Web server: " + server);
+        if (server == null || server.length() == 0)
+            server = "http://networks.systemsbiology.net";
+        GAGGLE_SERVER = server;
 
         this.gooseManager = new GooseManager(ui);
         this.workflowManager = new WorkflowManager(this, this.gooseManager);
@@ -372,11 +377,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             nameHelper = new NewNameHelper(nameHelperURI);
         }
 
-        String server = System.getProperty("server");
-        Log.info("Web server: " + server);
-        if (server == null || server.length() == 0)
-            server = "http://networks.systemsbiology.net";
-        GAGGLE_SERVER = server;
+
 
         String os = System.getProperty("os.name");
         String arch = System.getProperty("os.arch");
@@ -1347,7 +1348,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 // Now we upload the goose state files to server
                 URL url = null;
                 try {
-                    String server = System.getProperty("server");
+                    String server = BossImpl.GAGGLE_SERVER;
                     Log.info("Web server: " + server);
                     if (server == null || server.length() == 0)
                         server = "http://networks.systemsbiology.net";
@@ -1474,7 +1475,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     {
         URL url = null;
         try {
-            String server = System.getProperty("server");
+            String server = BossImpl.GAGGLE_SERVER;
             Log.info("Web server: " + server);
             if (server == null || server.length() == 0)
                 server = "http://networks.systemsbiology.net";
