@@ -706,7 +706,7 @@ public class WorkflowManager {
             Goose goose = null;
             boolean  forceStart = ((source.getOptions() & WorkflowComponent.Options.OpenInNewWindow.getValue()) > 0) ? true : false;
             Log.info("Component " + source.getComponentID() + " force start " + forceStart);
-            /*if (!forceStart)
+            if (!forceStart)
             {
 
                 if (source.getExistingGooseName() != null)
@@ -740,8 +740,8 @@ public class WorkflowManager {
                         }
                     }
                 }
-            }    */
-            //else
+            }
+            /*else
             {
 
                 String[] geeseNames = bossImpl.getListeningGooseNames();
@@ -777,7 +777,7 @@ public class WorkflowManager {
                         }
                     }
                 }
-            }
+            } */
 
             if (goose == null)
             {
