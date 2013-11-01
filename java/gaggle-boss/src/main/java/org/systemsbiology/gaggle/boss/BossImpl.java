@@ -466,12 +466,42 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         }
                         else
                         {
-                            files[i].delete();
+                            // We do not remove temp files of the same day because there is a case
+                            // that user might capture gaggle data from a web page, and save it, which
+                            // will first save the data to a temporary file, start the boss
+                            // automatically and save the data to the server. If we clean up the temp
+                            // files, we will lose data.
+                            long lastmodified = files[i].lastModified();
+                            Calendar c = Calendar.getInstance();
+                            // set the calendar to start of today
+                            c.set(Calendar.HOUR, 0);
+                            c.set(Calendar.MINUTE, 0);
+                            c.set(Calendar.SECOND, 0);
+                            // or as a timestamp in milliseconds
+                            long todayInMillis = c.getTimeInMillis();
+                            if (todayInMillis - lastmodified > 86400000)
+                            {
+                                try
+                                {
+                                    files[i].delete();
+                                }
+                                catch (Exception e1)
+                                {
+                                    Log.warning("Failed to remove temp file " + e1.getMessage());
+                                }
+                            }
                         }
                     }
                 }
             }
-            directory.delete();
+            try
+            {
+                directory.delete();
+            }
+            catch (Exception e)
+            {
+                Log.warning("Failed to remove temp foler " + e.getMessage());
+            }
         }
     }
 
@@ -1391,8 +1421,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                             }
                         }
 
-                        String[] propNames = new String[4];
-                        String[] propValues = new String[4];
+                        String[] propNames = new String[5];
+                        String[] propValues = new String[5];
                         propNames[0] = "stateid";
                         propValues[0] = stateid;
                         propNames[1] = "userid";
@@ -1401,6 +1431,12 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                         propValues[2] = name;
                         propNames[3] = "desc";
                         propValues[3] = desc;
+                        propNames[4] = "createtime";
+                        Date currentDate = new Date();
+                        SimpleDateFormat simpledateformat = new SimpleDateFormat("MM/d/yyyy HH:mm:ss");
+                        String createdate = simpledateformat.format(currentDate);
+                        Log.info("State create datetime string " + createdate);
+                        propValues[4] = createdate;
                         HttpFileUploadHelper httpFileUploadHelper = new HttpFileUploadHelper(url, propNames, propValues, statefiles);
 
                         //ArrayList<File> batch = new ArrayList<File>();

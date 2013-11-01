@@ -782,7 +782,18 @@ public class WorkflowManager {
             if (goose == null)
             {
                 Log.info("No goose found for " + source.getGooseName());
-                goose = tryToStartGoose(source, syncObj);
+                Log.info("Goose name " + source.getGooseName() + " os.name: " + System.getProperty("os.arch") + " " + bossImpl.getGoose("Firegoose"));
+                if (source.getGooseName().equalsIgnoreCase("firegoose")
+                        && System.getProperty("os.name").startsWith("Mac") && bossImpl.getGoose("Firegoose") != null)
+                {
+                    // On Mac, Firefox cannot start a new window if one is already openned, we
+                    // have to reuse the existing window anyway
+                    goose =  bossImpl.getGoose("Firegoose");
+                }
+                else
+                {
+                    goose = tryToStartGoose(source, syncObj);
+                }
                 if (goose != null && goose instanceof Goose3)
                     return (Goose3)goose;
             }
