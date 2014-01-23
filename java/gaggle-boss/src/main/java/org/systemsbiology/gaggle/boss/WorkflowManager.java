@@ -924,6 +924,7 @@ public class WorkflowManager {
         boolean gooseStarted = false;
         String os = System.getProperty("os.name");
         String cmdToRunTarget = cmdToRun.trim().toLowerCase();
+        Log.info("---===>Lowercase command line: " + cmdToRunTarget);
         // Somehow JSON Stringify wrapped the command uri with "".
         if (cmdToRunTarget.toLowerCase().endsWith(".bat\"") || cmdToRunTarget.toLowerCase().endsWith("bat"))
         {
@@ -944,7 +945,7 @@ public class WorkflowManager {
             cmdsToRun[4] = arguments;
             Runtime.getRuntime().exec(cmdsToRun, null, new File(path));
         }
-        else if (cmdToRunTarget.toLowerCase().endsWith("r.exe") || cmdToRun.toLowerCase().endsWith("/r"))
+        else if (cmdToRunTarget.toLowerCase().endsWith("r.exe") || cmdToRun.toLowerCase().endsWith("/r") || cmdToRunTarget.endsWith(".r"))
         {
             // Download the gaggle init.r file
             String server = BossImpl.GAGGLE_SERVER;
@@ -1554,14 +1555,14 @@ public class WorkflowManager {
                     ArrayList<WorkflowComponent> parallelcomponents = workflowMap.get(source.getComponentID()).get(0);
                     Log.info("Component " + source.getComponentID() + " has " + parallelcomponents.size() + " parallel children");
                     WorkflowComponent[] targets = null;
-                    if (parallelcomponents != null && parallelcomponents.size() > 1)
+                    //if (parallelcomponents != null && parallelcomponents.size() > 1)
                     {
                         // Pass the parallel children info to the source
-                        targets = new WorkflowComponent[parallelcomponents.size() - 1];
-                        for (int i = 1; i < parallelcomponents.size(); i++)
+                        targets = new WorkflowComponent[parallelcomponents.size()];
+                        for (int i = 0; i < parallelcomponents.size(); i++)
                         {
-                            targets[i - 1] = parallelcomponents.get(i);
-                            Log.info("Target component: " + targets[i-1].getGooseName());
+                            targets[i] = parallelcomponents.get(i);
+                            Log.info("Target component: " + targets[i].getGooseName());
                         }
                     }
 
@@ -1593,8 +1594,9 @@ public class WorkflowManager {
                         //threadSyncObj = new Object();
                         sourceGoose.handleWorkflowAction(action);
                         // if there is no parallel child, we skip to the ParallelAcknowledged state
-                        workflowNode.state = (parallelcomponents != null && parallelcomponents.size() > 1) ?
-                                ProcessingState.ParallelProcessed : ProcessingState.ParallelAcknowledged;
+                        //workflowNode.state = (parallelcomponents != null && parallelcomponents.size() > 1) ?
+                        //        ProcessingState.ParallelProcessed : ProcessingState.ParallelAcknowledged;
+                        workflowNode.state = ProcessingState.ParallelProcessed;
                     }
                     catch (Exception e0)
                     {
@@ -1673,28 +1675,62 @@ public class WorkflowManager {
                     // Add all the parallel components to processingQueue
                     Log.info("Found acknowledgement for " + source.getComponentID() + " " + source.getGooseName());
 
-                    /*WorkflowComponent nextcomponent = this.myWorkflow.getNode(currIndex++);
-                    if (nextcomponent != null && !nodeProcessed(nextcomponent))
-                    {
-                        WorkflowNode pn = new WorkflowNode(nextcomponent);
-                        this.processingQueue.add(pn);
-                    } */
                     ArrayList<WorkflowComponent> parallelcomponents = workflowMap.get(source.getComponentID()).get(0);
-                    for (int i = 1; i < parallelcomponents.size(); i++)
+
+                    for (int i = 0; i < parallelcomponents.size(); i++)
                     {
                         WorkflowComponent pc = parallelcomponents.get(i);
-                        WorkflowNode pn = new WorkflowNode(pc);
-
-                        // If this component's order is less than the current workflow order,
-                        // we should add it to the process queue
                         GaggleData dataForChild = this.stagingParallelData.get(pc.getComponentID());
                         if (dataForChild != null)
                         {
-                            Log.info("Adding ack data " + dataForChild.getName() + " for node " + pc.getComponentID());
-                            pc.addParam(WorkflowComponent.ParamNames.Data.getValue(), dataForChild);
-                        }
+                            if (i == 0)
+                            {
+                                // Some nodes might generate output. We still need to handle
+                                // the acknowledgement
+                                if (dataForChild instanceof Namelist)
+                                {
+                                    Namelist nl = (Namelist)dataForChild;
+                                    if (nl.getSpecies().equals("Workspace"))
+                                    {
+                                        // We need to pass the information to the workspace
+                                        String outputfile = nl.getName();
+                                        String server = System.getProperty("jnlp.server");
+                                        String[] serverstrings = server.split(":");
+                                        String host = serverstrings[0];
+                                        if (serverstrings[0].equalsIgnoreCase("http"))
+                                            host = serverstrings[1].substring(2); // skip the "//"
+                                        Log.info("Host: " + host);
+                                        String id = UUID.randomUUID().toString();
+                                        String retrieveurl = "http://" + host + ":8082" + "/" + id;
+                                        Log.info("Passing output file " + outputfile + "as " + retrieveurl + " to Workspace");
+                                        bossImpl.sendInfoToHttpGoose(id, outputfile);
+                                        Report(WorkflowInformation, ("WorkspaceData:::" + retrieveurl));
 
-                        this.processingQueue.add(pn);
+                                        /*Goose firegoose = bossImpl.getGoose("Firegoose");
+                                        if (firegoose != null)
+                                        {
+                                            Log.info("Pass data to Workspace");
+                                            try {
+                                                firegoose.handleNameList("Boss", nl);
+                                            }
+                                            catch (Exception e)
+                                            {
+                                                Log.severe("Failed to pass data to Workspace " + e.getMessage());
+                                                e.printStackTrace();
+                                            }
+                                        } */
+                                    }
+                                }
+                            }
+                            else {
+                                WorkflowNode pn = new WorkflowNode(pc);
+                                // If this component's order is less than the current workflow order,
+                                // we should add it to the process queue
+                                Log.info("Adding ack data " + dataForChild.getName() + " for node " + pc.getComponentID());
+                                pc.addParam(WorkflowComponent.ParamNames.Data.getValue(), dataForChild);
+                                this.processingQueue.add(pn);
+                            }
+                        }
                     }
                     // remove acknowledge data
                     this.acknowledgedParallelNodes.remove(source.getComponentID());

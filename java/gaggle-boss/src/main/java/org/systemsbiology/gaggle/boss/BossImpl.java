@@ -52,6 +52,8 @@ class HttpFileUploadHelper
             // No caching, we want the real thing.
             urlConnection.setUseCaches (false);
 
+            //urlConnection.setRequestProperty("Cookie", );
+
             httpRequest = new ClientHttpRequest(urlConnection);
 
             if (propNames != null && propValues != null && propNames.length <= propValues.length)
@@ -450,6 +452,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
     }
 
+    public WorkflowManager getWorkflowManager() { return workflowManager; }
+
     private void CleanTempDirectory(File directory)
     {
         // Iterate through all the sub folders and clean up
@@ -653,6 +657,16 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         gooseManager.unregisterIdleGeeseAndUpdate();
     }
     public void setRecording(boolean recording) { isRecording = recording; }
+
+    public void sendInfoToHttpGoose(String id, String info)
+    {
+        BossHttpServer server = ui.getHttpServer();
+        if (server != null)
+        {
+            server.addFile(id, info);
+        }
+    }
+
 
     // ***** Broadcasting *****
     public void broadcastNamelist(final String sourceGoose, final String targetGoose,
@@ -1120,17 +1134,47 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             try
             {
                 Log.info("Goose " + sourceGoose + " query: " + (String)data);
+                if (data == null)
+                    return;
+                String querystring = (String)data;
                 ProcessFinder procFinder = new ProcessFinder(sigar);
                 long[] pids = procFinder.find((String)data);
                 if (pids != null && pids.length > 0)
                 {
-                    Log.info("Getting info for process " + pids[0]);
-                    ProcExe procExe = new ProcExe();
-                    procExe.gather(sigar, pids[0]);
-                    String workdir = procExe.getCwd();
-                    String exename = procExe.getName();
-                    Log.info("Work dir: " + workdir + " Executable: " + exename);
-                    this.applicationInfo.put(sourceGoose, exename);
+                    String workdir = null;
+                    String exename = null;
+                    if (querystring.equals("State.Name.ct=R"))
+                    {
+                        // Look for the R process
+                        for (long pid:pids)
+                        {
+                            Log.info("Getting info for R " + pids[0]);
+                            ProcExe procExe = new ProcExe();
+                            procExe.gather(sigar, pid);
+                            String procname = procExe.getName();
+                            procname = procname.substring(procname.lastIndexOf(File.separator) + 1);
+                            Log.info("Process name " + procname);
+                            if (procname.toLowerCase().equals("r.exe"))
+                            {
+                                workdir = procExe.getCwd();
+                                exename = procExe.getName();
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Log.info("Getting info for process " + pids[0]);
+                        ProcExe procExe = new ProcExe();
+                        procExe.gather(sigar, pids[0]);
+                        workdir = procExe.getCwd();
+                        exename = procExe.getName();
+                    }
+                    if (workdir != null && exename != null)
+                    {
+                        Log.info("Work dir: " + workdir + " Executable: " + exename);
+                        this.applicationInfo.put(sourceGoose, exename);
+                    }
                 }
                 else
                     Log.warning("Couldn't find the process.");
@@ -1357,6 +1401,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     Date date = new Date();
                     filePrefix = df.format(date);
                 }
+                
 
                 for (int i = 0; i < gooseNames.length; i++) {
                     String gooseName = gooseNames[i];
@@ -1400,19 +1445,19 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
                         Thread.sleep(25000); // wait for geese to save the state files
                         String filenames[] = temp.list();
-                        /*(new FilenameFilter() {
-                           @Override
-                           public boolean accept(File dir, String name) {
-                               if (name.startsWith(fpre))
-                                   return true;
-                               return false;  //To change body of implemented methods use File | Settings | File Templates.
-                           }
-                       }); */
+                        //(new FilenameFilter() {
+                        //   @Override
+                        //   public boolean accept(File dir, String name) {
+                        //       if (name.startsWith(fpre))
+                        //           return true;
+                        //       return false;  //To change body of implemented methods use File | Settings | File Templates.
+                        //   }
+                       //});
 
                         ArrayList<File> statefiles = new ArrayList<File>();
                         for (String fn : filenames) {
                             Log.info("Processing " + fn);
-                            if (fn.startsWith(filePrefix)) {
+                            if (fn.contains(filePrefix)) {
                                 Log.info("Adding file " + fn + " to httprequest");
                                 File f = new File(tempDir + File.separator + fn);
                                 statefiles.add(f);
@@ -1507,7 +1552,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     }
 
 
-    private void handleLoadState(String stateid)
+    private void handleLoadState(String stateid, String[] fileids)
     {
         URL url = null;
         try {
@@ -1543,7 +1588,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             workflowManager.Report(WorkflowManager.InformationMessage, ("Received state json string: " + jsonresponse));
 
             // Parse the JSON string
-            Log.info("Parsing JSON state info: " + jsonresponse);
+            Log.info("Parsing JSON state info: " + jsonresponse + " file ids " + fileids);
             JSONObject jsonobj = JSONObject.fromObject(jsonresponse);
             Iterator iter = jsonobj.keys();
             while (iter.hasNext())
@@ -1564,15 +1609,39 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                     for (int i = 0; i < filecnt; i++)
                     {
                         JSONObject fobj = fileobj.getJSONObject(Integer.toString(i));
-                        String fileurl = fobj.getString("fileurl");
-                        fileinfo.add(fileurl);
-                        Log.info("Add " + fileurl + " for " + goosename);
-                        workflowManager.Report(WorkflowManager.InformationMessage, ("Add " + fileurl + " for " + goosename));
+
+                        String fileid = fobj.getString("id");
+                        Log.info("Returned state file id " + fileid);
+
+                        boolean fileidfound = true;
+                        if (fileids != null && fileids.length > 0)
+                        {
+                            fileidfound = false;
+                            for (int j = 0; j < fileids.length; j++)
+                            {
+                                if (fileids[j].equals(fileid))
+                                {
+                                    Log.info("Found file id " + fileid);
+                                    fileidfound = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (fileidfound)
+                        {
+                            String fileurl = fobj.getString("fileurl");
+                            fileinfo.add(fileurl);
+                            Log.info("Add " + fileurl + " for " + goosename);
+                            workflowManager.Report(WorkflowManager.InformationMessage, ("Add " + fileurl + " for " + goosename));
+                        }
                     }
 
                     // Put goose restore in threads
-                    RestoreStateThread rst = new RestoreStateThread(workflowManager, goosename, serviceurl, fileinfo);
-                    rst.start();
+                    if (fileinfo.size() > 0)
+                    {
+                        RestoreStateThread rst = new RestoreStateThread(workflowManager, goosename, serviceurl, fileinfo);
+                        rst.start();
+                    }
                 }
             }
 
@@ -1580,16 +1649,17 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         catch (Exception e1)
         {
             Log.severe("Failed to load state " + e1.getMessage());
+            e1.printStackTrace();
         }
     }
 
-    public void loadState(final String stateid) throws RemoteException
+    public void loadState(final String stateid, final String[] fileids) throws RemoteException
     {
         // Get the state information
         if (AppContext.getAppContext() == null) {
             Runnable loadStateTask = new Runnable() {
                 public void run() {
-                    handleLoadState(stateid);
+                    handleLoadState(stateid, fileids);
                 }
             };
 
@@ -1597,7 +1667,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             guiBoss.invokeLater2(loadStateTask);
 
         } else {
-            handleLoadState(stateid);
+            handleLoadState(stateid, fileids);
         }
     }
 

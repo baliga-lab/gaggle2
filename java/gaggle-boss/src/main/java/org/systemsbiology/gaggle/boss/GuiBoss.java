@@ -8,27 +8,27 @@
  */
 package org.systemsbiology.gaggle.boss;
 
-import javax.swing.*;
-import javax.swing.UIManager.*;
-import javax.swing.table.*;
-import java.awt.*;
-import java.awt.event.*;
+import org.systemsbiology.gaggle.boss.plugins.GaggleBossPlugin;
+import org.systemsbiology.gaggle.core.datatypes.Namelist;
+import org.systemsbiology.gaggle.util.MiscUtil;
+import sun.awt.AppContext;
 
-import java.lang.reflect.*;
-import java.util.*;
-import java.util.List;
-import java.io.*;
+import javax.swing.*;
+import javax.swing.UIManager.LookAndFeelInfo;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumnModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.lang.reflect.Constructor;
 import java.rmi.RemoteException;
 import java.security.Security;
-
-import org.systemsbiology.gaggle.boss.plugins.*;
-import org.systemsbiology.gaggle.util.*;
-import org.systemsbiology.gaggle.core.*;
-import org.systemsbiology.gaggle.core.datatypes.*;
-import sun.awt.AppContext;
-import sun.awt.SunToolkit;
-
-import java.util.logging.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Logger;
 
 public final class GuiBoss implements BossUI {
 
@@ -150,6 +150,11 @@ public final class GuiBoss implements BossUI {
             }
         }
         return list.toArray(new String[0]);
+    }
+
+    public BossHttpServer getHttpServer()
+    {
+        return this.httpServer;
     }
 
     public void broadcastToPlugins(final String[] names) {

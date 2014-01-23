@@ -166,7 +166,8 @@ public interface Boss3 extends Boss2 {
      * files and reload the state.
      *
      * @param stateid   The ID of the saved state.
+     * @param fileids   The IDs of the saved files.
      * @throws RemoteException
      */
-    public void loadState(String stateid) throws RemoteException;
+    public void loadState(String stateid, String[] fileids) throws RemoteException;
 }

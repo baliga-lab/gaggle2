@@ -12,4 +12,5 @@ public interface BossUI {
     public void hide();
     public boolean isListening(String gooseName);
     public void displayErrorMessage(String message);
+    public BossHttpServer getHttpServer();
 }

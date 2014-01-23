@@ -157,6 +157,10 @@ public class WorkflowComponent implements Serializable {
     public String getName() { return name; }
     public String getGooseName()
     {
+        // Some geese are scripts (e.g., R scripts), and needs a host goose (e.g. R) to open.
+        // So we return the name of the host goose.
+        if (existingGooseName != null && existingGooseName.length() > 0)
+            return existingGooseName;
         return gooseName;
     }
     public String getVersion() { return version; }

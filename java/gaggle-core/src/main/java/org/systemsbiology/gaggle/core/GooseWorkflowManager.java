@@ -327,6 +327,22 @@ public class GooseWorkflowManager
             fout.close();
     }
 
+    public String getTempDir(String subdirName)
+    {
+        String tempDir = System.getProperty("java.io.tmpdir");
+        System.out.println("Temp dir: " + tempDir);
+        if (tempDir.startsWith("/var/folders"))
+            tempDir = "/tmp";
+        tempDir += ("/Gaggle/" + subdirName);
+        File myTempFolder = new File(tempDir);
+        if (!myTempFolder.exists())
+        {
+            System.out.println("Make temp folder: " + myTempFolder.getAbsolutePath());
+            myTempFolder.mkdirs();
+        }
+        return tempDir;
+    }
+
 
     /**
      * First download a text file from the server, then parse it and output a GaggleData object.
@@ -343,17 +359,7 @@ public class GooseWorkflowManager
         try
         {
             URL url = new URL(fileurl);
-            String tempDir = System.getProperty("java.io.tmpdir");
-            System.out.println("Temp dir: " + tempDir);
-            if (tempDir.startsWith("/var/folders"))
-                tempDir = "/tmp";
-            tempDir += ("/Gaggle/Downloads");
-            File myTempFolder = new File(tempDir);
-            if (!myTempFolder.exists())
-            {
-                System.out.println("Make temp folder: " + myTempFolder.getAbsolutePath());
-                myTempFolder.mkdirs();
-            }
+            String tempDir = getTempDir("Downloads");
             String downloadFile = tempDir + File.separator + UUID.randomUUID().toString() + ".txt";
             downloadFileFromUrl(downloadFile, fileurl);
             localfilepath = downloadFile;
@@ -484,5 +490,191 @@ public class GooseWorkflowManager
                 e.printStackTrace();
             }
         }
+    }
+
+    public HashMap<String, String> parseArguments(String arguments)
+    {
+        HashMap<String, String> result = new HashMap<String, String>();
+        if (arguments != null)
+        {
+            String[] parameterstrings = arguments.split("&&&");
+            if (parameterstrings != null)
+            {
+                for (String pstr : parameterstrings) {
+                    if (pstr != null)
+                    {
+                        String[] parametervalue = pstr.split(";;;");
+                        if (parametervalue != null && parametervalue.length > 1)
+                        {
+                            result.put(parametervalue[0], parametervalue[1]);
+                        }
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    // Generate an output html file from the source file based on a template file
+    public String mapOutputToHtml(String sourceFile, String outputTemplateFileUrl, String targetFile)
+    {
+        if (sourceFile != null && outputTemplateFileUrl != null)
+        {
+            try
+            {
+                // We first download the template file
+                String tempDir = getTempDir("Outputs");
+                String templatefile = tempDir + "/" + UUID.randomUUID().toString() + ".html";
+                downloadFileFromUrl(templatefile, outputTemplateFileUrl);
+
+                String targetfilepath = targetFile;
+                if (targetFile == null)
+                {
+                    // We save the target file to temp dir
+                    targetfilepath = tempDir + "/" + UUID.randomUUID().toString() + ".html";
+
+                }
+                System.out.println("Map " + sourceFile + " to " + targetfilepath + " using " + outputTemplateFileUrl);
+
+                BufferedWriter fw = new BufferedWriter(new FileWriter(targetfilepath));
+                BufferedReader frsrc = new BufferedReader(new FileReader(sourceFile));
+
+                BufferedReader frtemplate = new BufferedReader(new FileReader(templatefile));
+                String line;
+                boolean start = false;
+                boolean formattinginfoRead = false;
+                boolean formattotable = false;
+                int tablecolumns = 0;
+                String[] tablecolumnnames = null;
+                StringBuffer filecontent = new StringBuffer();
+                while ((line = frtemplate.readLine()) != null)
+                {
+                    if (line.contains("id='gaggleContent'"))
+                    {
+                        // We need to replace the contents
+                        System.out.println("Gaggle content container found!");
+                        start = true;
+                        filecontent.append(line);
+                    }
+                    else if (start) {
+                        // The subsequentline contains the format info, which looks like:
+                        // table&&&2&&&bicluster(url:::http://networks.systemsbiology.net/%s:::name-id);;;p-value(value)
+                        System.out.println("Formatting info " + line);
+                        // column info is separated by "&&&"
+                        String[] formatinfo = line.split("&&&");
+                        if (formatinfo[0].equalsIgnoreCase("table"))
+                        {
+                            // Data is displayed in a table
+                            tablecolumns = Integer.parseInt(formatinfo[1]);
+                            if (tablecolumns > 0) {
+                                tablecolumnnames = formatinfo[2].split(";;;");
+                                String[] columntypes = new String[tablecolumns];
+                                filecontent.append("<table><tbody><tr>\n");
+                                for (int i = 0; i < tablecolumnnames.length; i++)
+                                {
+                                    String columnstr = tablecolumnnames[i];
+                                    String columntype = "";
+                                    String columnname = columnstr;
+                                    int ploc1 = columnstr.indexOf('(');
+                                    int ploc2 = columnstr.lastIndexOf(')');
+                                    if (ploc1 >= 0 && ploc2 > ploc1)
+                                    {
+                                        columnname = columnstr.substring(0, ploc1);
+                                        columntype = columnstr.substring(ploc1 + 1, ploc2);
+                                    }
+                                    System.out.println("Table column name " + columnname + " column type " + columntype);
+                                    columntypes[i] = columntype;
+                                    filecontent.append("<th>" + columnname + "</th>\n");
+                                }
+                                filecontent.append("</tr>\n");
+
+                                // Now we wrte the data
+                                String srcfileline = null;
+                                while ((srcfileline = frsrc.readLine()) != null)
+                                {
+                                    String[] data = srcfileline.split("\t");
+                                    if (data.length == tablecolumnnames.length)
+                                    {
+                                        filecontent.append("<tr>\n");
+                                        for (int j = 0; j < data.length; j++)
+                                        {
+                                            String datastr = data[j];
+                                            System.out.println("Orginal data string: " + datastr + " column type: " + columntypes[j]);
+                                            if (columntypes[j].toLowerCase().startsWith("url:::"))
+                                            {
+                                                // We create a url type out of the data
+                                                // column type string looks like:
+                                                // url:::http://networks.systemsbiology.net/%s:::name-id
+                                                String[] splitted = columntypes[j].split(":::");
+                                                String urlprototype = splitted[1];
+                                                System.out.println("----URL prototype: " + urlprototype);
+                                                String dataformatinfo = splitted[2];
+                                                System.out.println("----Data format info " + dataformatinfo);
+                                                String[] dataformat = dataformatinfo.split("_");
+                                                if (dataformat.length == 2)
+                                                {
+                                                    if (dataformat[1].equalsIgnoreCase("id"))
+                                                    {
+                                                        String[] datastrsplitted = datastr.split("_");
+                                                        String newdatastr = ("<a href='" + String.format(urlprototype, datastrsplitted[1])
+                                                                + "'>" + datastr + "</a>");
+                                                        System.out.println("data url: " + newdatastr);
+                                                        datastr = newdatastr;
+                                                    }
+                                                }
+                                            }
+                                            filecontent.append("<td>" + (datastr + "&nbsp;&nbsp;&nbsp;") + "</td>\n");
+                                        }
+                                        filecontent.append("</tr>\n");
+                                    }
+                                }
+                            }
+                        }
+                        start = false;
+                    }
+                    else {
+                        System.out.println("Append line " + line);
+                        filecontent.append(line);
+                    }
+                }
+                System.out.println(filecontent.toString());
+                fw.write(filecontent.toString());
+                fw.flush();
+                fw.close();
+                frsrc.close();
+                frtemplate.close();
+
+                targetfilepath = convertFilePathToURL(targetfilepath);
+                System.out.println("Returned file path: " + targetfilepath);
+                return targetfilepath;
+            }
+            catch (Exception e) {
+                System.out.println(e.getMessage());
+                e.printStackTrace();
+            }
+
+        }
+        return null;
+    }
+
+    public String convertFilePathToURL(String filepath)
+    {
+        String result = null;
+        if (filepath != null && !filepath.isEmpty())
+        {
+            String os = System.getProperty("os.name");
+            if (os.startsWith("Windows"))
+            {
+                result = filepath.replace("\\", "/");
+                result = result.replace(":", "|");
+                result = "file:///" + result;
+
+            }
+            else
+            {
+                result = "file://" + filepath;
+            }
+        }
+        return result;
     }
 }

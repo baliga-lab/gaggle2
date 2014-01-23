@@ -1,17 +1,19 @@
 package org.systemsbiology.gaggle.boss;
 
-import java.io.*;
-import java.rmi.*;
-import java.util.*;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.log.Log;
+import org.systemsbiology.gaggle.core.Goose;
+import org.systemsbiology.gaggle.util.TextFileReader;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
-
-import org.mortbay.jetty.*;
-import org.mortbay.jetty.handler.*;
-import org.mortbay.jetty.servlet.*;
-
-import org.systemsbiology.gaggle.core.*;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.rmi.RemoteException;
+import java.util.HashMap;
 
 /**
  * Gaggle boss embeds Jetty Server in order to support Geese that connect
@@ -29,6 +31,8 @@ class BossHttpServer extends HttpServlet {
     private Server server;
     private BossImpl bossImpl;
 
+    private HashMap<String, String> urlFileMap = new HashMap<String, String>();
+
     /**
      * Constructor.
      * @param bossImpl the main boss implementation
@@ -41,6 +45,15 @@ class BossHttpServer extends HttpServlet {
         root.addServlet(new ServletHolder(this), SERVLET_PATTERN);
     }
 
+    public void addFile(String id, String filepath)
+    {
+        if (id != null && filepath != null)
+        {
+            Log.info("Boss Http server saved file " + filepath + " with ID: " + id);
+            urlFileMap.put(id, filepath);
+        }
+    }
+
     /**
      * Starts the HTTP service.
      * @throws Exception if server could not be started successfully
@@ -49,11 +62,46 @@ class BossHttpServer extends HttpServlet {
         server.start();
     }
 
+    @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException
+    {
+         //req.getParameter("attachment").getBytes();
+    }
+
     /** {@inheritDoc} */
     @Override public void doGet(final HttpServletRequest request,
                                 final HttpServletResponse response)
         throws IOException {
-        if (request.isInitial()) {
+        String requestURI =  request.getRequestURI();
+        Log.info("HTTP Server received request " + requestURI);
+        String id = requestURI.substring(requestURI.lastIndexOf("/") + 1);
+        if (urlFileMap.containsKey(id))
+        {
+            // Fetch the file and return it
+            String filepath =  urlFileMap.get(id);
+            if (filepath.toLowerCase().startsWith("file:///"))
+            {
+                filepath = filepath.substring("file:///".length());
+                filepath = filepath.replace("|", ":");
+            }
+            Log.info("Loading file " + filepath);
+            if (filepath != null)
+            {
+                Log.info("Fetching file " + filepath);
+
+                //FileInputStream fin = new FileInputStream(filepath);
+                TextFileReader textFileReader = new TextFileReader(filepath);
+                textFileReader.read();
+                String filecontent = textFileReader.getText();
+                //response.setHeader("Access-Control-Allow-Origin", "*");
+                //response.setContentType("application/html");
+                //response.setStatus(HttpServletResponse.SC_OK);
+                Log.info(filecontent);
+                response.getWriter().print(filecontent);
+                //response.getWriter().flush();
+            }
+        }
+        else if (request.isInitial()) {
             String command = request.getParameter("command");
             String gooseName = request.getParameter("name");
             if ("register".equals(command)) {
@@ -73,7 +121,17 @@ class BossHttpServer extends HttpServlet {
                 String jsonData = request.getParameter("data");
                 bossImpl.broadcastJSON(gooseName, "boss", jsonData);
                 setJSONResponse(response, "{\"status\":\"ok\"}");
-            } else {
+            }
+            else if ("doUrlFileMap".equals(command))  {
+                // A goose has generated a file, and notify the Boss to associate the file with a url
+                String url = request.getParameter("URL");
+                String file = request.getParameter("FilePath");
+                if (url!= null && file != null && !url.isEmpty() && !file.isEmpty())
+                {
+                    urlFileMap.put(url.toLowerCase(), file);
+                }
+            }
+            else {
                 // TODO: report unhandled command
             }
         } else {
