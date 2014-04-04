@@ -58,6 +58,7 @@ public final class GuiBoss implements BossUI {
     private BossConfig config;
     private BossImpl bossImpl;
     private BossHttpServer httpServer;
+    private BossWebSocketController webSocketController;
     private AppContext evtContext; //field
 
     private Object syncObj = null;
@@ -89,9 +90,12 @@ public final class GuiBoss implements BossUI {
         MiscUtil.setApplicationIcon(frame);
 
         try {
-            this.httpServer = new BossHttpServer(bossImpl, 8082);
-            bossImpl.bind();
-            httpServer.startListen();
+            //this.httpServer = new BossHttpServer(bossImpl, 8082);
+            //bossImpl.bind();
+            //httpServer.startListen();
+
+            this.webSocketController = new BossWebSocketController(this.bossImpl, 8083);
+
         } catch (Exception e) {
             displayErrorMessage("Gaggle Port already in use.  Exiting....");
             displayErrorMessage(e.getMessage());

@@ -12,6 +12,8 @@ import static org.systemsbiology.gaggle.core.datatypes.JSONConstants.*;
 public class JSONWriter {
     private Writer writer;
 
+    public JSONWriter() {}
+
     public JSONWriter(Writer writer) { this.writer = writer; }
     public void write(Namelist namelist) {
         JSONObject jsonGaggleData = writeCommon(namelist).element(KEY_TYPE, TYPE_NAMELIST);
@@ -194,7 +196,7 @@ public class JSONWriter {
         return value;
     }
 
-    private void writeToWriter(JSONObject jsonGaggleData) {
+    protected void writeToWriter(JSONObject jsonGaggleData) {
         jsonGaggleData.write(writer);
     }
 }

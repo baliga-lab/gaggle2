@@ -1,19 +1,29 @@
 package org.systemsbiology.gaggle.boss;
 
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.log.Log;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.eclipse.jetty.server.Server;
 import org.systemsbiology.gaggle.core.Goose;
+import org.systemsbiology.gaggle.core.datatypes.GaggleData;
+import org.systemsbiology.gaggle.core.datatypes.Namelist;
 import org.systemsbiology.gaggle.util.TextFileReader;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
+import java.io.*;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.logging.Logger;
+
+/*import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.log.Log;
+*/
 
 /**
  * Gaggle boss embeds Jetty Server in order to support Geese that connect
@@ -30,6 +40,7 @@ class BossHttpServer extends HttpServlet {
     private static final String SERVLET_PATTERN = "/*";
     private Server server;
     private BossImpl bossImpl;
+    private Logger Log = Logger.getLogger(this.getClass().getName());
 
     private HashMap<String, String> urlFileMap = new HashMap<String, String>();
 
@@ -41,8 +52,8 @@ class BossHttpServer extends HttpServlet {
     public BossHttpServer(BossImpl bossImpl, int port) {
         this.bossImpl = bossImpl;
         server = new Server(port);
-        Context root = new Context(server, HTTP_CONTEXT, Context.SESSIONS);
-        root.addServlet(new ServletHolder(this), SERVLET_PATTERN);
+        //ServletContextHandler.Context root = new ServletContextHandler.Context(server, HTTP_CONTEXT, ServletContextHandler.Context.SESSIONS);
+        //root.addServlet("BossHttpServer", this); //, SERVLET_PATTERN);
     }
 
     public void addFile(String id, String filepath)
@@ -65,13 +76,141 @@ class BossHttpServer extends HttpServlet {
     @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException
     {
-         //req.getParameter("attachment").getBytes();
+        String requestURI =  req.getRequestURI();
+        Log.info("HTTP Server received request " + requestURI);
+        String command = req.getParameter("command");
+        Log.info("HTTP Server received command " + command);
+
+        if (command.equalsIgnoreCase("CreateNameList"))
+        {
+            StringBuffer databuilder = new StringBuffer();
+            String line = null;
+            try {
+                BufferedReader reader = req.getReader();
+                ArrayList<String> namelistdata = new ArrayList<String>();
+                while ((line = reader.readLine()) != null)
+                {
+                    Log.info("Read line: " + line);
+                    namelistdata.add(line);
+                }
+
+                Log.info("Namelist array size: " + namelistdata.size());
+                String[] splitted = namelistdata.get(0).split(";;;");
+                if (splitted.length > 2)
+                {
+                    String[] names = splitted[2].split(",");
+                    Log.info("Name: " + splitted[0] + " Species: " + splitted[1] + " names: " + names.length);
+                    Namelist nl = new Namelist(splitted[0], splitted[1], names);
+                    byte[] serialized = serializeGaggleData(nl);
+                    if (serialized != null)
+                    {
+                        //BufferedWriter writer = new BufferedWriter(resp.getWriter());
+                        //ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                        //bos.write(serialized);
+                        //bos.flush();
+                        OutputStream os = resp.getOutputStream();
+                        os.write(serialized);
+                        os.flush();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                /*report an error*/
+                Log.warning("Failed to read data from request " + e.getMessage());
+            }
+        }
+        else if (command.equalsIgnoreCase("Broadcast")) {
+            try {
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(
+                                req.getInputStream()));
+
+                ArrayList<String> dataarray = new ArrayList<String>();
+                String line = null;
+                while ((line = reader.readLine()) != null)
+                {
+                    Log.info("Read line: " + line);
+                    dataarray.add(line);
+                }
+
+                Log.info("Data array size: " + dataarray.size());
+                JSONObject jsonObj = JSONObject.fromObject(dataarray.get(0));
+                if (jsonObj != null)
+                {
+                    String source = jsonObj.getString("source");
+                    String target = jsonObj.getString("target");
+                    JSONObject dataobj = (JSONObject)jsonObj.get("data");
+                    String datatype = dataobj.getString("_type");
+                    String name = dataobj.getString("_name");
+                    String species = dataobj.getString("_species");
+                    JSONArray namejsonarray = (JSONArray)dataobj.get("_data");
+                    Log.info("JSONARRAY size: " + namejsonarray.size());
+                    List<String> list = new ArrayList<String>();
+                    for(int i = 0; i < namejsonarray.size(); i++){
+                        String value = namejsonarray.getString(i);
+                        Log.info("Namelist value: " + value);
+                        list.add(value);
+                    }
+                    String[] names = new String[list.size()];
+                    names = list.toArray(names);
+                    Log.info("Names: " + names);
+                    if (datatype.equalsIgnoreCase("NameList")) {
+                        Namelist nl = new Namelist(name, species, names);
+                        bossImpl.broadcastNamelist(source, target, nl);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                /*report an error*/
+                Log.warning("Failed to read data from request " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private byte[] serializeGaggleData(GaggleData data)
+    {
+        if (data != null)
+        {
+            Log.info("Serializing gaggle data " + data.getName());
+            ByteArrayOutputStream  bos = new ByteArrayOutputStream();
+            ObjectOutputStream out = null;
+            try {
+                out = new ObjectOutputStream(bos);
+                out.writeObject(data);
+                byte[] result = bos.toByteArray();
+                return result;
+            }
+            catch (Exception e)
+            {
+                Log.warning("Failed to serialize object " + e.getMessage());
+            }
+            finally {
+                try {
+                    if (out != null) {
+                        out.close();
+                    }
+                } catch (IOException ex) {
+                    // ignore close exception
+                }
+                try {
+                    bos.close();
+                } catch (IOException ex) {
+                    // ignore close exception
+                }
+            }
+        }
+        return null;
     }
 
     /** {@inheritDoc} */
     @Override public void doGet(final HttpServletRequest request,
                                 final HttpServletResponse response)
         throws IOException {
+
+
         String requestURI =  request.getRequestURI();
         Log.info("HTTP Server received request " + requestURI);
         String id = requestURI.substring(requestURI.lastIndexOf("/") + 1);
@@ -101,9 +240,11 @@ class BossHttpServer extends HttpServlet {
                 //response.getWriter().flush();
             }
         }
-        else if (request.isInitial()) {
+        else if (request != null) //if (request.isInitial())
+        {
             String command = request.getParameter("command");
             String gooseName = request.getParameter("name");
+            Log.info("Request command: " + command);
             if ("register".equals(command)) {
                 String finalGooseName = registerHttpGoose(gooseName);
                 setJSONResponse(response, jsonGooseName(finalGooseName));
@@ -112,8 +253,9 @@ class BossHttpServer extends HttpServlet {
             } else if ("waitBroadcast".equals(command)) {
                 HttpGoose httpGoose = getHttpGooseFor(gooseName);
                 if (httpGoose != null) {
-                    request.suspend();
-                    httpGoose.waitForBroadcast(new HttpGoose.RequestHandler(request));
+                    // TODO: suspend the request
+                    //request.suspend();
+                    //httpGoose.waitForBroadcast(new HttpGoose.RequestHandler(request));
                 } else {
                     System.out.println("HTTP Goose unavailable");
                 }
@@ -130,6 +272,21 @@ class BossHttpServer extends HttpServlet {
                 {
                     urlFileMap.put(url.toLowerCase(), file);
                 }
+            }
+            else if (("getGeese").equals(command)) {
+                Log.info("HTTP server received getGeese");
+                String[] gooseNames = bossImpl.getGooseNames();
+                String result = "";
+                if (gooseNames.length > 0)
+                {
+                    for (String name : gooseNames)
+                    {
+                        if (name != null && name.length() > 0)
+                            result += name + ";;;";
+                    }
+                }
+                Log.info("Return " + result);
+                setJSONResponse(response, "{\"result\": \"" + result + "\"}");
             }
             else {
                 // TODO: report unhandled command

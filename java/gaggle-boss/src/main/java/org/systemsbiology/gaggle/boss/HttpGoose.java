@@ -1,13 +1,12 @@
 package org.systemsbiology.gaggle.boss;
 
-import java.io.*;
-import java.rmi.*;
+import org.systemsbiology.gaggle.core.JSONGoose;
 
-import javax.servlet.http.*;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.rmi.RemoteException;
 
-import org.mortbay.jetty.*;
-import org.systemsbiology.gaggle.core.*;
-import org.systemsbiology.gaggle.core.datatypes.*;
+//import org.mortbay.jetty.*;
 
 /**
  * A representation of a Gaggle Goose connected through HTTP.
@@ -41,12 +40,12 @@ public class HttpGoose implements JSONGoose {
         public void handleJSON(String source, String json) throws IOException {
             System.out.printf("HttpGoose.handleJSON() [REQ: %s], source: '%s', json: '%s'\n",
                               request, source, json);
-            HttpServletResponse response = (HttpServletResponse) request.getServletResponse();
+            /*HttpServletResponse response = (HttpServletResponse) request.getServletResponse();
             response.setHeader("Access-Control-Allow-Origin", "*");
             response.setContentType("application/json");
             response.setStatus(HttpServletResponse.SC_OK);
             response.getWriter().println(json);
-            request.resume();
+            request.resume(); */
         }
     }
 
