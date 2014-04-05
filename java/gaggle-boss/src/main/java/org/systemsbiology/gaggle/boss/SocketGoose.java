@@ -25,7 +25,11 @@ public class SocketGoose implements JSONGoose {
         this.jsonWebSocketWriter = new JSONWebSocketWriter(socket);
     }
 
-    public void setName(String newName) { this.gooseName = newName; }
+    public void setName(String newName)
+    {
+        logger.info("Socket goose set name: " + newName);
+        this.gooseName = newName;
+    }
     /** {@inheritDoc} */
     public String getName() { return gooseName; }
     /** {@inheritDoc} */

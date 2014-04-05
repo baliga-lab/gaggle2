@@ -5,12 +5,49 @@ import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 
+import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
  * Created by Ning Jiang on 3/6/14.
  */
+
+class PingThread extends Thread
+{
+    private BossWebSocket mySocket;
+    private Logger Log = Logger.getLogger(this.getClass().getName());
+
+    public PingThread(BossWebSocket socket)
+    {
+        mySocket = socket;
+    }
+
+    public void run()
+    {
+        if (mySocket != null)
+        {
+            Log.info("Starting websocket ping thread...");
+            try
+            {
+                while (mySocket.isConnected())
+                {
+                    String data = "Ping";
+                    Log.info("Send Ping...");
+                    ByteBuffer payload = ByteBuffer.wrap(data.getBytes());
+                    mySocket.getRemote().sendPing(payload);
+                    Thread.sleep(60000);
+                }
+            }
+            catch (Throwable t)
+            {
+                Log.warning("Failed to start websocket server " + t.getMessage());
+                t.printStackTrace(System.err);
+            }
+        }
+    }
+}
+
 public class BossWebSocket extends WebSocketAdapter
 {
     private BossWebSocketController myController;
@@ -18,6 +55,7 @@ public class BossWebSocket extends WebSocketAdapter
     private String mySocketID;
     private Logger Log = Logger.getLogger(this.getClass().getName());
     private SocketGoose myGoose;
+    private PingThread pingThread = new PingThread(this);
 
     public BossWebSocket() {
 
@@ -41,6 +79,7 @@ public class BossWebSocket extends WebSocketAdapter
             super.onWebSocketConnect(sess);
             mySession = sess;
             mySocketID = UUID.randomUUID().toString();
+            pingThread.start();
             Log.info("Websocket connection received " + mySocketID);
             //sess.getRemote().sendString("{'socketid': \'" + socketid + "\'}");
 
@@ -79,6 +118,7 @@ public class BossWebSocket extends WebSocketAdapter
     {
         //super.onWebSocketClose(statusCode,reason);
         Log.info("Socket Closed: [" + statusCode + "] " + reason);
+        this.myController.removeSocketGoose(mySocketID);
     }
 
     @Override
@@ -86,14 +126,15 @@ public class BossWebSocket extends WebSocketAdapter
     {
         //super.onWebSocketError(cause);
         cause.printStackTrace(System.err);
+        this.myController.removeSocketGoose(mySocketID);
     }
 
     private String generateJSONString(String id, String action, String data)
     {
         String jsonstring = "{";
-        jsonstring += "'ID': " + id + ", ";
-        jsonstring += "'Action': " + action + ", ";
-        jsonstring += "'Data': " + data;
+        jsonstring += "\"ID\": \"" + id + "\", ";
+        jsonstring += "\"Action\": \"" + action + "\", ";
+        jsonstring += "\"Data\": \"" + data + "\"";
         jsonstring += "}";
         Log.info("Generated json string: " + jsonstring);
         return jsonstring;

@@ -65,6 +65,20 @@ public class BossWebSocketController
         }
     }
 
+    public void removeSocketGoose(String key)
+    {
+        if (key != null)
+        {
+            if (socketGooseHashMap.containsKey(key)) {
+                SocketGoose goose = socketGooseHashMap.get(key);
+                if (goose != null) {
+                    bossImpl.unregister(goose.getName());
+                }
+                socketGooseHashMap.remove(key);
+            }
+        }
+    }
+
     public void sendMessage(String key, String message)
     {
         if (key != null && message != null)
