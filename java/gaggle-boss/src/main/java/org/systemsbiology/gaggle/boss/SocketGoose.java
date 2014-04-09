@@ -45,7 +45,8 @@ public class SocketGoose implements JSONGoose {
             try
             {
                 logger.info("Sending " + json + " to " + gooseName);
-                this.mySocket.getRemote().sendString(json);
+
+                this.mySocket.broadcastJSON(json);
             }
             catch (Exception e)
             {

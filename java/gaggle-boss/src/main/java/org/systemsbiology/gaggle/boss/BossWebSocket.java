@@ -5,6 +5,8 @@ import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -129,15 +131,32 @@ public class BossWebSocket extends WebSocketAdapter
         this.myController.removeSocketGoose(mySocketID);
     }
 
-    private String generateJSONString(String id, String action, String data)
+    public void broadcastJSON(String jsonstring) throws IOException
     {
-        String jsonstring = "{";
-        jsonstring += "\"ID\": \"" + id + "\", ";
-        jsonstring += "\"Action\": \"" + action + "\", ";
-        jsonstring += "\"Data\": \"" + data + "\"";
-        jsonstring += "}";
-        Log.info("Generated json string: " + jsonstring);
-        return jsonstring;
+        if (jsonstring != null)
+        {
+            String data = generateJSONString(this.mySocketID, "Broadcast", jsonstring, true);
+            Log.info("Broadcasting json data " + data);
+            this.getRemote().sendString(data);
+        }
+    }
+
+    private String generateJSONString(String id, String action, String data, boolean isjson)
+    {
+        Log.info("Generate JSON string from " + data);
+        JSONObject jsonobj = new JSONObject();
+        jsonobj = jsonobj.element("ID", id).element("Action", action);
+        if (isjson)
+        {
+            JSONObject jsondata = JSONObject.fromObject(data.trim());
+            jsonobj.put("Data", jsondata);
+        }
+        else
+            jsonobj = jsonobj.element("Data", data);
+        StringWriter stringWriter = new StringWriter();
+        jsonobj.write(stringWriter);
+        Log.info("Generated json string: " + stringWriter.toString());
+        return stringWriter.toString();
     }
 
     private void processTextMessage(String message)
@@ -159,7 +178,7 @@ public class BossWebSocket extends WebSocketAdapter
                         myController.saveSocketGoose(mySocketID, goose);
                         Log.info("Session saved: " + mySocketID);
                     }
-                    String jsonstring = generateJSONString(mySocketID, "", "");
+                    String jsonstring = generateJSONString(mySocketID, "", "", false);
                     mySession.getRemote().sendString(jsonstring);
                 }
                 else if (action.equalsIgnoreCase("GetGeese")) {
@@ -170,7 +189,7 @@ public class BossWebSocket extends WebSocketAdapter
                         if (geese != null)
                         {
                             String namestring = StringUtils.join(geese, ";;;");
-                            String jsonstring = generateJSONString(mySocketID, "GetGeese", namestring);
+                            String jsonstring = generateJSONString(mySocketID, "GetGeese", namestring, false);
                             Log.info("Geese name string to be sent back: " + jsonstring);
                             mySession.getRemote().sendString(jsonstring);
                         }

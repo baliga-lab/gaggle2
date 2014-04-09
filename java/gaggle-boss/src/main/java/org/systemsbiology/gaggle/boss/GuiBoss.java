@@ -91,7 +91,7 @@ public final class GuiBoss implements BossUI {
 
         try {
             //this.httpServer = new BossHttpServer(bossImpl, 8082);
-            //bossImpl.bind();
+            bossImpl.bind();
             //httpServer.startListen();
 
             this.webSocketController = new BossWebSocketController(this.bossImpl, 8083);
