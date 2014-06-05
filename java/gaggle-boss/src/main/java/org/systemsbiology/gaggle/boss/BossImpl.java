@@ -351,9 +351,10 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
 
         // We clean up the temp folder before doing everything else
         // Workflow manager will create its own temp folder afterwards
+        String tempDir = "";
         try
         {
-            String tempDir = System.getProperty("java.io.tmpdir");
+            tempDir = System.getProperty("java.io.tmpdir");
             if (tempDir.toLowerCase().startsWith("/var/folders/"))
                 tempDir = "/tmp/";
             tempDir += "Gaggle";
@@ -401,6 +402,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 Log.info("Loading windows sigar-x86-winnt.dll");
                 libloaded = loadSigarLibrary("sigar-x86-winnt");
             }
+            initSelenium(tempDir, "chromedriver.exe", server + "/static/lib/chromedriver.exe");
         }
         if (os.startsWith("Mac"))
         {
@@ -506,6 +508,16 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             {
                 Log.warning("Failed to remove temp foler " + e.getMessage());
             }
+        }
+    }
+
+    private void initSelenium(String temp, String driverFileName, String fromUrl)
+    {
+        if (temp != null && !temp.isEmpty())
+        {
+            Log.info("Downloading Selenium driver from " + fromUrl + " to " + (temp + "/" + driverFileName));
+            workflowManager.downloadFileFromUrl((temp + "/" + driverFileName), fromUrl);
+            System.setProperty("webdriver.chrome.driver",(temp + "/" + driverFileName));
         }
     }
 

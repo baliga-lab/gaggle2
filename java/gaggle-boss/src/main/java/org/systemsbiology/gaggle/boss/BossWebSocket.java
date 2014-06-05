@@ -60,7 +60,6 @@ public class BossWebSocket extends WebSocketAdapter
     private PingThread pingThread = new PingThread(this);
 
     public BossWebSocket() {
-
     }
 
     public BossWebSocket(BossWebSocketController controller)
@@ -194,6 +193,12 @@ public class BossWebSocket extends WebSocketAdapter
                             mySession.getRemote().sendString(jsonstring);
                         }
                     }
+                }
+                else if (action.equalsIgnoreCase("Chrome")) {
+                    String dataString = jsonObj.getString("Data");
+                    Log.info("Selenium data string: " + dataString);
+                    JSONObject jsonActionObject = JSONObject.fromObject(dataString);
+                    this.myController.getSeleniumChromeHandler().handleAction(jsonActionObject);
                 }
             }
             catch (Exception e)

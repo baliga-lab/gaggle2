@@ -46,6 +46,9 @@ public class BossWebSocketController
     private BossWebSocketServlet servlet = null;
     private HashMap<String, SocketGoose> socketGooseHashMap = new HashMap<String, SocketGoose>();
     private Logger Log = Logger.getLogger(this.getClass().getName());
+    private SeleniumChromeHandler chromeHandler = new SeleniumChromeHandler();
+
+    public SeleniumChromeHandler getSeleniumChromeHandler() { return chromeHandler; }
 
     public void saveSocketGoose(String key, SocketGoose socketGoose)
     {
