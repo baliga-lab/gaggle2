@@ -53,7 +53,13 @@ public class SeleniumChromeHandler {
         {
             for (int i = 0; i < elements.size(); i++) {
                 WebElement element = elements.get(i);
-                element.click();
+                try {
+                    element.click();
+                }
+                catch (Exception e) {
+                    Log.severe("Failed to click element " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
         }
     }
