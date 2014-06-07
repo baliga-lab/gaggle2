@@ -342,6 +342,7 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
     private String stateTempFolderName = "StateFiles";
     private Object syncObj = null;
     private String submitWorkflowResult = "";
+    private String chromeGooseDir = "";
 
     private static Logger Log = Logger.getLogger("Boss");
 
@@ -417,6 +418,8 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
                 Log.info("Loading Mac libsigar-universal-macosx.dylib");
                 libloaded = loadSigarLibrary("libsigar-universal-macosx.dylib");
             }
+
+            initSelenium(tempDir, "mac-chromedriver", server + "/static/lib/mac-chromedriver");
         }
         else if (os.startsWith("Linux"))
         {
@@ -425,11 +428,13 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             {
                 Log.info("Loading linux libsigar-x86-linux.so");
                 libloaded = loadSigarLibrary("libsigar-x86-linux");
+                initSelenium(tempDir, "linux32-chromedriver", server + "/static/lib/linux32-chromedriver");
             }
             else if (arch.startsWith("amd64"))
             {
                 Log.info("Loading linux libsigar-x64-linux.so");
                 libloaded = loadSigarLibrary("libsigar-x64-linux");
+                initSelenium(tempDir, "linux64-chromedriver", server + "/static/lib/linux64-chromedriver");
             }
         }
         if (libloaded) {
@@ -449,10 +454,16 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
             }
         }
 
+        Log.info("Downloading ChromeGoose from ChromeGoose.crx to " + tempDir + "/ChromeGoose.crx");
+        chromeGooseDir = tempDir + "/ChromeGoose.crx";
+        workflowManager.downloadFileFromUrl((tempDir + "/ChromeGoose.crx"), server + "/static/lib/ChromeGoose.crx");
+
         proxyCallbackThread = new ProxyCallbackThread(this, null);
         proxyCallbackThread.start();
 
     }
+
+    public String getChromeGooseDir() { return chromeGooseDir; }
 
     public WorkflowManager getWorkflowManager() { return workflowManager; }
 

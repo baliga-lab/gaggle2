@@ -46,7 +46,7 @@ public class BossWebSocketController
     private BossWebSocketServlet servlet = null;
     private HashMap<String, SocketGoose> socketGooseHashMap = new HashMap<String, SocketGoose>();
     private Logger Log = Logger.getLogger(this.getClass().getName());
-    private SeleniumChromeHandler chromeHandler = new SeleniumChromeHandler();
+    private SeleniumChromeHandler chromeHandler = null;
 
     public SeleniumChromeHandler getSeleniumChromeHandler() { return chromeHandler; }
 
@@ -114,7 +114,7 @@ public class BossWebSocketController
     public BossWebSocketController(BossImpl bossImpl, int port)
     {
         this.bossImpl = bossImpl;
-
+        this.chromeHandler = new SeleniumChromeHandler(bossImpl.getChromeGooseDir(), (bossImpl.GAGGLE_SERVER + "/static/gaggle_output.html"));
         Server server = new Server();
         ServerConnector connector = new ServerConnector(server);
         connector.setPort(port);

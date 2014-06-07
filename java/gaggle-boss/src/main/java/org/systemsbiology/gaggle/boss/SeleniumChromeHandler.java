@@ -19,11 +19,15 @@ public class SeleniumChromeHandler {
     WebDriver myDriver;
     private Logger Log = Logger.getLogger(this.getClass().getName());
 
-    public SeleniumChromeHandler()
+    public SeleniumChromeHandler(String chromeGooseDir, String startPageUrl)
     {
+        Log.info("ChromeGoose directory: " + chromeGooseDir);
         ChromeOptions options = new ChromeOptions();
-        options.addExtensions(new File("C:/GitHub/BaligaLab/Geese/ChromeGoose.crx"));
+        options.addExtensions(new File(chromeGooseDir));
+        options.addArguments("test-type");
         myDriver = new ChromeDriver(options);
+        if (startPageUrl != null && !startPageUrl.isEmpty())
+            myDriver.get(startPageUrl);
     }
 
     private ArrayList<WebElement> findElements(String elementId, String elementClass)
