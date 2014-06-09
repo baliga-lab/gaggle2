@@ -356,9 +356,14 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         try
         {
             tempDir = System.getProperty("java.io.tmpdir");
+            Log.info("java.io.tmpdir: " + tempDir);
             if (tempDir.toLowerCase().startsWith("/var/folders/"))
                 tempDir = "/tmp/";
+            Log.info("Temp Dir: " + tempDir);
+            if (!tempDir.endsWith(File.separator))
+                tempDir += File.separator;
             tempDir += "Gaggle";
+            Log.info("Final temp dir: " + tempDir);
             File tdFile = new File(tempDir);
             CleanTempDirectory(tdFile);
         }
@@ -528,6 +533,14 @@ public class BossImpl extends UnicastRemoteObject implements Boss3 {
         {
             Log.info("Downloading Selenium driver from " + fromUrl + " to " + (temp + "/" + driverFileName));
             workflowManager.downloadFileFromUrl((temp + "/" + driverFileName), fromUrl);
+            try {
+                File seleniumDriverFile = new File((temp + "/" + driverFileName));
+                seleniumDriverFile.setExecutable(true, true);
+            }
+            catch (Exception e) {
+                Log.warning("Failed to set executable for selenium driver file " + e.getMessage());
+                e.printStackTrace();
+            }
             System.setProperty("webdriver.chrome.driver",(temp + "/" + driverFileName));
         }
     }
