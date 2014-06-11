@@ -19,16 +19,11 @@ import java.util.logging.Logger;
 public class SeleniumChromeHandler {
     WebDriver myDriver;
     private Logger Log = Logger.getLogger(this.getClass().getName());
+    private String chromeGooseDir = null;
 
-    public SeleniumChromeHandler(String chromeGooseDir, String startPageUrl)
+    public SeleniumChromeHandler(String chromeGooseDir)
     {
-        Log.info("ChromeGoose directory: " + chromeGooseDir);
-        ChromeOptions options = new ChromeOptions();
-        options.addExtensions(new File(chromeGooseDir));
-        options.addArguments("test-type");
-        myDriver = new ChromeDriver(options);
-        if (startPageUrl != null && !startPageUrl.isEmpty())
-            myDriver.get(startPageUrl);
+        this.chromeGooseDir = chromeGooseDir;
     }
 
     private ArrayList<WebElement> findElements(String elementId, String elementClass,
@@ -125,7 +120,16 @@ public class SeleniumChromeHandler {
         }
     }
 
-
+    public void startSelenium(String startPageUrl)
+    {
+        Log.info("ChromeGoose directory: " + this.chromeGooseDir);
+        ChromeOptions options = new ChromeOptions();
+        options.addExtensions(new File(this.chromeGooseDir));
+        options.addArguments("test-type");
+        myDriver = new ChromeDriver(options);
+        if (startPageUrl != null && !startPageUrl.isEmpty())
+            myDriver.get(startPageUrl);
+    }
 
     public void handleAction(JSONObject jsonActionData)
     {
@@ -136,7 +140,13 @@ public class SeleniumChromeHandler {
                 String dataString = jsonActionData.getString("Data");
                 Log.info("Selenium action command " + command + " data: " + dataString);
                 JSONObject dataJsonObject = JSONObject.fromObject(dataString);
-                if (command.equalsIgnoreCase("openpage")) {
+                if (command.equalsIgnoreCase("Start")) {
+                    String pageUrl = dataJsonObject.getString("PageUrl");
+                    Log.info("Starting page in Selenium " + pageUrl);
+                    //, (bossImpl.GAGGLE_SERVER + "/static/gaggle_output.html"
+                    this.startSelenium(pageUrl);
+                }
+                else if (command.equalsIgnoreCase("openpage")) {
                     String pageUrl = dataJsonObject.getString("PageUrl");
                     Log.info("Opening page " + pageUrl);
                     myDriver.get(pageUrl);

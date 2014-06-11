@@ -114,7 +114,7 @@ public class BossWebSocketController
     public BossWebSocketController(BossImpl bossImpl, int port)
     {
         this.bossImpl = bossImpl;
-        this.chromeHandler = new SeleniumChromeHandler(bossImpl.getChromeGooseDir(), (bossImpl.GAGGLE_SERVER + "/static/gaggle_output.html"));
+        this.chromeHandler = new SeleniumChromeHandler(bossImpl.getChromeGooseDir());
         Server server = new Server();
         ServerConnector connector = new ServerConnector(server);
         connector.setPort(port);
