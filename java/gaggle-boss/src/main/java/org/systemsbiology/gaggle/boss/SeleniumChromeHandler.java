@@ -122,11 +122,13 @@ public class SeleniumChromeHandler {
 
     public void startSelenium(String startPageUrl)
     {
-        Log.info("ChromeGoose directory: " + this.chromeGooseDir);
-        ChromeOptions options = new ChromeOptions();
-        options.addExtensions(new File(this.chromeGooseDir));
-        options.addArguments("test-type");
-        myDriver = new ChromeDriver(options);
+        if (this.myDriver == null) {
+            Log.info("ChromeGoose directory: " + this.chromeGooseDir);
+            ChromeOptions options = new ChromeOptions();
+            options.addExtensions(new File(this.chromeGooseDir));
+            options.addArguments("test-type");
+            myDriver = new ChromeDriver(options);
+        }
         if (startPageUrl != null && !startPageUrl.isEmpty())
             myDriver.get(startPageUrl);
     }

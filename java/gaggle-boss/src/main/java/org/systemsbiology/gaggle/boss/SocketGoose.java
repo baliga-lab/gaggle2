@@ -1,5 +1,7 @@
 package org.systemsbiology.gaggle.boss;
 
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
 import org.systemsbiology.gaggle.core.JSONGoose;
@@ -15,7 +17,7 @@ public class SocketGoose implements JSONGoose {
     private BossWebSocket mySocket;
     private JSONReader jsonReader = new JSONReader();
     private JSONWebSocketWriter jsonWebSocketWriter;
-    private Logger logger = Log.getLogger(this.getName());
+    private static Logger logger = Log.getLogger("Socket Goose");
 
     public SocketGoose(String gooseName, BossWebSocket socket)
     {
@@ -23,6 +25,33 @@ public class SocketGoose implements JSONGoose {
         this.gooseName = gooseName;
         this.mySocket = socket;
         this.jsonWebSocketWriter = new JSONWebSocketWriter(socket);
+    }
+
+    public static Namelist fromJSONtoNamelist(JSONObject jsonObj)
+    {
+        logger.info("Convert json object to namelist...");
+        if (jsonObj != null)
+        {
+            String name = jsonObj.getString("_name");
+            String species = jsonObj.getString("_species");
+            if (species == null) {
+                JSONObject metadataJSONObj = jsonObj.getJSONObject("metadata");
+                if (metadataJSONObj != null) {
+                    species = metadataJSONObj.getString("species");
+                }
+            }
+            int size = jsonObj.getInt("_size");
+            JSONArray data = jsonObj.containsKey("_data") ? jsonObj.getJSONArray("_data") : jsonObj.getJSONArray("gaggle-data");
+            String[] names = new String[data.size()];
+            for (int i = 0; i < data.size(); i++) {
+                logger.info("Data item: " + data.getString(i));
+                names[i] = data.getString(i);
+            }
+            logger.info("Species: " + species + " Names: " + names);
+            Namelist nl = new Namelist(name, species, names);
+            return nl;
+        }
+        return null;
     }
 
     public void setName(String newName)

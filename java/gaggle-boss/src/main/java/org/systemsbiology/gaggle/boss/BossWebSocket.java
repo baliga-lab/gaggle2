@@ -4,6 +4,7 @@ import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
+import org.systemsbiology.gaggle.core.datatypes.Namelist;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -199,6 +200,23 @@ public class BossWebSocket extends WebSocketAdapter
                     Log.info("Selenium data string: " + dataString);
                     JSONObject jsonActionObject = JSONObject.fromObject(dataString);
                     this.myController.getSeleniumChromeHandler().handleAction(jsonActionObject);
+                }
+                else if (action.equalsIgnoreCase("Broadcast")) {
+                    Log.info("Handling broadcast data...");
+                    JSONObject dataObj = jsonObj.getJSONObject("Data");
+                    Log.info("Broadcast data json obj: " + dataObj);
+                    String source = dataObj.getString("Source");
+                    String target = dataObj.getString("Target");
+                    JSONObject jsonGaggleData = dataObj.getJSONObject("GaggleData");
+                    Log.info("Received broadcast data " + source + " " + target + " " + jsonGaggleData.toString());
+                    if (jsonGaggleData != null) {
+                        String type = jsonGaggleData.getString("_type");
+                        Log.info("Broadcast data type: " + type);
+                        if (type.equalsIgnoreCase("Namelist")) {
+                            Namelist namelist = SocketGoose.fromJSONtoNamelist(jsonGaggleData);
+                            this.myController.handleNamelist(source, target, namelist);
+                        }
+                    }
                 }
             }
             catch (Exception e)

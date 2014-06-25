@@ -8,6 +8,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.systemsbiology.gaggle.core.datatypes.Namelist;
 
 import java.util.HashMap;
 import java.util.logging.Logger;
@@ -79,6 +80,14 @@ public class BossWebSocketController
                 }
                 socketGooseHashMap.remove(key);
             }
+        }
+    }
+
+    public void handleNamelist(String source, String target, Namelist namelist)
+    {
+        Log.info("Web socket controller handling gaggle data from " + source + " to " + target);
+        if (target != null && namelist != null) {
+            this.bossImpl.broadcastNamelist(source, target, namelist);
         }
     }
 
